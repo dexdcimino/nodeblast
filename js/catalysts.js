@@ -37,6 +37,60 @@ function normalizeUrl(raw) {
   return 'https://' + trimmed;
 }
 
+export function slugify(title) {
+  return (title || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60) || 'untitled';
+}
+
+async function uniqueSlugForUser(uid, baseSlug, ignoreId = null) {
+  try {
+    const q = query(
+      collection(db, 'catalysts'),
+      where('ownerId', '==', uid),
+    );
+    const snap = await getDocs(q);
+    const taken = new Set();
+    snap.docs.forEach((d) => {
+      if (d.id === ignoreId) return;
+      const s = d.data().slug;
+      if (s) taken.add(s);
+    });
+    if (!taken.has(baseSlug)) return baseSlug;
+    for (let i = 2; i < 1000; i++) {
+      const candidate = `${baseSlug}-${i}`;
+      if (!taken.has(candidate)) return candidate;
+    }
+    return baseSlug + '-' + Date.now();
+  } catch (err) {
+    console.warn('[catalysts] uniqueSlugForUser failed:', err);
+    return baseSlug;
+  }
+}
+
+export async function getCatalystBySlug(ownerId, slug) {
+  if (!ownerId || !slug) return null;
+  try {
+    const q = query(
+      collection(db, 'catalysts'),
+      where('ownerId', '==', ownerId),
+      where('slug', '==', slug),
+      limit(1),
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  } catch (err) {
+    console.warn('[catalysts] getCatalystBySlug failed:', err);
+    return null;
+  }
+}
+
 function safeDomain(url) {
   try {
     return new URL(normalizeUrl(url)).host.replace(/^www\./, '');
@@ -94,12 +148,16 @@ export async function createCatalyst(data, file) {
     catch (err) { console.warn('[catalysts] thumb upload failed:', err); }
   }
 
+  const slug = await uniqueSlugForUser(State.user.uid, slugify(data.title));
+
   const doc1 = {
     ownerId: State.user.uid,
     ownerName: State.profile?.displayName || 'anon',
+    ownerUsernameLower: (State.profile?.displayName || 'anon').toLowerCase(),
     ownerHex: State.profile?.hexCode || '5aaa72',
     ownerPhoto: State.profile?.photoURL || '',
     title: data.title.slice(0, 40),
+    slug,
     url: normalizeUrl(data.url),
     description: (data.description || '').slice(0, 500),
     category: CATEGORIES.includes(data.category) ? data.category : 'sites',
@@ -122,8 +180,9 @@ export async function updateCatalyst(id, data, file) {
   if (!State.user) throw new Error('Not signed in');
   const ref = doc(db, 'catalysts', id);
 
+  const title = data.title.slice(0, 40);
   const updates = {
-    title: data.title.slice(0, 40),
+    title,
     url: normalizeUrl(data.url),
     description: (data.description || '').slice(0, 500),
     category: CATEGORIES.includes(data.category) ? data.category : 'sites',
@@ -131,6 +190,18 @@ export async function updateCatalyst(id, data, file) {
     accentColor: data.accentColor || '#5AAA72',
     updatedAt: serverTimestamp(),
   };
+
+  // Re-slug only if the title actually changed
+  try {
+    const existing = await getDoc(ref);
+    const current = existing.data();
+    if (current && current.title !== title) {
+      updates.slug = await uniqueSlugForUser(State.user.uid, slugify(title), id);
+    }
+  } catch (err) {
+    console.warn('[catalysts] slug recompute skipped:', err);
+  }
+
   if (file) {
     try { updates.thumbURL = await uploadCatalystThumb(State.user.uid, id, file); }
     catch (err) { console.warn('[catalysts] thumb re-upload failed:', err); }

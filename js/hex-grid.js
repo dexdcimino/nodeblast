@@ -74,7 +74,7 @@ function catalystTileHTML(cat) {
     <div class="hex-info">
       <div class="hex-title">${title}</div>
       <div class="hex-url">${escapeHtml(domain)}</div>
-      <div class="hex-creator" style="color:${escapeHtml(accent)}">${escapeHtml(creator)}</div>
+      <div class="hex-creator" style="color:${escapeHtml(accent)};pointer-events:auto;cursor:pointer" data-creator-link>${escapeHtml(creator)}</div>
     </div>
   `;
 }
@@ -157,7 +157,14 @@ export function renderHexGrid(state = _lastState) {
         el.style.setProperty('--accent', accent);
         if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
         el.innerHTML = catalystTileHTML(tile);
-        el.addEventListener('click', () => state.onTileClick?.(tile));
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('[data-creator-link]')) {
+            e.stopPropagation();
+            state.onCreatorClick?.(tile);
+            return;
+          }
+          state.onTileClick?.(tile);
+        });
       }
       honey.appendChild(el);
       idx++;

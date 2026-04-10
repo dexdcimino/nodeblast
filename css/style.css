@@ -270,6 +270,40 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .cat-filter-pill.selected{background:var(--clr-adj);color:var(--clr-adj-on,#fff);}
 
 /* ══════════════════════════════════════
+   PROFILE HEADER BAR
+══════════════════════════════════════ */
+#profile-bar{position:fixed;top:var(--hdr);left:0;right:0;height:80px;background:var(--bg2);border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:20px;z-index:90;}
+#profile-bar-left{display:flex;align-items:center;gap:16px;min-width:0;}
+#profile-bar-avatar{width:48px;height:48px;border-radius:50%;border:2.5px solid var(--acct-hex,var(--clr-adj));background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--clr-adj);font-size:20px;font-weight:700;}
+#profile-bar-avatar img{width:100%;height:100%;object-fit:cover;}
+#profile-bar-info{min-width:0;display:flex;flex-direction:column;gap:4px;}
+#profile-bar-name{font-size:18px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#profile-bar-hex-row{display:flex;align-items:center;gap:6px;}
+#profile-bar-hex-dot{width:10px;height:10px;border-radius:50%;background:var(--acct-hex,var(--clr-adj));flex-shrink:0;}
+#profile-bar-hex-label{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx2);}
+#profile-bar-right{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+#profile-bar-count{font-size:12px;color:var(--tx3);font-weight:500;}
+
+#grid.with-profile-bar{top:calc(var(--hdr) + 80px);}
+
+.acct-view-profile-link{display:inline-block;margin-top:6px;font-size:12px;color:var(--clr-adj);text-decoration:none;font-weight:500;transition:opacity var(--ease);}
+.acct-view-profile-link:hover{opacity:0.75;}
+
+/* Brand is clickable → home */
+#hdr-brand{cursor:pointer;}
+#hdr-logo{cursor:pointer;}
+
+/* ══════════════════════════════════════
+   404
+══════════════════════════════════════ */
+#not-found{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:80;}
+#not-found-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:48px 56px;text-align:center;max-width:380px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;gap:10px;}
+#not-found-code{font-size:56px;font-weight:800;color:var(--clr-adj);letter-spacing:-2px;line-height:1;}
+#not-found-title{font-size:22px;font-weight:700;color:var(--tx);margin-bottom:4px;}
+#not-found-sub{font-size:14px;color:var(--tx2);margin-bottom:20px;}
+#not-found-home{padding:12px 28px;}
+
+/* ══════════════════════════════════════
    HEX GRID
 ══════════════════════════════════════ */
 #grid{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;overflow:auto;background:var(--bg);}

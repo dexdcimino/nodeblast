@@ -70,7 +70,7 @@
   </div>
 
   <!-- ══════════════════════════════════════
-       CATEGORY FILTER BAR (public feed only)
+       CATEGORY FILTER BAR (feed route only)
        ══════════════════════════════════════ -->
   <div id="cat-filter-bar" style="display:none">
     <button class="cat-filter-pill selected" data-cat="all">All</button>
@@ -80,6 +80,38 @@
     <button class="cat-filter-pill" data-cat="ai">AI</button>
     <button class="cat-filter-pill" data-cat="sites">Sites</button>
     <button class="cat-filter-pill" data-cat="wild">Wild</button>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PROFILE HEADER BAR (profile / catalyst route only)
+       ══════════════════════════════════════ -->
+  <div id="profile-bar" style="display:none">
+    <div id="profile-bar-left">
+      <div id="profile-bar-avatar"></div>
+      <div id="profile-bar-info">
+        <div id="profile-bar-name"></div>
+        <div id="profile-bar-hex-row">
+          <div id="profile-bar-hex-dot"></div>
+          <span id="profile-bar-hex-label"></span>
+        </div>
+      </div>
+    </div>
+    <div id="profile-bar-right">
+      <span id="profile-bar-count"></span>
+      <button id="profile-bar-action" class="cat-btn"></button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       404 PAGE
+       ══════════════════════════════════════ -->
+  <div id="not-found" style="display:none">
+    <div id="not-found-card">
+      <div id="not-found-code">404</div>
+      <div id="not-found-title">not found</div>
+      <div id="not-found-sub">This page doesn't exist or was removed.</div>
+      <button id="not-found-home" class="cat-btn primary">Go home</button>
+    </div>
   </div>
 
   <!-- ══════════════════════════════════════
@@ -220,6 +252,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             </button>
           </div>
+          <a href="#" id="acct-view-profile" class="acct-view-profile-link">View my profile →</a>
         </div>
       </div>
 

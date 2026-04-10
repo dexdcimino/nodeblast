@@ -16,6 +16,7 @@ import {
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 import State from './state.js';
+import { normalizeUsername } from './users.js';
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -29,8 +30,10 @@ function randomHex() {
 
 function fallbackProfile(user, providerId) {
   const provider = providerId.includes('github') ? 'github' : 'google';
+  const displayName = user.displayName || 'anon';
   return {
-    displayName: user.displayName || 'anon',
+    displayName,
+    usernameLower: normalizeUsername(displayName),
     hexCode: randomHex(),
     photoURL: user.photoURL || '',
     provider,
@@ -50,8 +53,10 @@ async function loadOrCreateProfile(user, providerId) {
   }
 
   if (!snap.exists()) {
+    const displayName = user.displayName || 'anon';
     const profile = {
-      displayName: user.displayName || 'anon',
+      displayName,
+      usernameLower: normalizeUsername(displayName),
       hexCode: randomHex(),
       photoURL: user.photoURL || '',
       provider,
@@ -66,12 +71,19 @@ async function loadOrCreateProfile(user, providerId) {
     return profile;
   }
 
-  // Existing profile (may have been created by DexNote) — touch lastLogin but
-  // don't let a failed write block the auth callbacks from firing.
-  updateDoc(ref, { lastLogin: serverTimestamp() }).catch((err) => {
-    console.warn('[auth] lastLogin update failed:', err);
+  // Existing profile (may have been created by DexNote) — touch lastLogin and
+  // backfill usernameLower if missing. Don't let a failed write block the
+  // auth callbacks from firing.
+  const existing = snap.data();
+  const touchUpdates = { lastLogin: serverTimestamp() };
+  const needsLower = normalizeUsername(existing.displayName);
+  if (needsLower && existing.usernameLower !== needsLower) {
+    touchUpdates.usernameLower = needsLower;
+  }
+  updateDoc(ref, touchUpdates).catch((err) => {
+    console.warn('[auth] lastLogin/usernameLower update failed:', err);
   });
-  return snap.data();
+  return { ...existing, usernameLower: needsLower || existing.usernameLower };
 }
 
 export async function signIn(providerName = 'google') {
@@ -95,6 +107,9 @@ export async function signOut() {
 }
 
 export async function saveProfile(updates) {
+  if (updates.displayName) {
+    updates.usernameLower = normalizeUsername(updates.displayName);
+  }
   if (!State.user) {
     State.profile = { ...State.profile, ...updates };
     return;
