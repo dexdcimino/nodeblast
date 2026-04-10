@@ -159,17 +159,10 @@ export function openAccountMenu() {
   menu.style.left = 'auto';
   menu.classList.add('open');
   _resetMenuView();
-  _positionGuestBanner();
 }
 export function closeAccountMenu() {
   document.getElementById('acct-menu')?.classList.remove('open');
   closeColorPopup();
-}
-
-function _positionGuestBanner() {
-  const banner = document.getElementById('guest-signin-banner');
-  if (!banner || !State.guest) return;
-  banner.classList.add('visible');
 }
 
 export function initAccountMenu(handlers) {

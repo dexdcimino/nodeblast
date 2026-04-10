@@ -21,9 +21,8 @@ input,textarea,[contenteditable="true"]{user-select:text;}
 html.theme-transition,
 html.theme-transition body,
 html.theme-transition #hdr,
-html.theme-transition #auth-overlay,
-html.theme-transition #auth-card,
 html.theme-transition #acct-menu,
+html.theme-transition #signin-menu,
 html.theme-transition .hex-tile {
   transition: background-color .35s ease, color .35s ease, border-color .35s ease !important;
 }
@@ -191,43 +190,16 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .acct-menu-item.danger:hover{color:#e05c5c;border-color:#e05c5c;}
 
 /* ══════════════════════════════════════
-   AUTH OVERLAY
+   SIGN-IN DROPDOWN (opened from header button)
 ══════════════════════════════════════ */
-#auth-overlay{display:none;position:fixed;inset:0;z-index:10000;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:24px;}
-#auth-overlay.visible{display:flex;}
-#auth-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:60px;padding:48px 52px 36px;text-align:center;max-width:410px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,.4);}
-#auth-card h1{font-size:32px;font-weight:800;color:var(--auth-accent,#5AAA72);margin-bottom:6px;letter-spacing:-0.5px;}
-[data-theme="light"] #auth-card{background:#ced3d8;}
-#auth-card p{font-size:14px;color:var(--tx2);margin-bottom:40px;}
-#google-signin-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px 20px;border-radius:10px;background:#fff;color:#1a1a1a;border:1.5px solid transparent;cursor:pointer;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;transition:box-shadow .2s,transform .15s,border-color .15s;}
-#google-signin-btn:hover{box-shadow:0 4px 12px rgba(0,0,0,.15);transform:translateY(-1px);border-color:var(--tx3);}
-#github-signin-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px 20px;border-radius:10px;background:#24292e;color:#fff;border:1px solid #444d56;cursor:pointer;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;transition:box-shadow .2s,transform .15s,border-color .15s;margin-top:8px;}
-#github-signin-btn:hover{background:#2f363d;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:translateY(-1px);border-color:#6e7681;}
-[data-theme="light"] #github-signin-btn{background:#24292e;color:#fff;border-color:#24292e;}
-#auth-divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--tx2);font-size:14px;font-weight:500;width:100%;}
-#auth-divider::before,#auth-divider::after{content:'';flex:1;height:2px;background:color-mix(in srgb,var(--tx3) 60%,transparent);}
-#guest-mode-btn{width:100%;padding:13px;border-radius:10px;background:var(--bg3);border:2px solid var(--bdr);color:var(--tx);font-family:'Outfit',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:all .15s;}
-#guest-mode-btn:hover{border-color:var(--auth-accent,#5AAA72);color:var(--tx);background:var(--bg4);}
-[data-theme="light"] #guest-mode-btn{background:#e4e7ea;}
-#auth-guest-note{font-size:10px;color:var(--tx3);margin-top:14px;opacity:.7;}
-#auth-error{font-size:13px;color:#e05c5c;margin-top:14px;display:none;}
-#auth-prefs{display:flex;align-items:center;justify-content:center;gap:16px;margin:20px 0 12px;transform:scale(0.95);}
-#auth-palette-group,#auth-theme-group{display:flex;gap:10px;}
-.auth-palette-btn{background:var(--bg2);border:1.5px solid var(--bdr);border-radius:16px;padding:4px;cursor:pointer;transition:border-color .2s ease;width:64px;height:64px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-.auth-palette-btn.selected{border-color:var(--auth-accent,#5AAA72);border-width:2px;box-shadow:0 6px 20px rgba(0,0,0,.4);}
-.auth-palette-btn:hover:not(.selected){border-color:var(--tx3);}
-.auth-theme-btn{background:var(--bg2);border:1.5px solid var(--bdr);border-radius:16px;width:64px;height:64px;cursor:pointer;color:var(--tx2);transition:border-color .2s ease,color .2s ease;display:flex;align-items:center;justify-content:center;}
-.auth-theme-btn.selected{border-color:var(--auth-accent,#5AAA72);border-width:2px;color:var(--tx);box-shadow:0 6px 20px rgba(0,0,0,.4);}
-.auth-theme-btn:hover:not(.selected){border-color:var(--tx3);color:var(--tx);}
-[data-theme="light"] .auth-palette-btn,[data-theme="light"] .auth-theme-btn{background:#e4e7ea;}
-[data-theme="light"] .auth-palette-btn.selected,[data-theme="light"] .auth-theme-btn.selected{box-shadow:0 6px 20px rgba(0,0,0,.15);}
-
-/* Guest sign-in banner */
-#guest-signin-banner{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--bdr);border-radius:14px;padding:10px 16px;box-shadow:0 12px 40px rgba(0,0,0,.45);z-index:200;gap:12px;align-items:center;}
-#guest-signin-banner.visible{display:flex;}
-#guest-banner-text{font-size:13px;color:var(--tx);font-weight:500;}
-#guest-banner-google,#guest-banner-github{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid var(--bdr);background:var(--bg3);color:var(--tx);font-family:var(--fn);font-size:12px;font-weight:600;cursor:pointer;transition:all var(--ease);}
-#guest-banner-google:hover,#guest-banner-github:hover{border-color:var(--clr-adj);color:var(--clr-adj);}
+#signin-menu{display:none;position:fixed;z-index:9500;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:8px;box-shadow:0 12px 40px rgba(0,0,0,.45);flex-direction:column;gap:6px;width:240px;}
+#signin-menu.open{display:flex;}
+#google-signin-btn,#github-signin-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:10px 14px;border-radius:8px;cursor:pointer;font-family:var(--fn);font-size:13px;font-weight:600;transition:all .15s;}
+#google-signin-btn{background:#fff;color:#1a1a1a;border:1.5px solid transparent;}
+#google-signin-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.15);border-color:var(--tx3);}
+#github-signin-btn{background:#24292e;color:#fff;border:1px solid #444d56;}
+#github-signin-btn:hover{background:#2f363d;border-color:#6e7681;}
+#auth-error{font-size:13px;color:#e05c5c;text-align:center;padding:6px 0;display:none;}
 
 /* ══════════════════════════════════════
    COLOR PICKER POPUP

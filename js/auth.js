@@ -50,8 +50,6 @@ async function loadOrCreateProfile(user, providerId) {
 }
 
 export async function signIn(providerName = 'google') {
-  State.guest = false;
-  localStorage.removeItem('nb-guest');
   const provider = providerName === 'github'
     ? new GithubAuthProvider()
     : new GoogleAuthProvider();
@@ -68,26 +66,11 @@ export async function signIn(providerName = 'google') {
 }
 
 export async function signOut() {
-  State.guest = false;
-  localStorage.removeItem('nb-guest');
   await fbSignOut(auth);
 }
 
-export function enterGuestMode() {
-  State.guest = true;
-  State.user = null;
-  State.profile = { displayName: 'Guest', hexCode: '888888', photoURL: '' };
-  localStorage.setItem('nb-guest', '1');
-  authResolved = true;
-  readyCallbacks.forEach((cb) => cb(null, State.profile));
-}
-
-export function isGuest() {
-  return State.guest === true;
-}
-
 export async function saveProfile(updates) {
-  if (State.guest || !State.user) {
+  if (!State.user) {
     State.profile = { ...State.profile, ...updates };
     return;
   }
@@ -102,11 +85,8 @@ export function onAuthReady(cb) {
 }
 
 onAuthStateChanged(auth, async (user) => {
-  if (State.guest && !user) return;
   State.user = user;
   if (user) {
-    State.guest = false;
-    localStorage.removeItem('nb-guest');
     const providerId = user.providerData[0]?.providerId || 'google.com';
     State.profile = await loadOrCreateProfile(user, providerId);
   } else {
