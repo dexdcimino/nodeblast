@@ -6,6 +6,32 @@
 import State from './state.js';
 import { openColorPopup, closeColorPopup } from './color.js';
 
+/* ── Shared helpers ── */
+export function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Render a username, styling any trailing/embedded ".dev" suffix as an
+// admin badge (gray, slightly smaller) regardless of the parent color.
+// Returns an HTML string; caller is responsible for where it's dropped.
+export function renderUsername(name, hexColor) {
+  const safeName = escapeHtml(name || 'anon');
+  const lower = safeName.toLowerCase();
+  const idx = lower.indexOf('.dev');
+  const colorAttr = hexColor ? ` style="color:${escapeHtml(hexColor)}"` : '';
+  if (idx === -1) {
+    return `<span class="uname-main"${colorAttr}>${safeName}</span>`;
+  }
+  const main = safeName.slice(0, idx);
+  const tag = safeName.slice(idx);
+  return `<span class="uname-main"${colorAttr}>${main}</span><span class="uname-dev-tag">${tag}</span>`;
+}
+
 /* ── Toast ── */
 let _toastT;
 export function toast(msg) {
@@ -153,10 +179,21 @@ export function openAccountMenu() {
   const menu = document.getElementById('acct-menu');
   const btn = document.getElementById('acct-btn');
   if (!menu || !btn) return;
-  const rect = btn.getBoundingClientRect();
-  menu.style.top = (rect.bottom + 6) + 'px';
-  menu.style.right = (window.innerWidth - rect.right) + 'px';
-  menu.style.left = 'auto';
+  if (window.innerWidth <= 640) {
+    // Mobile: bottom sheet, full width
+    menu.style.top = '';
+    menu.style.right = '0';
+    menu.style.left = '0';
+    menu.style.bottom = '0';
+    menu.classList.add('mobile-sheet');
+  } else {
+    const rect = btn.getBoundingClientRect();
+    menu.style.top = (rect.bottom + 6) + 'px';
+    menu.style.right = (window.innerWidth - rect.right) + 'px';
+    menu.style.left = 'auto';
+    menu.style.bottom = '';
+    menu.classList.remove('mobile-sheet');
+  }
   menu.classList.add('open');
   _resetMenuView();
 }
@@ -207,13 +244,17 @@ export function initAccountMenu(handlers) {
     else _openEditPanel();
   });
   document.getElementById('acct-edit-cancel-btn')?.addEventListener('click', _closeEditPanel);
-  document.getElementById('acct-edit-save-btn')?.addEventListener('click', () => {
+  document.getElementById('acct-edit-save-btn')?.addEventListener('click', async () => {
     const name = document.getElementById('acct-username-input').value.trim();
     const hex = document.getElementById('acct-edit-hex-input').value.replace('#', '').toLowerCase();
     if (!/^[0-9a-f]{6}$/.test(hex)) { toast('Invalid hex color'); return; }
-    onSaveProfile?.({ displayName: name || 'anon', hexCode: hex });
-    _closeEditPanel();
-    toast('Profile saved');
+    try {
+      await onSaveProfile?.({ displayName: name || 'anon', hexCode: hex });
+      _closeEditPanel();
+      toast('Profile saved');
+    } catch (err) {
+      toast(err?.message || 'Could not save profile');
+    }
   });
   document.getElementById('acct-edit-hex-input')?.addEventListener('input', _updateEditColorPreview);
   document.getElementById('acct-edit-color-btn')?.addEventListener('click', (e) => {

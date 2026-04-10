@@ -23,7 +23,7 @@ import {
 import State from './state.js';
 import { uploadCatalystThumb, deleteCatalystThumb } from './storage.js';
 import { openColorPopup, closeColorPopup } from './color.js';
-import { toast, showModal } from './ui-events.js';
+import { toast, showModal, renderUsername } from './ui-events.js';
 
 const db = getFirestore(app);
 
@@ -476,11 +476,12 @@ export async function openCatalystDetail(catalyst) {
 
   const creator = document.getElementById('cat-detail-creator');
   const hex = catalyst.ownerHex || '5aaa72';
+  const unameHtml = renderUsername(catalyst.ownerName || 'anon', '#' + hex);
   creator.innerHTML = `
     <div class="cat-detail-creator-avatar" style="border-color:#${hex}">
       ${catalyst.ownerPhoto ? `<img src="${catalyst.ownerPhoto}" alt="">` : ''}
     </div>
-    <span style="color:#${hex}">${catalyst.ownerName || 'anon'}#${hex}</span>
+    <span>${unameHtml}<span style="color:#${hex}">#${hex}</span></span>
   `;
 
   document.getElementById('cat-detail-category').textContent = catalyst.category || 'sites';

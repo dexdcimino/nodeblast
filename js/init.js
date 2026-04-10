@@ -2,8 +2,16 @@ import State, { BRAND } from './state.js';
 import { signIn, signOut, onAuthReady, saveProfile } from './auth.js';
 import { applyTheme, applyPalette, initThemeToggle, initPalettePickers } from './theme.js';
 import { initColorPicker } from './color.js';
-import { initTooltips, initAccountMenu, initAudioSettings, showModal, closeAccountMenu } from './ui-events.js';
-import { renderHexGrid } from './hex-grid.js';
+import {
+  initTooltips,
+  initAccountMenu,
+  initAudioSettings,
+  showModal,
+  closeAccountMenu,
+  renderUsername,
+  escapeHtml,
+} from './ui-events.js';
+import { renderHexGrid, getCols } from './hex-grid.js';
 import {
   loadUserCatalysts,
   loadPublicFeed,
@@ -20,7 +28,11 @@ let _currentCategory = 'all';
 let _currentRoute = null;
 let _currentTiles = [];
 let _currentShowAdd = false;
+let _currentEmptyMessage = '';
+let _firstRender = true;
 let _profileCache = new Map(); // usernameLower -> { user, catalysts }
+
+function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 function setAvatarEl(el, profile, user) {
   if (!el) return;
@@ -74,7 +86,7 @@ function showProfileBar(user, catalystCount, isOwn) {
   }
   avatar.style.borderColor = hexColor;
 
-  document.getElementById('profile-bar-name').textContent = user.displayName || 'anon';
+  document.getElementById('profile-bar-name').innerHTML = renderUsername(user.displayName || 'anon');
   document.getElementById('profile-bar-hex-dot').style.background = hexColor;
   document.getElementById('profile-bar-hex-label').textContent = '#' + (user.hexCode || '5aaa72');
   document.getElementById('profile-bar-count').textContent =
@@ -130,24 +142,34 @@ function handleCreatorClick(cat) {
   navigate('/' + encodeURIComponent(name.toLowerCase()));
 }
 
-function renderGrid(tiles, { showAdd = false } = {}) {
+function renderGrid(tiles, { showAdd = false, emptyMessage = '' } = {}) {
   _currentTiles = tiles;
   _currentShowAdd = showAdd;
+  _currentEmptyMessage = emptyMessage;
   renderHexGrid({
     tiles,
     showAdd,
+    emptyMessage,
     onTileClick: handleTileClick,
     onAddClick: () => openCatalystModal(null),
     onCreatorClick: handleCreatorClick,
   });
 }
 
+function renderSkeleton() {
+  renderHexGrid({ loading: true });
+}
+
 async function renderFeedRoute() {
   hideAllViews();
   showFilterBar();
   setPageTitle([]);
+  renderSkeleton();
   const tiles = await loadPublicFeed(_currentCategory);
-  renderGrid(tiles, { showAdd: false });
+  const emptyMessage = _currentCategory === 'all'
+    ? 'No catalysts yet. Be the first to share what you\'re building.'
+    : 'No catalysts in this category yet.';
+  renderGrid(tiles, { showAdd: false, emptyMessage });
 }
 
 async function renderProfileRoute(username, { openSlug = null } = {}) {
@@ -161,11 +183,16 @@ async function renderProfileRoute(username, { openSlug = null } = {}) {
   if (cached) {
     const isOwn = State.user && cached.user.uid === State.user.uid;
     showProfileBar(cached.user, cached.catalysts.length, isOwn);
-    renderGrid(cached.catalysts, { showAdd: isOwn });
+    renderGrid(cached.catalysts, {
+      showAdd: isOwn,
+      emptyMessage: isOwn ? 'Create your first catalyst' : 'No catalysts yet',
+    });
     if (openSlug) {
       const match = cached.catalysts.find((c) => c.slug === openSlug);
       if (match) openCatalystDetail(match);
     }
+  } else {
+    renderSkeleton();
   }
 
   // Always fetch fresh in background
@@ -179,7 +206,10 @@ async function renderProfileRoute(username, { openSlug = null } = {}) {
 
   const isOwn = State.user && user.uid === State.user.uid;
   showProfileBar(user, catalysts.length, isOwn);
-  renderGrid(catalysts, { showAdd: isOwn });
+  renderGrid(catalysts, {
+    showAdd: isOwn,
+    emptyMessage: isOwn ? 'Create your first catalyst' : 'No catalysts yet',
+  });
   setPageTitle([user.displayName || username]);
 
   if (openSlug) {
@@ -195,14 +225,27 @@ async function renderProfileRoute(username, { openSlug = null } = {}) {
 async function renderRoute() {
   const route = getRoute();
   _currentRoute = route;
-  if (route.page === 'feed') {
-    await renderFeedRoute();
-  } else if (route.page === 'profile') {
-    await renderProfileRoute(route.username);
-  } else if (route.page === 'catalyst') {
-    await renderProfileRoute(route.username, { openSlug: route.slug });
-  } else {
-    show404();
+  const honey = document.getElementById('honeycomb');
+
+  // Smooth fade between routes (skip the very first render)
+  if (!_firstRender && honey) {
+    honey.style.opacity = '0';
+    await wait(150);
+  }
+  _firstRender = false;
+
+  try {
+    if (route.page === 'feed') {
+      await renderFeedRoute();
+    } else if (route.page === 'profile') {
+      await renderProfileRoute(route.username);
+    } else if (route.page === 'catalyst') {
+      await renderProfileRoute(route.username, { openSlug: route.slug });
+    } else {
+      show404();
+    }
+  } finally {
+    if (honey) honey.style.opacity = '1';
   }
 }
 
@@ -226,8 +269,10 @@ function updateAuthUI(user, profile) {
 
     const name = profile?.displayName || user.displayName || 'Account';
     const hex = profile?.hexCode || '5aaa72';
-    document.getElementById('acct-name-short').textContent = `${name}#${hex}`;
-    document.getElementById('acct-name').textContent = name;
+    const unameHtml = renderUsername(name);
+    document.getElementById('acct-name-short').innerHTML =
+      `${unameHtml}<span class="acct-name-hex">#${escapeHtml(hex)}</span>`;
+    document.getElementById('acct-name').innerHTML = unameHtml;
     document.getElementById('acct-hex-label').textContent = '#' + hex;
 
     document.getElementById('acct-avatar-sm').style.borderColor = hexColor;

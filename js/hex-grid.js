@@ -1,7 +1,9 @@
 // ══════════════════════════════════════
 //  NodeBlast — HEX GRID
-//  Dynamic honeycomb layout with click routing
+//  Dynamic responsive honeycomb layout
 // ══════════════════════════════════════
+
+import { renderUsername, escapeHtml } from './ui-events.js';
 
 const GAP = 10;
 const ROUND_R = 0.08;
@@ -50,12 +52,23 @@ function safeDomain(url) {
   catch { return url; }
 }
 
-function layoutRows(count) {
+export function getCols(width) {
+  if (width >= 1200) return 4;
+  if (width >= 800) return 3;
+  if (width >= 500) return 2;
+  return 1;
+}
+
+function layoutRows(count, COLS) {
   const rows = [];
+  if (COLS <= 1) {
+    for (let i = 0; i < count; i++) rows.push(1);
+    return rows;
+  }
   let remaining = count;
   let rowIdx = 0;
   while (remaining > 0) {
-    const cols = rowIdx % 2 === 0 ? 4 : 3;
+    const cols = rowIdx % 2 === 0 ? COLS : COLS - 1;
     const take = Math.min(cols, remaining);
     rows.push(take);
     remaining -= take;
@@ -65,16 +78,17 @@ function layoutRows(count) {
 }
 
 function catalystTileHTML(cat) {
-  const creator = `${cat.ownerName || 'anon'}#${cat.ownerHex || '5aaa72'}`;
   const domain = safeDomain(cat.url);
   const title = escapeHtml(cat.title || '');
   const accent = cat.accentColor || '#5AAA72';
+  const hex = escapeHtml(cat.ownerHex || '5aaa72');
+  const unameHtml = renderUsername(cat.ownerName || 'anon', accent);
   return `
     <div class="hex-fade"></div>
     <div class="hex-info">
       <div class="hex-title">${title}</div>
       <div class="hex-url">${escapeHtml(domain)}</div>
-      <div class="hex-creator" style="color:${escapeHtml(accent)};pointer-events:auto;cursor:pointer" data-creator-link>${escapeHtml(creator)}</div>
+      <div class="hex-creator" data-creator-link><span class="hex-creator-name">${unameHtml}</span><span class="hex-creator-hex" style="color:${escapeHtml(accent)}">#${hex}</span></div>
     </div>
   `;
 }
@@ -89,83 +103,98 @@ function addTileHTML() {
   `;
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+function skeletonHTML() {
+  return `<div class="hex-skeleton-inner"></div>`;
 }
 
-let _lastState = { tiles: [], showAdd: false, onTileClick: null, onAddClick: null };
+let _lastState = null;
 
-export function renderHexGrid(state = _lastState) {
+export function renderHexGrid(state) {
+  if (!state) state = _lastState;
+  if (!state) return;
   _lastState = state;
+
   ensureClipPath();
   const honey = document.getElementById('honeycomb');
   if (!honey) return;
   honey.innerHTML = '';
 
+  const containerW = honey.clientWidth;
+  if (containerW <= 0) return;
+
+  const COLS = getCols(containerW);
+
+  // Loading: render N skeleton placeholders matching current column count
+  if (state.loading) {
+    const skeletonCount = Math.max(3, COLS + Math.max(0, COLS - 1));
+    _renderTiles(honey, containerW, COLS, skeletonCount, (i, el) => {
+      el.classList.add('hex-skeleton');
+      el.innerHTML = skeletonHTML();
+    });
+    return;
+  }
+
   const tiles = state.tiles || [];
-  const totalTiles = tiles.length + (state.showAdd ? 1 : 0);
+  const showAdd = !!state.showAdd;
+  const totalTiles = tiles.length + (showAdd ? 1 : 0);
+
   if (totalTiles === 0) {
     honey.style.height = '100%';
     const empty = document.createElement('div');
-    empty.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:14px;';
-    empty.textContent = 'No catalysts yet';
+    empty.className = 'hex-empty';
+    empty.textContent = state.emptyMessage || 'No catalysts yet';
     honey.appendChild(empty);
     return;
   }
 
-  const containerW = honey.clientWidth;
-  if (containerW <= 0) return;
+  _renderTiles(honey, containerW, COLS, totalTiles, (i, el) => {
+    const isAdd = showAdd && i === tiles.length;
+    if (isAdd) {
+      el.classList.add('add-tile');
+      el.innerHTML = addTileHTML();
+      el.addEventListener('click', () => state.onAddClick?.());
+    } else {
+      const tile = tiles[i];
+      const accent = tile.accentColor || '#5AAA72';
+      el.style.setProperty('--accent', accent);
+      if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
+      el.innerHTML = catalystTileHTML(tile);
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-creator-link]')) {
+          e.stopPropagation();
+          state.onCreatorClick?.(tile);
+          return;
+        }
+        state.onTileClick?.(tile);
+      });
+    }
+  });
+}
 
-  const COLS = 4;
+function _renderTiles(honey, containerW, COLS, count, decorate) {
   const hexW = (containerW - GAP * (COLS + 1)) / (COLS + 0.5);
   const hexH = hexW * 1.1547;
   const stepX = hexW + GAP;
   const stepY = hexH * 0.75 + GAP;
 
-  const rowCounts = layoutRows(totalTiles);
+  const rowCounts = layoutRows(count, COLS);
 
   let idx = 0;
   for (let row = 0; row < rowCounts.length; row++) {
-    const count = rowCounts[row];
-    const rowWidth = count * hexW + (count - 1) * GAP;
+    const rowCount = rowCounts[row];
+    const rowWidth = rowCount * hexW + (rowCount - 1) * GAP;
     const rowLeft = (containerW - rowWidth) / 2;
     const top = GAP + row * stepY;
 
-    for (let col = 0; col < count; col++) {
-      if (idx >= totalTiles) break;
-      const isAdd = state.showAdd && idx === tiles.length;
-      const tile = tiles[idx];
+    for (let col = 0; col < rowCount; col++) {
       const left = rowLeft + col * stepX;
-
       const el = document.createElement('div');
-      el.className = 'hex-tile' + (isAdd ? ' add-tile' : '');
+      el.className = 'hex-tile';
       el.style.width = hexW + 'px';
       el.style.height = hexH + 'px';
       el.style.left = left + 'px';
       el.style.top = top + 'px';
-
-      if (isAdd) {
-        el.innerHTML = addTileHTML();
-        el.addEventListener('click', () => state.onAddClick?.());
-      } else {
-        const accent = tile.accentColor || '#5AAA72';
-        el.style.setProperty('--accent', accent);
-        if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
-        el.innerHTML = catalystTileHTML(tile);
-        el.addEventListener('click', (e) => {
-          if (e.target.closest('[data-creator-link]')) {
-            e.stopPropagation();
-            state.onCreatorClick?.(tile);
-            return;
-          }
-          state.onTileClick?.(tile);
-        });
-      }
+      decorate(idx, el);
       honey.appendChild(el);
       idx++;
     }

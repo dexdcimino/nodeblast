@@ -108,6 +108,12 @@ export async function signOut() {
 
 export async function saveProfile(updates) {
   if (updates.displayName) {
+    // ".dev" is reserved for admin accounts — allow it only if the
+    // current profile has isAdmin:true (set manually in the Firebase
+    // console, no UI path to grant it).
+    if (/\.dev/i.test(updates.displayName) && !State.profile?.isAdmin) {
+      throw new Error('.dev usernames are reserved for admins');
+    }
     updates.usernameLower = normalizeUsername(updates.displayName);
   }
   if (!State.user) {
