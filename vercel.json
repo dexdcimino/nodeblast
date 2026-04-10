@@ -1,4 +1,6 @@
 {
+  "buildCommand": "bash scripts/build-firebase-config.sh",
+  "outputDirectory": ".",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
