@@ -2,8 +2,6 @@
 node_modules/
 .DS_Store
 desktop.ini
-
-# Secrets / environment
+*.zip
 .env
 .env.local
-js/firebase-config.local.js
