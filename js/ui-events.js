@@ -1,10 +1,14 @@
 // ══════════════════════════════════════
 //  NodeBlast — UI EVENTS
-//  Tooltip, toast, modal, account menu
+//  Tooltip, toast, account menu, audio (DexNote-style)
 // ══════════════════════════════════════
 
 import State from './state.js';
 import { openColorPopup, closeColorPopup } from './color.js';
+import { showModal as _showModal } from './modal.js';
+
+// Re-export showModal so existing importers (catalysts.js, init.js) keep working.
+export const showModal = _showModal;
 
 /* ── Shared helpers ── */
 export function escapeHtml(s) {
@@ -18,7 +22,6 @@ export function escapeHtml(s) {
 
 // Render a username, styling any trailing/embedded ".dev" suffix as an
 // admin badge (gray, slightly smaller) regardless of the parent color.
-// Returns an HTML string; caller is responsible for where it's dropped.
 export function renderUsername(name, hexColor) {
   const safeName = escapeHtml(name || 'anon');
   const lower = safeName.toLowerCase();
@@ -32,7 +35,7 @@ export function renderUsername(name, hexColor) {
   return `<span class="uname-main"${colorAttr}>${main}</span><span class="uname-dev-tag">${tag}</span>`;
 }
 
-/* ── Toast ── */
+/* ── Toast (DexNote-verbatim) ── */
 let _toastT;
 export function toast(msg) {
   const t = document.getElementById('toast');
@@ -44,39 +47,7 @@ export function toast(msg) {
   _toastT = setTimeout(() => t.classList.remove('show'), dur);
 }
 
-/* ── Modal ── */
-export function showModal({ title, msg, sub, confirmLabel, danger, onConfirm }) {
-  const modal = document.getElementById('dex-modal');
-  if (!modal) { if (window.confirm(msg)) onConfirm?.(); return; }
-  document.getElementById('dex-modal-title').textContent = title;
-  document.getElementById('dex-modal-msg').innerHTML = msg;
-  const subEl = document.getElementById('dex-modal-sub');
-  if (subEl) { subEl.textContent = sub || ''; subEl.style.display = sub ? 'block' : 'none'; }
-  const confirmBtn = document.getElementById('dex-modal-confirm');
-  confirmBtn.textContent = confirmLabel || 'Confirm';
-  confirmBtn.className = 'dex-modal-btn ' + (danger ? 'danger' : 'primary');
-
-  const close = () => {
-    modal.classList.remove('open');
-    if (modal._onBg) { modal.removeEventListener('click', modal._onBg); modal._onBg = null; }
-    if (modal._onKey) { document.removeEventListener('keydown', modal._onKey, true); modal._onKey = null; }
-  };
-  modal.classList.add('open');
-  document.getElementById('dex-modal-cancel').onclick = (e) => { e.stopPropagation(); close(); };
-  confirmBtn.onclick = (e) => { e.stopPropagation(); close(); onConfirm?.(); };
-  const onBg = (e) => { if (e.target === modal) { e.stopPropagation(); close(); } };
-  modal._onBg = onBg;
-  modal.addEventListener('click', onBg);
-  const onKey = (e) => {
-    if (!modal.classList.contains('open')) return;
-    if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); close(); onConfirm?.(); }
-    else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); close(); }
-  };
-  modal._onKey = onKey;
-  document.addEventListener('keydown', onKey, true);
-}
-
-/* ── Tooltip system ── */
+/* ── Tooltip system (DexNote-verbatim) ── */
 export function initTooltips() {
   const tipEl = document.getElementById('dex-tip');
   let timer = null, target = null, clickedEl = null;
@@ -107,7 +78,8 @@ export function initTooltips() {
         tipEl.style.transform = 'translate(-50%,0)';
       } else {
         tipEl.style.left = (rect.left + rect.width / 2) + 'px';
-        tipEl.style.top = (rect.top - 8) + 'px';
+        const tipOff = parseInt(target.dataset.tipOffset) || 8;
+        tipEl.style.top = (rect.top - tipOff) + 'px';
         tipEl.style.transform = 'translate(-50%,-100%)';
         if (rect.top < 40) {
           tipEl.style.top = (rect.bottom + 8) + 'px';
@@ -136,27 +108,35 @@ export function initTooltips() {
   });
 }
 
-/* ── Account menu ── */
-let _menuMainView = true;
-function _resetMenuView() {
+/* ══════════════════════════════════════
+   Account menu — open/close, settings view, edit panel
+   (DexNote-identical behavior)
+══════════════════════════════════════ */
+
+function _hideSettingsView() {
+  document.getElementById('acct-settings-view')?.classList.remove('visible');
   document.getElementById('acct-menu-scroll').style.display = '';
-  document.getElementById('acct-settings-view').style.display = 'none';
   document.getElementById('acct-footer').style.display = '';
-  _menuMainView = true;
-  _closeEditPanel();
 }
 function _showSettingsView() {
   document.getElementById('acct-menu-scroll').style.display = 'none';
-  document.getElementById('acct-settings-view').style.display = 'flex';
   document.getElementById('acct-footer').style.display = 'none';
-  _menuMainView = false;
+  document.getElementById('acct-settings-view')?.classList.add('visible');
+}
+
+function _updateEditColorPreview() {
+  const hex = document.getElementById('acct-edit-hex-input')?.value || '#5AAA72';
+  const preview = document.getElementById('acct-edit-color-preview');
+  if (preview) preview.style.background = hex;
 }
 
 function _openEditPanel() {
   const p = document.getElementById('acct-edit-panel');
   const editBtn = document.getElementById('acct-edit-btn');
+  if (!p) return;
   p.style.display = 'flex';
-  editBtn.classList.add('active');
+  editBtn?.classList.add('active');
+  document.getElementById('acct-menu-scroll')?.classList.add('edit-panel-active');
   const nameIn = document.getElementById('acct-username-input');
   const hexIn = document.getElementById('acct-edit-hex-input');
   if (nameIn) { nameIn.value = State.profile?.displayName || ''; nameIn.focus(); }
@@ -167,12 +147,15 @@ function _closeEditPanel() {
   const p = document.getElementById('acct-edit-panel');
   if (p) p.style.display = 'none';
   document.getElementById('acct-edit-btn')?.classList.remove('active');
+  document.getElementById('acct-menu-scroll')?.classList.remove('edit-panel-active');
   closeColorPopup();
 }
-function _updateEditColorPreview() {
-  const hex = document.getElementById('acct-edit-hex-input')?.value || '#5AAA72';
-  const preview = document.getElementById('acct-edit-color-preview');
-  if (preview) preview.style.background = hex;
+
+function _resetMenuView() {
+  _hideSettingsView();
+  _closeEditPanel();
+  // Collapse any open dropdown sections
+  document.querySelectorAll('.acct-dropdown-section.open').forEach((s) => s.classList.remove('open'));
 }
 
 export function openAccountMenu() {
@@ -180,11 +163,7 @@ export function openAccountMenu() {
   const btn = document.getElementById('acct-btn');
   if (!menu || !btn) return;
   if (window.innerWidth <= 640) {
-    // Mobile: bottom sheet, full width
-    menu.style.top = '';
-    menu.style.right = '0';
-    menu.style.left = '0';
-    menu.style.bottom = '0';
+    menu.style.top = ''; menu.style.right = '0'; menu.style.left = '0'; menu.style.bottom = '0';
     menu.classList.add('mobile-sheet');
   } else {
     const rect = btn.getBoundingClientRect();
@@ -229,11 +208,10 @@ export function initAccountMenu(handlers) {
     }
   });
 
-  // Dropdown toggles (Catalysts, People)
-  document.querySelectorAll('.acct-dropdown-toggle').forEach(toggle => {
+  // Dropdown toggles — toggle .open on section; CSS handles body visibility
+  document.querySelectorAll('.acct-dropdown-toggle').forEach((toggle) => {
     toggle.addEventListener('click', () => {
-      const body = toggle.nextElementSibling;
-      if (body) body.style.display = body.style.display === 'flex' ? 'none' : 'flex';
+      toggle.closest('.acct-dropdown-section')?.classList.toggle('open');
     });
   });
 
@@ -256,6 +234,13 @@ export function initAccountMenu(handlers) {
       toast(err?.message || 'Could not save profile');
     }
   });
+  // Enter in username input → save
+  document.getElementById('acct-username-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('acct-edit-save-btn')?.click(); }
+  });
+  document.getElementById('acct-edit-hex-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('acct-edit-save-btn')?.click(); }
+  });
   document.getElementById('acct-edit-hex-input')?.addEventListener('input', _updateEditColorPreview);
   document.getElementById('acct-edit-color-btn')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -266,15 +251,15 @@ export function initAccountMenu(handlers) {
     });
   });
 
-  // Status buttons
-  document.querySelectorAll('#acct-status-toggle .status-btn').forEach(b => {
+  // Status buttons (UI-only for now — no presence backend)
+  document.querySelectorAll('#acct-status-toggle .status-btn').forEach((b) => {
     b.addEventListener('click', () => {
-      document.querySelectorAll('#acct-status-toggle .status-btn').forEach(x => x.classList.remove('selected'));
+      document.querySelectorAll('#acct-status-toggle .status-btn').forEach((x) => x.classList.remove('selected'));
       b.classList.add('selected');
     });
   });
 
-  // Hex copy
+  // Hex copy (full username#hexcode)
   document.getElementById('acct-hex-copy-btn')?.addEventListener('click', () => {
     const name = State.profile?.displayName || 'anon';
     const hex = State.profile?.hexCode || '5aaa72';
@@ -282,14 +267,37 @@ export function initAccountMenu(handlers) {
     toast('Copied ' + name + '#' + hex);
   });
 
+  // Avatar upload — read file, convert to data URL, save via onSaveProfile
+  document.getElementById('acct-avatar-upload-btn')?.addEventListener('click', () => {
+    document.getElementById('acct-avatar-file')?.click();
+  });
+  document.getElementById('acct-avatar-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      await onSaveProfile?.({ photoURL: dataUrl });
+      toast('Photo updated');
+    } catch (err) {
+      toast('Could not upload photo');
+    }
+  });
+
   // Settings view toggle
   document.getElementById('acct-settings-btn')?.addEventListener('click', _showSettingsView);
-  document.getElementById('settings-back-btn')?.addEventListener('click', _resetMenuView);
+  document.getElementById('settings-back-btn')?.addEventListener('click', _hideSettingsView);
   document.getElementById('acct-signout-btn')?.addEventListener('click', () => onSignOut?.());
   document.getElementById('settings-signout-btn')?.addEventListener('click', () => onSignOut?.());
 }
 
-/* ── Audio sliders ── */
+/* ══════════════════════════════════════
+   Audio sliders (DexNote-verbatim behavior)
+══════════════════════════════════════ */
 const _AK = { master: 'nb-vol-master', music: 'nb-vol-music', fx: 'nb-vol-fx' };
 const _MK = { master: 'nb-mute-master', music: 'nb-mute-music', fx: 'nb-mute-fx' };
 

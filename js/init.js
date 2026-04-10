@@ -65,22 +65,22 @@ function setAvatarEl(el, profile, user) {
 ══════════════════════════════════════ */
 
 function hideAllViews() {
-  document.getElementById('cat-filter-bar').style.display = 'none';
-  document.getElementById('profile-bar').style.display = 'none';
-  document.getElementById('not-found').style.display = 'none';
+  document.getElementById('cat-filter-bar').classList.remove('visible');
+  document.getElementById('profile-bar').classList.remove('visible');
+  document.getElementById('not-found').classList.remove('visible');
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
   grid.classList.remove('with-filter', 'with-profile-bar');
 }
 
 function showFilterBar() {
-  document.getElementById('cat-filter-bar').style.display = 'flex';
+  document.getElementById('cat-filter-bar').classList.add('visible');
   document.getElementById('grid').classList.add('with-filter');
 }
 
 function showProfileBar(user, catalystCount, isOwn) {
   const bar = document.getElementById('profile-bar');
-  bar.style.display = 'flex';
+  bar.classList.add('visible');
   document.getElementById('grid').classList.add('with-profile-bar');
 
   const hexColor = '#' + (user.hexCode || '5aaa72');
@@ -139,10 +139,10 @@ function openAccountMenuFromPill() {
 }
 
 function show404() {
-  document.getElementById('not-found').style.display = 'flex';
+  document.getElementById('not-found').classList.add('visible');
   document.getElementById('grid').style.display = 'none';
-  document.getElementById('cat-filter-bar').style.display = 'none';
-  document.getElementById('profile-bar').style.display = 'none';
+  document.getElementById('cat-filter-bar').classList.remove('visible');
+  document.getElementById('profile-bar').classList.remove('visible');
   setPageTitle(['404']);
 }
 
@@ -319,13 +319,15 @@ function updateAuthUI(user, profile) {
     const name = profile?.displayName || user.displayName || 'Account';
     const hex = profile?.hexCode || '5aaa72';
     const unameHtml = renderUsername(name);
-    document.getElementById('acct-name-short').innerHTML =
-      `${unameHtml}<span class="acct-name-hex">#${escapeHtml(hex)}</span>`;
+    // Pill: truncate to 14 chars like DexNote
+    const shortName = name.length > 14 ? name.slice(0, 14) + '…' : name;
+    document.getElementById('acct-name-short').textContent = shortName;
     document.getElementById('acct-name').innerHTML = unameHtml;
-    document.getElementById('acct-hex-label').textContent = '#' + hex;
+    // DexNote format: <span>#</span>5aaa72 — the # span has opacity 0.8 via CSS
+    document.getElementById('acct-hex-label').innerHTML = `<span>#</span>${escapeHtml(hex)}`;
 
-    document.getElementById('acct-avatar-sm').style.borderColor = hexColor;
-    document.getElementById('acct-avatar').style.borderColor = hexColor;
+    // Paint the account hex everywhere (--acct-hex cascade)
+    document.documentElement.style.setProperty('--acct-hex', hexColor);
     document.getElementById('acct-hex-dot').style.background = hexColor;
     document.getElementById('acct-edit-color-preview').style.background = hexColor;
 
