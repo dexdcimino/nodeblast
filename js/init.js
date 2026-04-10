@@ -4,6 +4,17 @@ import { applyTheme, applyPalette, initThemeToggle, initPalettePickers } from '.
 import { initColorPicker } from './color.js';
 import { initTooltips, initAccountMenu, initAudioSettings, showModal } from './ui-events.js';
 import { renderHexGrid } from './hex-grid.js';
+import {
+  loadUserCatalysts,
+  loadPublicFeed,
+  openCatalystModal,
+  openCatalystDetail,
+  initCatalystModal,
+  initCatalystDetail,
+} from './catalysts.js';
+
+let _currentCategory = 'all';
+let _currentTiles = [];
 
 function setAvatarEl(el, profile, user) {
   if (!el) return;
@@ -17,6 +28,39 @@ function setAvatarEl(el, profile, user) {
   } else {
     el.textContent = (profile?.displayName || 'A').charAt(0).toUpperCase();
   }
+}
+
+function handleTileClick(cat) {
+  if (State.user && cat.ownerId === State.user.uid) {
+    openCatalystModal(cat);
+  } else {
+    openCatalystDetail(cat);
+  }
+}
+
+function renderCurrentFeed() {
+  const showAdd = !!State.user;
+  renderHexGrid({
+    tiles: _currentTiles,
+    showAdd,
+    onTileClick: handleTileClick,
+    onAddClick: () => openCatalystModal(null),
+  });
+}
+
+async function refreshFeed() {
+  const filterBar = document.getElementById('cat-filter-bar');
+  const grid = document.getElementById('grid');
+  if (State.user) {
+    filterBar.style.display = 'none';
+    grid.classList.remove('with-filter');
+    _currentTiles = await loadUserCatalysts(State.user.uid);
+  } else {
+    filterBar.style.display = 'flex';
+    grid.classList.add('with-filter');
+    _currentTiles = await loadPublicFeed(_currentCategory);
+  }
+  renderCurrentFeed();
 }
 
 function updateAuthUI(user, profile) {
@@ -46,6 +90,7 @@ function updateAuthUI(user, profile) {
     signinBtn.style.display = 'inline-flex';
     acctBtn.style.display = 'none';
   }
+  refreshFeed();
 }
 
 function openSigninMenu() {
@@ -91,6 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
     },
   });
 
+  initCatalystModal(() => refreshFeed());
+  initCatalystDetail();
+
   // Header sign-in button → open dropdown
   document.getElementById('signin-btn')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -98,8 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (menu?.classList.contains('open')) closeSigninMenu();
     else openSigninMenu();
   });
-
-  // Sign-in provider buttons
   document.getElementById('google-signin-btn')?.addEventListener('click', async () => {
     await signIn('google');
     closeSigninMenu();
@@ -108,8 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
     await signIn('github');
     closeSigninMenu();
   });
-
-  // Dismiss sign-in dropdown on outside click
   document.addEventListener('click', (e) => {
     const menu = document.getElementById('signin-menu');
     if (!menu?.classList.contains('open')) return;
@@ -118,8 +162,18 @@ document.addEventListener('DOMContentLoaded', () => {
     closeSigninMenu();
   });
 
+  // Category filter pills
+  document.querySelectorAll('.cat-filter-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.cat-filter-pill').forEach((p) => p.classList.remove('selected'));
+      pill.classList.add('selected');
+      _currentCategory = pill.dataset.cat;
+      refreshFeed();
+    });
+  });
+
   onAuthReady(updateAuthUI);
 
-  renderHexGrid();
-  window.addEventListener('resize', () => renderHexGrid());
+  renderCurrentFeed();
+  window.addEventListener('resize', () => renderCurrentFeed());
 });

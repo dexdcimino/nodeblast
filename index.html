@@ -70,10 +70,126 @@
   </div>
 
   <!-- ══════════════════════════════════════
+       CATEGORY FILTER BAR (public feed only)
+       ══════════════════════════════════════ -->
+  <div id="cat-filter-bar" style="display:none">
+    <button class="cat-filter-pill selected" data-cat="all">All</button>
+    <button class="cat-filter-pill" data-cat="games">Games</button>
+    <button class="cat-filter-pill" data-cat="tools">Tools</button>
+    <button class="cat-filter-pill" data-cat="creative">Creative</button>
+    <button class="cat-filter-pill" data-cat="ai">AI</button>
+    <button class="cat-filter-pill" data-cat="sites">Sites</button>
+    <button class="cat-filter-pill" data-cat="wild">Wild</button>
+  </div>
+
+  <!-- ══════════════════════════════════════
        HEX GRID
        ══════════════════════════════════════ -->
   <div id="grid">
     <div id="honeycomb"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       CATALYST MODAL (create / edit)
+       ══════════════════════════════════════ -->
+  <div id="cat-modal">
+    <div id="cat-modal-card">
+      <button id="cat-modal-close" data-tip="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div id="cat-modal-title">New Catalyst</div>
+
+      <div class="cat-field">
+        <label class="cat-label">Title</label>
+        <input id="cat-title" type="text" maxlength="40" placeholder="Project name" spellcheck="false" autocomplete="off" />
+      </div>
+
+      <div class="cat-field">
+        <label class="cat-label">URL</label>
+        <input id="cat-url" type="text" placeholder="https://..." spellcheck="false" autocomplete="off" />
+      </div>
+
+      <div class="cat-field">
+        <label class="cat-label">Description</label>
+        <textarea id="cat-desc" maxlength="500" rows="3" placeholder="What does it do?"></textarea>
+      </div>
+
+      <div class="cat-field">
+        <label class="cat-label">Category</label>
+        <div class="cat-pills" id="cat-category-pills">
+          <button class="cat-pill" data-val="games">Games</button>
+          <button class="cat-pill" data-val="tools">Tools</button>
+          <button class="cat-pill" data-val="creative">Creative</button>
+          <button class="cat-pill" data-val="ai">AI</button>
+          <button class="cat-pill selected" data-val="sites">Sites</button>
+          <button class="cat-pill" data-val="wild">Wild</button>
+        </div>
+      </div>
+
+      <div class="cat-field">
+        <label class="cat-label">Platform</label>
+        <div class="cat-pills" id="cat-platform-pills">
+          <button class="cat-pill selected" data-val="web">Web</button>
+          <button class="cat-pill" data-val="mobile">Mobile</button>
+          <button class="cat-pill" data-val="both">Both</button>
+        </div>
+      </div>
+
+      <div class="cat-field cat-field-row">
+        <div class="cat-field-col" style="flex:1">
+          <label class="cat-label">Thumbnail</label>
+          <div id="cat-thumb-drop">
+            <div class="cat-thumb-hint">Drop image or click to upload</div>
+          </div>
+          <input type="file" id="cat-thumb-file" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" />
+        </div>
+        <div class="cat-field-col" style="flex:0 0 auto">
+          <label class="cat-label">Accent</label>
+          <button id="cat-accent-btn" data-tip="Pick accent color">
+            <span id="cat-accent-preview"></span>
+          </button>
+        </div>
+      </div>
+
+      <div id="cat-modal-btns">
+        <button id="cat-delete-btn" class="cat-btn danger">Delete</button>
+        <div style="flex:1"></div>
+        <button id="cat-cancel-btn" class="cat-btn">Cancel</button>
+        <button id="cat-submit-btn" class="cat-btn primary">Create Catalyst</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       CATALYST DETAIL POPUP
+       ══════════════════════════════════════ -->
+  <div id="cat-detail-popup">
+    <div id="cat-detail-card">
+      <button id="cat-detail-close" data-tip="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div id="cat-detail-thumb"></div>
+      <div id="cat-detail-body">
+        <div id="cat-detail-title"></div>
+        <div id="cat-detail-creator"></div>
+        <div id="cat-detail-badges">
+          <span class="cat-detail-badge" id="cat-detail-category"></span>
+          <span class="cat-detail-badge" id="cat-detail-platform"></span>
+        </div>
+        <div id="cat-detail-desc"></div>
+        <button id="cat-detail-open" class="cat-btn primary">Open Project</button>
+        <div id="cat-detail-vote">
+          <button id="cat-vote-fire" class="vote-btn" data-tip="Fire!">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>
+            <span class="vote-count">0</span>
+          </button>
+          <button id="cat-vote-frost" class="vote-btn" data-tip="Frost">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22 11h-4.17l3.24-3.24-1.41-1.42L15 11h-2V9l4.66-4.66-1.42-1.41L13 6.17V2h-2v4.17L7.76 2.93 6.34 4.34 11 9v2H9L4.34 6.34 2.93 7.76 6.17 11H2v2h4.17l-3.24 3.24 1.41 1.42L9 13h2v2l-4.66 4.66 1.42 1.41L11 17.83V22h2v-4.17l3.24 3.24 1.42-1.41L13 15v-2h2l4.66 4.66 1.41-1.42L17.83 13H22v-2z"/></svg>
+            <span class="vote-count">0</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ══════════════════════════════════════

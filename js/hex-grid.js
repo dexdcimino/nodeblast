@@ -1,21 +1,10 @@
-const COLS = 4;
+// ══════════════════════════════════════
+//  NodeBlast — HEX GRID
+//  Dynamic honeycomb layout with click routing
+// ══════════════════════════════════════
+
 const GAP = 10;
 const ROUND_R = 0.08;
-
-const DEMO_TILES = [
-  {title:'DexNote', url:'dexnote.dev', creator:'dex', accent:'#5AAA72'},
-  {title:'dexddc', url:'dexddc.com', creator:'dex', accent:'#7F77DD'},
-  {title:'Archer Arena', url:'coming soon', creator:'dex', accent:'#E8853A'},
-  {title:'Dot-Sim', url:'coming soon', creator:'dex', accent:'#E8413A'},
-  {title:'NodeBlast', url:'nodeblast.dev', creator:'dex', accent:'#378ADD'},
-  {title:'Spire', url:'coming soon', creator:'dex', accent:'#825FC2'},
-  {title:'Cupcake Game', url:'dexddc.com', creator:'dex', accent:'#E8853A'},
-  {title:'Pixel Forge', url:'pixelforge.io', creator:'zara', accent:'#00BCD4'},
-  {title:'Beat Maker', url:'beats.app', creator:'koda', accent:'#FFB74D'},
-  {title:'Dream Gen', url:'dreamgen.dev', creator:'luna', accent:'#CE93D8'},
-  {title:'Voxel World', url:'voxelworld.dev', creator:'rex', accent:'#4DB6AC'},
-  {title:'Wave Synth', url:'wavesynth.io', creator:'echo', accent:'#90CAF9'},
-];
 
 // Pointy-top hex vertices (objectBoundingBox 0..1)
 const HEX_VERTS = [
@@ -52,37 +41,93 @@ function buildRoundedHexPath(r) {
 
 function ensureClipPath() {
   const path = document.getElementById('hex-clip-path');
-  if (!path) return;
-  path.setAttribute('d', buildRoundedHexPath(ROUND_R));
+  if (path) path.setAttribute('d', buildRoundedHexPath(ROUND_R));
 }
 
-function tileHTML(t) {
+function safeDomain(url) {
+  if (!url) return '';
+  try { return new URL(url).host.replace(/^www\./, ''); }
+  catch { return url; }
+}
+
+function layoutRows(count) {
+  const rows = [];
+  let remaining = count;
+  let rowIdx = 0;
+  while (remaining > 0) {
+    const cols = rowIdx % 2 === 0 ? 4 : 3;
+    const take = Math.min(cols, remaining);
+    rows.push(take);
+    remaining -= take;
+    rowIdx++;
+  }
+  return rows;
+}
+
+function catalystTileHTML(cat) {
+  const creator = `${cat.ownerName || 'anon'}#${cat.ownerHex || '5aaa72'}`;
+  const domain = safeDomain(cat.url);
+  const title = escapeHtml(cat.title || '');
+  const accent = cat.accentColor || '#5AAA72';
   return `
     <div class="hex-fade"></div>
     <div class="hex-info">
-      <div class="hex-title">${t.title}</div>
-      <div class="hex-url">${t.url}</div>
-      <div class="hex-creator" style="color:${t.accent}">${t.creator}</div>
+      <div class="hex-title">${title}</div>
+      <div class="hex-url">${escapeHtml(domain)}</div>
+      <div class="hex-creator" style="color:${escapeHtml(accent)}">${escapeHtml(creator)}</div>
     </div>
   `;
 }
 
-export function renderHexGrid() {
+function addTileHTML() {
+  return `
+    <div class="add-tile-bg"></div>
+    <div class="add-tile-plus">
+      <span class="plus">+</span>
+      <span class="label">add catalyst</span>
+    </div>
+  `;
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+let _lastState = { tiles: [], showAdd: false, onTileClick: null, onAddClick: null };
+
+export function renderHexGrid(state = _lastState) {
+  _lastState = state;
   ensureClipPath();
   const honey = document.getElementById('honeycomb');
   if (!honey) return;
   honey.innerHTML = '';
 
+  const tiles = state.tiles || [];
+  const totalTiles = tiles.length + (state.showAdd ? 1 : 0);
+  if (totalTiles === 0) {
+    honey.style.height = '100%';
+    const empty = document.createElement('div');
+    empty.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:14px;';
+    empty.textContent = 'No catalysts yet';
+    honey.appendChild(empty);
+    return;
+  }
+
   const containerW = honey.clientWidth;
   if (containerW <= 0) return;
 
+  const COLS = 4;
   const hexW = (containerW - GAP * (COLS + 1)) / (COLS + 0.5);
   const hexH = hexW * 1.1547;
   const stepX = hexW + GAP;
   const stepY = hexH * 0.75 + GAP;
 
-  // 4-3-4-3 pattern
-  const rowCounts = [COLS, COLS - 1, COLS, COLS - 1];
+  const rowCounts = layoutRows(totalTiles);
 
   let idx = 0;
   for (let row = 0; row < rowCounts.length; row++) {
@@ -92,19 +137,30 @@ export function renderHexGrid() {
     const top = GAP + row * stepY;
 
     for (let col = 0; col < count; col++) {
-      if (idx >= DEMO_TILES.length) break;
-      const t = DEMO_TILES[idx++];
+      if (idx >= totalTiles) break;
+      const isAdd = state.showAdd && idx === tiles.length;
+      const tile = tiles[idx];
       const left = rowLeft + col * stepX;
 
       const el = document.createElement('div');
-      el.className = 'hex-tile';
+      el.className = 'hex-tile' + (isAdd ? ' add-tile' : '');
       el.style.width = hexW + 'px';
       el.style.height = hexH + 'px';
       el.style.left = left + 'px';
       el.style.top = top + 'px';
-      el.style.setProperty('--accent', t.accent);
-      el.innerHTML = tileHTML(t);
+
+      if (isAdd) {
+        el.innerHTML = addTileHTML();
+        el.addEventListener('click', () => state.onAddClick?.());
+      } else {
+        const accent = tile.accentColor || '#5AAA72';
+        el.style.setProperty('--accent', accent);
+        if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
+        el.innerHTML = catalystTileHTML(tile);
+        el.addEventListener('click', () => state.onTileClick?.(tile));
+      }
       honey.appendChild(el);
+      idx++;
     }
   }
 
