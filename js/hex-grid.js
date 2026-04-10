@@ -151,6 +151,10 @@ export function renderHexGrid(state) {
     return;
   }
 
+  // Own-profile empty state: render just the + tile plus the caption
+  // underneath so the user gets both the affordance and the prompt.
+  const isOwnEmpty = tiles.length === 0 && showAdd && state.emptyMessage;
+
   _renderTiles(honey, containerW, COLS, totalTiles, (i, el) => {
     const isAdd = showAdd && i === tiles.length;
     if (isAdd) {
@@ -178,6 +182,17 @@ export function renderHexGrid(state) {
       });
     }
   });
+
+  if (isOwnEmpty) {
+    // Position the caption just below the single + tile.
+    const hexW = (containerW - GAP * (COLS + 1)) / (COLS + 0.5);
+    const hexH = hexW * 1.1547;
+    const caption = document.createElement('div');
+    caption.className = 'hex-empty-caption';
+    caption.textContent = state.emptyMessage;
+    caption.style.top = (GAP + hexH + 12) + 'px';
+    honey.appendChild(caption);
+  }
 }
 
 function _renderTiles(honey, containerW, COLS, count, decorate) {

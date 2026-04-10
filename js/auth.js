@@ -12,7 +12,6 @@ import {
   doc,
   getDoc,
   setDoc,
-  updateDoc,
   serverTimestamp,
   onSnapshot,
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
@@ -25,7 +24,8 @@ const db = getFirestore(app);
 
 const readyCallbacks = [];
 let authResolved = false;
-let _profileUnsub = null;
+let _profileUnsubTop = null;
+let _profileUnsubPrefs = null;
 
 function fireReady() {
   readyCallbacks.forEach((cb) => {
@@ -37,74 +37,153 @@ function randomHex() {
   return Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
 }
 
-function fallbackProfile(user, providerId) {
-  const provider = providerId.includes('github') ? 'github' : 'google';
-  const displayName = user.displayName || 'anon';
+function stripHash(h) {
+  return (h || '').toString().replace(/^#/, '').toLowerCase();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Profile schema compatibility with DexNote
+// ──────────────────────────────────────────────────────────────
+//  DexNote writes the canonical profile at:
+//    users/{uid}/prefs/profile  →  { username, hexColor }
+//
+//  NodeBlast additionally keeps a top-level mirror at:
+//    users/{uid}  →  { displayName, hexCode (without '#'),
+//                      usernameLower, photoURL, provider, isAdmin? }
+//
+//  usernameLower is how NodeBlast resolves /username routes, so the
+//  top-level doc must exist for profile lookup to work. The DexNote
+//  subdoc is authoritative for displayName + hex, so if both exist
+//  the subdoc wins on merge (this is how cross-site edits propagate).
+// ══════════════════════════════════════════════════════════════
+
+function mergeProfileDocs(topData, prefsData, user, providerId) {
+  const provider = (providerId || '').includes('github') ? 'github' : 'google';
+  // DexNote subdoc wins for displayName + hexCode
+  const displayName =
+    prefsData?.username ||
+    topData?.displayName ||
+    user.displayName ||
+    'anon';
+  const hexCode =
+    stripHash(prefsData?.hexColor) ||
+    stripHash(topData?.hexCode) ||
+    null;
+  const photoURL = topData?.photoURL || user.photoURL || '';
   return {
     displayName,
-    usernameLower: normalizeUsername(displayName),
-    hexCode: randomHex(),
-    photoURL: user.photoURL || '',
+    hexCode,
+    photoURL,
     provider,
+    usernameLower: normalizeUsername(displayName),
+    isAdmin: topData?.isAdmin || false,
   };
 }
 
 async function loadOrCreateProfile(user, providerId) {
-  const ref = doc(db, 'users', user.uid);
-  const provider = providerId.includes('github') ? 'github' : 'google';
+  const topRef = doc(db, 'users', user.uid);
+  const prefsRef = doc(db, 'users', user.uid, 'prefs', 'profile');
 
-  let snap;
+  let topSnap, prefsSnap;
   try {
-    snap = await getDoc(ref);
+    [topSnap, prefsSnap] = await Promise.all([
+      getDoc(topRef),
+      getDoc(prefsRef),
+    ]);
   } catch (err) {
     console.warn('[auth] profile read failed, using fallback:', err);
-    return fallbackProfile(user, providerId);
-  }
-
-  if (!snap.exists()) {
-    const displayName = user.displayName || 'anon';
-    const profile = {
-      displayName,
-      usernameLower: normalizeUsername(displayName),
+    return {
+      displayName: user.displayName || 'anon',
       hexCode: randomHex(),
       photoURL: user.photoURL || '',
-      provider,
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
+      provider: (providerId || '').includes('github') ? 'github' : 'google',
+      usernameLower: normalizeUsername(user.displayName || 'anon'),
     };
-    try {
-      await setDoc(ref, profile);
-    } catch (err) {
-      console.warn('[auth] profile create failed, using in-memory:', err);
-    }
-    return profile;
   }
 
-  // Existing profile (may have been created by DexNote). Touch lastLogin
-  // AND write usernameLower unconditionally on every sign-in so old
-  // DexNote accounts that predate this field become lookupable by
-  // /username. We await the write so that by the time renderRoute fires
-  // off a getUserByUsername, the doc actually has the field.
-  const existing = snap.data();
-  const lower = normalizeUsername(existing.displayName);
-  try {
-    await updateDoc(ref, {
-      lastLogin: serverTimestamp(),
-      usernameLower: lower,
-    });
-  } catch (err) {
-    console.error('[auth] failed to write usernameLower on sign-in — profile lookup by /username will 404 until this succeeds:', err);
+  const topData = topSnap.exists() ? topSnap.data() : null;
+  const prefsData = prefsSnap.exists() ? prefsSnap.data() : null;
+  const merged = mergeProfileDocs(topData, prefsData, user, providerId);
+
+  // If neither doc has a hex, this is a truly fresh account — generate one
+  // and persist it to both locations so DexNote sees it too.
+  const isFirstEver = !merged.hexCode;
+  if (isFirstEver) merged.hexCode = randomHex();
+
+  // Backfill the top-level mirror. setDoc with merge:true creates the doc
+  // if it's missing and never clobbers fields we didn't touch.
+  const topUpdate = {
+    displayName: merged.displayName,
+    hexCode: merged.hexCode,
+    photoURL: merged.photoURL,
+    usernameLower: merged.usernameLower,
+    provider: merged.provider,
+    lastLogin: serverTimestamp(),
+  };
+  if (!topData?.createdAt) topUpdate.createdAt = serverTimestamp();
+  setDoc(topRef, topUpdate, { merge: true }).catch((err) => {
+    console.error('[auth] top-level profile write failed:', err);
+  });
+
+  // Backfill the DexNote subdoc only if it's missing, so we never overwrite
+  // DexNote's own live data.
+  if (!prefsData) {
+    setDoc(prefsRef, {
+      username: merged.displayName,
+      hexColor: '#' + merged.hexCode,
+      updatedAt: serverTimestamp(),
+    }, { merge: true }).catch(() => {});
   }
-  return { ...existing, usernameLower: lower };
+
+  return merged;
+}
+
+function teardownProfileSubs() {
+  if (_profileUnsubTop) { try { _profileUnsubTop(); } catch {} _profileUnsubTop = null; }
+  if (_profileUnsubPrefs) { try { _profileUnsubPrefs(); } catch {} _profileUnsubPrefs = null; }
+}
+
+function startProfileSubs(user, providerId) {
+  teardownProfileSubs();
+  const topRef = doc(db, 'users', user.uid);
+  const prefsRef = doc(db, 'users', user.uid, 'prefs', 'profile');
+
+  // Shared re-merge step. Whenever either doc updates, we re-read the other
+  // side's cached view, merge, and fire ready callbacks if something the UI
+  // cares about actually changed.
+  let topCache = null;
+  let prefsCache = null;
+
+  function reapply() {
+    const next = mergeProfileDocs(topCache, prefsCache, user, providerId);
+    if (!next.hexCode) next.hexCode = State.profile?.hexCode || randomHex();
+    const prev = State.profile || {};
+    const changed =
+      prev.displayName !== next.displayName ||
+      prev.hexCode !== next.hexCode ||
+      prev.photoURL !== next.photoURL ||
+      prev.isAdmin !== next.isAdmin ||
+      prev.usernameLower !== next.usernameLower;
+    State.profile = { ...prev, ...next };
+    if (changed) fireReady();
+  }
+
+  _profileUnsubTop = onSnapshot(
+    topRef,
+    (snap) => { topCache = snap.exists() ? snap.data() : null; reapply(); },
+    (err) => console.warn('[auth] top profile snapshot error:', err),
+  );
+  _profileUnsubPrefs = onSnapshot(
+    prefsRef,
+    (snap) => { prefsCache = snap.exists() ? snap.data() : null; reapply(); },
+    (err) => console.warn('[auth] prefs profile snapshot error:', err),
+  );
 }
 
 export async function signIn(providerName = 'google') {
   const provider = providerName === 'github'
     ? new GithubAuthProvider()
     : new GoogleAuthProvider();
-  // Block the account-menu outside-click handler so the popup opening
-  // (which can trigger a focus/blur click in the parent) doesn't dismiss
-  // the menu before the flow completes.
   setSigningIn(true);
   try {
     await signInWithPopup(auth, provider);
@@ -117,22 +196,17 @@ export async function signIn(providerName = 'google') {
       errEl.style.display = 'block';
     }
   } finally {
-    // Clear the flag after onAuthStateChanged has had a chance to fire.
-    // A short delay is enough — the click events from the popup focus
-    // transition happen in the same microtask burst.
     setTimeout(() => setSigningIn(false), 500);
   }
 }
 
 export async function signOut() {
+  teardownProfileSubs();
   await fbSignOut(auth);
 }
 
 export async function saveProfile(updates) {
   if (updates.displayName) {
-    // ".dev" is reserved for admin accounts — allow it only if the
-    // current profile has isAdmin:true (set manually in the Firebase
-    // console, no UI path to grant it).
     if (/\.dev/i.test(updates.displayName) && !State.profile?.isAdmin) {
       throw new Error('.dev usernames are reserved for admins');
     }
@@ -142,8 +216,21 @@ export async function saveProfile(updates) {
     State.profile = { ...State.profile, ...updates };
     return;
   }
-  const ref = doc(db, 'users', State.user.uid);
-  await updateDoc(ref, updates);
+  const topRef = doc(db, 'users', State.user.uid);
+  const prefsRef = doc(db, 'users', State.user.uid, 'prefs', 'profile');
+
+  // Mirror writes: top-level gets NodeBlast shape, subdoc gets DexNote shape.
+  const topUpdates = { ...updates, updatedAt: serverTimestamp() };
+  const prefsUpdates = { updatedAt: serverTimestamp() };
+  if (updates.displayName) prefsUpdates.username = updates.displayName;
+  if (updates.hexCode) prefsUpdates.hexColor = '#' + stripHash(updates.hexCode);
+
+  await Promise.all([
+    setDoc(topRef, topUpdates, { merge: true }),
+    (updates.displayName || updates.hexCode)
+      ? setDoc(prefsRef, prefsUpdates, { merge: true })
+      : Promise.resolve(),
+  ]);
   State.profile = { ...State.profile, ...updates };
 }
 
@@ -153,45 +240,27 @@ export function onAuthReady(cb) {
 }
 
 onAuthStateChanged(auth, async (user) => {
-  // Tear down any existing profile subscription before we do anything else
-  if (_profileUnsub) { try { _profileUnsub(); } catch {} _profileUnsub = null; }
-
+  teardownProfileSubs();
   State.user = user;
   try {
     if (user) {
       const providerId = user.providerData[0]?.providerId || 'google.com';
       State.profile = await loadOrCreateProfile(user, providerId);
-
-      // Live listener: catches cross-site edits (DexNote changing name/hex)
-      // and keeps State.profile in sync without a page reload.
-      const ref = doc(db, 'users', user.uid);
-      _profileUnsub = onSnapshot(
-        ref,
-        (snap) => {
-          if (!snap.exists()) return;
-          const next = snap.data();
-          const prev = State.profile || {};
-          // Only re-notify if something actually changed on fields the UI cares about
-          if (
-            prev.displayName !== next.displayName ||
-            prev.hexCode !== next.hexCode ||
-            prev.photoURL !== next.photoURL ||
-            prev.isAdmin !== next.isAdmin
-          ) {
-            State.profile = { ...prev, ...next };
-            fireReady();
-          } else {
-            State.profile = { ...prev, ...next };
-          }
-        },
-        (err) => console.warn('[auth] profile snapshot error:', err),
-      );
+      startProfileSubs(user, providerId);
     } else {
       State.profile = null;
     }
   } catch (err) {
     console.error('[auth] profile load threw unexpectedly:', err);
-    State.profile = user ? fallbackProfile(user, user.providerData[0]?.providerId || 'google.com') : null;
+    State.profile = user
+      ? {
+          displayName: user.displayName || 'anon',
+          hexCode: randomHex(),
+          photoURL: user.photoURL || '',
+          provider: 'google',
+          usernameLower: normalizeUsername(user.displayName || 'anon'),
+        }
+      : null;
   } finally {
     authResolved = true;
     fireReady();
