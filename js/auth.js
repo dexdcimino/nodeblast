@@ -79,19 +79,22 @@ async function loadOrCreateProfile(user, providerId) {
     return profile;
   }
 
-  // Existing profile (may have been created by DexNote) — touch lastLogin and
-  // backfill usernameLower if missing. Don't let a failed write block the
-  // auth callbacks from firing.
+  // Existing profile (may have been created by DexNote). Touch lastLogin
+  // AND write usernameLower unconditionally on every sign-in so old
+  // DexNote accounts that predate this field become lookupable by
+  // /username. We await the write so that by the time renderRoute fires
+  // off a getUserByUsername, the doc actually has the field.
   const existing = snap.data();
-  const touchUpdates = { lastLogin: serverTimestamp() };
-  const needsLower = normalizeUsername(existing.displayName);
-  if (needsLower && existing.usernameLower !== needsLower) {
-    touchUpdates.usernameLower = needsLower;
+  const lower = normalizeUsername(existing.displayName);
+  try {
+    await updateDoc(ref, {
+      lastLogin: serverTimestamp(),
+      usernameLower: lower,
+    });
+  } catch (err) {
+    console.error('[auth] failed to write usernameLower on sign-in — profile lookup by /username will 404 until this succeeds:', err);
   }
-  updateDoc(ref, touchUpdates).catch((err) => {
-    console.warn('[auth] lastLogin/usernameLower update failed:', err);
-  });
-  return { ...existing, usernameLower: needsLower || existing.usernameLower };
+  return { ...existing, usernameLower: lower };
 }
 
 export async function signIn(providerName = 'google') {
