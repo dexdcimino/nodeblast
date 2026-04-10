@@ -8,7 +8,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebas
 const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 
 const prodConfig = {
-  apiKey:            "AIzaSyAp5t7_4SM_vLSIv-amfGjRSatvZmqHOHs",
+  apiKey:            "AIzaSyCU7xuhuILTkbdcP-E2qBH3EnNKT_eWTjA",
   authDomain:        "dexnote-d7047.firebaseapp.com",
   projectId:         "dexnote-d7047",
   storageBucket:     "dexnote-d7047.firebasestorage.app",
