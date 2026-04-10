@@ -5,3 +5,9 @@ desktop.ini
 *.zip
 .env
 .env.local
+
+# Permanent reference — don't bloat the repo
+_dexnote-reference/
+
+# Rolling 3-slot archive of recent commits (post-commit hook)
+_recent-commits/
