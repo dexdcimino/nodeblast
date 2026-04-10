@@ -14,6 +14,7 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
+  onSnapshot,
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 import State from './state.js';
 import { normalizeUsername } from './users.js';
@@ -23,6 +24,13 @@ const db = getFirestore(app);
 
 const readyCallbacks = [];
 let authResolved = false;
+let _profileUnsub = null;
+
+function fireReady() {
+  readyCallbacks.forEach((cb) => {
+    try { cb(State.user, State.profile); } catch (e) { console.error('[auth] ready callback threw:', e); }
+  });
+}
 
 function randomHex() {
   return Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
@@ -131,11 +139,39 @@ export function onAuthReady(cb) {
 }
 
 onAuthStateChanged(auth, async (user) => {
+  // Tear down any existing profile subscription before we do anything else
+  if (_profileUnsub) { try { _profileUnsub(); } catch {} _profileUnsub = null; }
+
   State.user = user;
   try {
     if (user) {
       const providerId = user.providerData[0]?.providerId || 'google.com';
       State.profile = await loadOrCreateProfile(user, providerId);
+
+      // Live listener: catches cross-site edits (DexNote changing name/hex)
+      // and keeps State.profile in sync without a page reload.
+      const ref = doc(db, 'users', user.uid);
+      _profileUnsub = onSnapshot(
+        ref,
+        (snap) => {
+          if (!snap.exists()) return;
+          const next = snap.data();
+          const prev = State.profile || {};
+          // Only re-notify if something actually changed on fields the UI cares about
+          if (
+            prev.displayName !== next.displayName ||
+            prev.hexCode !== next.hexCode ||
+            prev.photoURL !== next.photoURL ||
+            prev.isAdmin !== next.isAdmin
+          ) {
+            State.profile = { ...prev, ...next };
+            fireReady();
+          } else {
+            State.profile = { ...prev, ...next };
+          }
+        },
+        (err) => console.warn('[auth] profile snapshot error:', err),
+      );
     } else {
       State.profile = null;
     }
@@ -144,8 +180,6 @@ onAuthStateChanged(auth, async (user) => {
     State.profile = user ? fallbackProfile(user, user.providerData[0]?.providerId || 'google.com') : null;
   } finally {
     authResolved = true;
-    readyCallbacks.forEach((cb) => {
-      try { cb(State.user, State.profile); } catch (e) { console.error('[auth] ready callback threw:', e); }
-    });
+    fireReady();
   }
 });

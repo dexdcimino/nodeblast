@@ -10,6 +10,7 @@ import {
   query,
   where,
   limit,
+  orderBy,
   getDocs,
   doc,
   updateDoc,
@@ -37,6 +38,28 @@ export async function getUserByUsername(username) {
   } catch (err) {
     console.warn('[users] getUserByUsername failed:', err);
     return null;
+  }
+}
+
+// Prefix search on the users collection, used by the header search bar.
+// Relies on the usernameLower field being populated (auth.js backfills it
+// on every sign-in). Uses the standard Firestore prefix-range trick.
+export async function searchUsers(prefix) {
+  const lower = normalizeUsername(prefix);
+  if (!lower) return [];
+  try {
+    const q = query(
+      collection(db, 'users'),
+      where('usernameLower', '>=', lower),
+      where('usernameLower', '<', lower + '\uf8ff'),
+      orderBy('usernameLower'),
+      limit(8),
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+  } catch (err) {
+    console.warn('[users] searchUsers failed:', err);
+    return [];
   }
 }
 

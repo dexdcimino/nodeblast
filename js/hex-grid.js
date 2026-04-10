@@ -83,11 +83,15 @@ function catalystTileHTML(cat) {
   const accent = cat.accentColor || '#5AAA72';
   const hex = escapeHtml(cat.ownerHex || '5aaa72');
   const unameHtml = renderUsername(cat.ownerName || 'anon', accent);
+  const faviconHtml = domain
+    ? `<img class="hex-favicon" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" alt="" onerror="this.style.display='none'">`
+    : '';
   return `
+    ${faviconHtml}
     <div class="hex-fade"></div>
     <div class="hex-info">
       <div class="hex-title">${title}</div>
-      <div class="hex-url">${escapeHtml(domain)}</div>
+      <div class="hex-url" data-url-link>${escapeHtml(domain)}</div>
       <div class="hex-creator" data-creator-link><span class="hex-creator-name">${unameHtml}</span><span class="hex-creator-hex" style="color:${escapeHtml(accent)}">#${hex}</span></div>
     </div>
   `;
@@ -163,6 +167,11 @@ export function renderHexGrid(state) {
         if (e.target.closest('[data-creator-link]')) {
           e.stopPropagation();
           state.onCreatorClick?.(tile);
+          return;
+        }
+        if (e.target.closest('[data-url-link]')) {
+          e.stopPropagation();
+          if (tile.url) window.open(tile.url, '_blank', 'noopener');
           return;
         }
         state.onTileClick?.(tile);

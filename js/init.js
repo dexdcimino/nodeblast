@@ -10,19 +10,22 @@ import {
   closeAccountMenu,
   renderUsername,
   escapeHtml,
+  toast,
 } from './ui-events.js';
-import { renderHexGrid, getCols } from './hex-grid.js';
+import { renderHexGrid } from './hex-grid.js';
 import {
-  loadUserCatalysts,
-  loadPublicFeed,
   openCatalystModal,
   openCatalystDetail,
+  closeCatalystDetail,
   initCatalystModal,
   initCatalystDetail,
   getCatalystBySlug,
+  subscribeUserCatalysts,
+  subscribePublicFeed,
 } from './catalysts.js';
 import { getUserByUsername } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle } from './router.js';
+import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js';
 
 let _currentCategory = 'all';
 let _currentRoute = null;
@@ -31,6 +34,15 @@ let _currentShowAdd = false;
 let _currentEmptyMessage = '';
 let _firstRender = true;
 let _profileCache = new Map(); // usernameLower -> { user, catalysts }
+
+// Active Firestore listeners for the current route. Cleared on every
+// renderRoute() so we don't leak listeners across navigation.
+let _routeSubs = [];
+function trackSub(unsub) { if (typeof unsub === 'function') _routeSubs.push(unsub); }
+function clearSubs() {
+  _routeSubs.forEach((u) => { try { u(); } catch {} });
+  _routeSubs = [];
+}
 
 function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
@@ -93,6 +105,7 @@ function showProfileBar(user, catalystCount, isOwn) {
     catalystCount + (catalystCount === 1 ? ' catalyst' : ' catalysts');
 
   const actionBtn = document.getElementById('profile-bar-action');
+  const shareBtn = document.getElementById('profile-bar-share');
   if (isOwn) {
     actionBtn.textContent = 'Edit Profile';
     actionBtn.disabled = false;
@@ -100,10 +113,24 @@ function showProfileBar(user, catalystCount, isOwn) {
       openAccountMenuFromPill();
       setTimeout(() => document.getElementById('acct-edit-btn')?.click(), 80);
     };
+    if (shareBtn) {
+      shareBtn.style.display = 'inline-flex';
+      const usernameLower = (user.usernameLower || (user.displayName || '').toLowerCase());
+      shareBtn.onclick = async () => {
+        const link = `${window.location.origin}/${encodeURIComponent(usernameLower)}`;
+        try {
+          await navigator.clipboard.writeText(link);
+          toast('Profile link copied!');
+        } catch {
+          toast(link);
+        }
+      };
+    }
   } else {
     actionBtn.textContent = 'Message';
     actionBtn.disabled = true;
     actionBtn.onclick = null;
+    if (shareBtn) { shareBtn.style.display = 'none'; shareBtn.onclick = null; }
   }
 }
 
@@ -165,11 +192,14 @@ async function renderFeedRoute() {
   showFilterBar();
   setPageTitle([]);
   renderSkeleton();
-  const tiles = await loadPublicFeed(_currentCategory);
   const emptyMessage = _currentCategory === 'all'
     ? 'No catalysts yet. Be the first to share what you\'re building.'
     : 'No catalysts in this category yet.';
-  renderGrid(tiles, { showAdd: false, emptyMessage });
+  // Live feed subscription — updates as new catalysts are added or votes change.
+  const unsub = subscribePublicFeed(_currentCategory, (tiles) => {
+    renderGrid(tiles, { showAdd: false, emptyMessage });
+  });
+  trackSub(unsub);
 }
 
 async function renderProfileRoute(username, { openSlug = null } = {}) {
@@ -178,14 +208,16 @@ async function renderProfileRoute(username, { openSlug = null } = {}) {
 
   const lower = username.toLowerCase();
 
-  // Serve cached view instantly if we have one
+  // Paint cached view instantly if we have one
   const cached = _profileCache.get(lower);
   if (cached) {
     const isOwn = State.user && cached.user.uid === State.user.uid;
     showProfileBar(cached.user, cached.catalysts.length, isOwn);
     renderGrid(cached.catalysts, {
       showAdd: isOwn,
-      emptyMessage: isOwn ? 'Create your first catalyst' : 'No catalysts yet',
+      emptyMessage: isOwn
+        ? 'Create your first catalyst'
+        : 'This alchemist hasn\'t created any catalysts yet.',
     });
     if (openSlug) {
       const match = cached.catalysts.find((c) => c.slug === openSlug);
@@ -195,34 +227,51 @@ async function renderProfileRoute(username, { openSlug = null } = {}) {
     renderSkeleton();
   }
 
-  // Always fetch fresh in background
+  // Resolve the user doc (always fresh — cheap enough, and we need the uid
+  // for the subscription).
   const user = await getUserByUsername(username);
   if (!user) {
     if (!cached) show404();
     return;
   }
-  const catalysts = await loadUserCatalysts(user.uid);
-  _profileCache.set(lower, { user, catalysts });
-
   const isOwn = State.user && user.uid === State.user.uid;
-  showProfileBar(user, catalysts.length, isOwn);
-  renderGrid(catalysts, {
-    showAdd: isOwn,
-    emptyMessage: isOwn ? 'Create your first catalyst' : 'No catalysts yet',
-  });
   setPageTitle([user.displayName || username]);
 
+  // Live subscription for this user's catalysts. Replaces one-shot load.
+  const unsub = subscribeUserCatalysts(user.uid, (catalysts) => {
+    _profileCache.set(lower, { user, catalysts });
+    showProfileBar(user, catalysts.length, isOwn);
+    renderGrid(catalysts, {
+      showAdd: isOwn,
+      emptyMessage: isOwn
+        ? 'Create your first catalyst'
+        : 'This alchemist hasn\'t created any catalysts yet.',
+    });
+    if (openSlug) {
+      const match = catalysts.find((c) => c.slug === openSlug);
+      if (match) {
+        setPageTitle([match.title, user.displayName || username]);
+        openCatalystDetail(match);
+      }
+    }
+  });
+  trackSub(unsub);
+
+  // If the subscription can't find the slug (possibly an old link to a
+  // deleted catalyst or a fresh fetch race), fall back to a direct lookup.
   if (openSlug) {
-    let match = catalysts.find((c) => c.slug === openSlug);
-    if (!match) match = await getCatalystBySlug(user.uid, openSlug);
-    if (match) {
-      setPageTitle([match.title, user.displayName || username]);
-      openCatalystDetail(match);
+    const direct = await getCatalystBySlug(user.uid, openSlug);
+    if (direct) {
+      setPageTitle([direct.title, user.displayName || username]);
+      openCatalystDetail(direct);
     }
   }
 }
 
 async function renderRoute() {
+  // Tear down any listeners from the previous route
+  clearSubs();
+
   const route = getRoute();
   _currentRoute = route;
   const honey = document.getElementById('honeycomb');
@@ -352,6 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   initCatalystDetail();
   initRouter(renderRoute);
+  initSearch();
 
   // Brand + logo → home
   document.getElementById('hdr-brand')?.addEventListener('click', () => navigate('/'));
@@ -406,7 +456,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // When the catalyst detail popup closes via back button, strip the slug
   // from the URL so a refresh lands on the profile page, not the catalyst.
   window.addEventListener('popstate', () => {
-    document.getElementById('cat-detail-popup')?.classList.remove('open');
+    closeCatalystDetail();
+  });
+
+  // Global keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    const target = e.target;
+    const isTyping = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+    if (e.key === '/' && !isTyping) {
+      e.preventDefault();
+      focusSearch();
+      return;
+    }
+    if (e.key === 'Escape') {
+      // Let individual components handle their own Escape first (they all
+      // listen on document). This block is a catchall for the search
+      // dropdown in case something slips through.
+      if (isSearchOpen()) { closeSearch(); return; }
+    }
   });
 
   onAuthReady(updateAuthUI);

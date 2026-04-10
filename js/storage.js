@@ -17,6 +17,7 @@ const storage = getStorage(app);
 const MAX_W = 800;
 const MAX_H = 600;
 const JPEG_QUALITY = 0.8;
+const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
 function loadImage(file) {
   return new Promise((resolve, reject) => {
@@ -51,6 +52,9 @@ export async function compressImage(file) {
 
 export async function uploadCatalystThumb(userId, catalystId, file) {
   const blob = await compressImage(file);
+  if (blob.size > MAX_BYTES) {
+    throw new Error('Image too large. Max 5MB.');
+  }
   const path = `catalysts/${userId}/${catalystId}/thumb.jpg`;
   const ref = storageRef(storage, path);
   await uploadBytes(ref, blob, { contentType: 'image/jpeg' });

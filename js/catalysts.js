@@ -19,6 +19,8 @@ import {
   limit,
   serverTimestamp,
   runTransaction,
+  onSnapshot,
+  increment,
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 import State from './state.js';
 import { uploadCatalystThumb, deleteCatalystThumb } from './storage.js';
@@ -35,6 +37,22 @@ function normalizeUrl(raw) {
   const trimmed = raw.trim();
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return 'https://' + trimmed;
+}
+
+// Light validation: accept http/https or a bare domain containing at
+// least one dot, no spaces. "coming soon" etc. fail here — callers
+// should special-case those before submitting.
+export function isValidUrl(raw) {
+  if (!raw) return false;
+  const trimmed = raw.trim();
+  if (/\s/.test(trimmed)) return false;
+  try {
+    const u = new URL(normalizeUrl(trimmed));
+    if (!u.hostname.includes('.')) return false;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function slugify(title) {
@@ -133,6 +151,63 @@ export async function loadPublicFeed(category, max = 20) {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   } catch (err) {
     console.warn('[catalysts] loadPublicFeed failed:', err);
+    return [];
+  }
+}
+
+/* ── Live subscriptions ── */
+
+export function subscribeUserCatalysts(uid, callback) {
+  if (!uid) return () => {};
+  const q = query(
+    collection(db, 'catalysts'),
+    where('ownerId', '==', uid),
+    orderBy('createdAt', 'desc'),
+  );
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => console.warn('[catalysts] user sub error:', err),
+  );
+}
+
+export function subscribePublicFeed(category, callback, max = 24) {
+  const constraints = [
+    where('isPublic', '==', true),
+    orderBy('fireCount', 'desc'),
+    limit(max),
+  ];
+  if (category && category !== 'all') {
+    constraints.unshift(where('category', '==', category));
+  }
+  return onSnapshot(
+    query(collection(db, 'catalysts'), ...constraints),
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => console.warn('[catalysts] feed sub error:', err),
+  );
+}
+
+/* ── Search ── */
+
+export async function searchCatalysts(term) {
+  if (!term || term.length < 2) return [];
+  const lower = term.toLowerCase();
+  try {
+    // Firestore has no substring search, so pull the most recent public
+    // catalysts and filter client-side. Good enough for v1.
+    const q = query(
+      collection(db, 'catalysts'),
+      where('isPublic', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(100),
+    );
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((c) => (c.title || '').toLowerCase().includes(lower))
+      .slice(0, 8);
+  } catch (err) {
+    console.warn('[catalysts] searchCatalysts failed:', err);
     return [];
   }
 }
@@ -380,11 +455,25 @@ export function initCatalystModal(onSaved) {
     });
   });
 
+  const urlInput = document.getElementById('cat-url');
+  const urlErr = document.getElementById('cat-url-error');
+  function _clearUrlError() {
+    urlInput?.classList.remove('invalid');
+    if (urlErr) { urlErr.textContent = ''; urlErr.classList.remove('visible'); }
+  }
+  function _showUrlError(msg) {
+    urlInput?.classList.add('invalid');
+    if (urlErr) { urlErr.textContent = msg; urlErr.classList.add('visible'); }
+  }
+  urlInput?.addEventListener('input', _clearUrlError);
+
   document.getElementById('cat-submit-btn')?.addEventListener('click', async () => {
     const title = document.getElementById('cat-title').value.trim();
     const url = document.getElementById('cat-url').value.trim();
+    _clearUrlError();
     if (!title) { toast('Title required'); return; }
-    if (!url) { toast('URL required'); return; }
+    if (!url) { _showUrlError('URL required'); return; }
+    if (!isValidUrl(url)) { _showUrlError('Enter a valid URL (e.g. example.com)'); return; }
     const data = {
       title,
       url,
@@ -407,9 +496,10 @@ export function initCatalystModal(onSaved) {
       onSaved?.();
     } catch (err) {
       console.error(err);
-      toast('Save failed: ' + (err.message || 'unknown'));
+      toast('Failed to save. ' + (err?.message || 'Check your connection.'));
     } finally {
       submitBtn.disabled = false;
+      submitBtn.textContent = _editingId ? 'Save Changes' : 'Create Catalyst';
     }
   });
 
@@ -492,8 +582,26 @@ export async function openCatalystDetail(catalyst) {
 
   _myVote = await getMyVote(catalyst.id);
   _renderVoteButtons();
+  _renderViewCount();
 
   pop.classList.add('open');
+
+  // Fire-and-forget view count increment
+  try {
+    updateDoc(doc(db, 'catalysts', catalyst.id), { viewCount: increment(1) })
+      .catch((err) => console.warn('[catalysts] viewCount increment failed:', err));
+    catalyst.viewCount = (catalyst.viewCount || 0) + 1;
+    _renderViewCount();
+  } catch {}
+}
+
+function _renderViewCount() {
+  if (!_detailCatalyst) return;
+  const el = document.getElementById('cat-detail-view-count');
+  const labelEl = document.getElementById('cat-detail-view-label');
+  const count = _detailCatalyst.viewCount || 0;
+  if (el) el.textContent = count;
+  if (labelEl) labelEl.textContent = count === 1 ? 'view' : 'views';
 }
 
 export function closeCatalystDetail() {

@@ -3,8 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NodeBlast — create. share. detonate.</title>
-  <meta name="description" content="NodeBlast — a launchpad for creators. Showcase your projects as hexagonal tiles." />
+  <title>nodeblast</title>
+  <meta name="description" content="A launchpad for creators. Share your projects, discover what others are building." />
+  <meta property="og:title" content="nodeblast" />
+  <meta property="og:description" content="A launchpad for creators. Share your projects, discover what others are building." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://nodeblast.dev" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="nodeblast" />
+  <meta name="twitter:description" content="A launchpad for creators." />
+  <link rel="canonical" href="https://nodeblast.dev" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -54,7 +63,21 @@
       <div id="hdr-brand">nodeblast</div>
       <div id="hdr-tag">create. share. detonate.</div>
     </div>
-    <div id="hdr-mid"></div>
+    <div id="hdr-mid">
+      <div id="search-wrap">
+        <button class="icon-btn" id="search-btn" data-tip="Search ( / )">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <div id="search-input-shell">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="search-input" placeholder="Search users or catalysts..." spellcheck="false" autocomplete="off" />
+          <button id="search-close" data-tip="Close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div id="search-dropdown"></div>
+      </div>
+    </div>
     <div id="hdr-right">
       <button class="icon-btn" data-action="theme" data-tip="Toggle theme">
         <svg class="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -98,6 +121,10 @@
     </div>
     <div id="profile-bar-right">
       <span id="profile-bar-count"></span>
+      <button id="profile-bar-share" class="cat-btn" style="display:none" data-tip="Copy profile link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Share
+      </button>
       <button id="profile-bar-action" class="cat-btn"></button>
     </div>
   </div>
@@ -139,6 +166,7 @@
       <div class="cat-field">
         <label class="cat-label">URL</label>
         <input id="cat-url" type="text" placeholder="https://..." spellcheck="false" autocomplete="off" />
+        <div id="cat-url-error" class="cat-field-error"></div>
       </div>
 
       <div class="cat-field">
@@ -209,7 +237,10 @@
           <span class="cat-detail-badge" id="cat-detail-platform"></span>
         </div>
         <div id="cat-detail-desc"></div>
-        <button id="cat-detail-open" class="cat-btn primary">Open Project</button>
+        <button id="cat-detail-open" class="cat-btn primary">
+          Open Project
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </button>
         <div id="cat-detail-vote">
           <button id="cat-vote-fire" class="vote-btn" data-tip="Fire!">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>
@@ -219,6 +250,11 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22 11h-4.17l3.24-3.24-1.41-1.42L15 11h-2V9l4.66-4.66-1.42-1.41L13 6.17V2h-2v4.17L7.76 2.93 6.34 4.34 11 9v2H9L4.34 6.34 2.93 7.76 6.17 11H2v2h4.17l-3.24 3.24 1.41 1.42L9 13h2v2l-4.66 4.66 1.42 1.41L11 17.83V22h2v-4.17l3.24 3.24 1.42-1.41L13 15v-2h2l4.66 4.66 1.41-1.42L17.83 13H22v-2z"/></svg>
             <span class="vote-count">0</span>
           </button>
+        </div>
+        <div id="cat-detail-views">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span id="cat-detail-view-count">0</span>
+          <span id="cat-detail-view-label">views</span>
         </div>
       </div>
     </div>
