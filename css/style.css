@@ -23,7 +23,6 @@ html.theme-transition,
 html.theme-transition body,
 html.theme-transition #hdr,
 html.theme-transition #acct-menu,
-html.theme-transition #signin-menu,
 html.theme-transition .hex-tile {
   transition: background-color .35s ease, color .35s ease, border-color .35s ease !important;
 }
@@ -72,9 +71,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 [data-theme="dark"] .theme-icon-moon{opacity:1;transform:translate(0,0);}
 [data-theme="light"] .theme-icon-sun{opacity:1;transform:translate(0,0);}
 
-/* Sign-in button (header) */
-#signin-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:2.5px solid var(--bdr);border-radius:20px;padding:7px 16px;color:var(--tx2);font-family:var(--fn);font-size:14px;font-weight:500;cursor:pointer;transition:all var(--ease);}
-#signin-btn:hover{border-color:var(--clr-adj);color:var(--clr-adj);}
+/* Header sign-in button removed — sign-in lives in account menu footer */
+#signin-btn{display:none !important;}
 
 /* ══════════════════════════════════════
    PROFILE PILL (verbatim from DexNote)
@@ -216,23 +214,32 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .settings-palette-strip{display:flex;width:100%;height:100%;border-radius:5px;overflow:hidden;}
 .settings-palette-strip>span{flex:1;height:100%;}
 
-/* Footer */
+/* Footer (signed in) */
 #acct-footer{border-top:1px solid var(--bdr);padding:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;background:var(--bg2);}
 .acct-menu-item{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:6px;background:none;border:1px solid var(--bdr);cursor:pointer;font-family:var(--fn);font-size:inherit;color:var(--tx2);text-align:center;transition:all var(--ease);}
 .acct-menu-item:hover{background:var(--bg3);color:var(--tx);border-color:var(--tx3);}
 .acct-menu-item.danger:hover{color:var(--danger);border-color:var(--danger);}
 
-/* ══════════════════════════════════════
-   SIGN-IN DROPDOWN
-══════════════════════════════════════ */
-#signin-menu{display:none;position:fixed;z-index:9500;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:8px;box-shadow:0 12px 40px rgba(0,0,0,.45);flex-direction:column;gap:6px;width:240px;}
-#signin-menu.open{display:flex;}
-#google-signin-btn,#github-signin-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:10px 14px;border-radius:8px;cursor:pointer;font-family:var(--fn);font-size:13px;font-weight:600;transition:all .15s;}
-#google-signin-btn{background:#fff;color:#1a1a1a;border:1.5px solid transparent;}
-#google-signin-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.15);border-color:var(--tx3);}
-#github-signin-btn{background:#24292e;color:#fff;border:1px solid #444d56;}
-#github-signin-btn:hover{background:#2f363d;border-color:#6e7681;}
-#auth-error{font-size:13px;color:var(--danger);text-align:center;padding:6px 0;display:none;}
+/* Footer (guest — sign-in) */
+#acct-signin-footer{display:none;border-top:1px solid var(--bdr);padding:14px 14px 12px;flex-direction:column;gap:8px;flex-shrink:0;background:var(--bg2);}
+#acct-signin-footer.visible{display:flex;}
+#acct-signin-title{font-size:12px;font-weight:600;color:var(--tx2);text-align:center;margin-bottom:2px;letter-spacing:.02em;}
+#acct-signin-footer #google-signin-btn,
+#acct-signin-footer #github-signin-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 16px;border-radius:8px;cursor:pointer;font-family:var(--fn);font-size:14px;font-weight:500;transition:all .15s;}
+#acct-signin-footer #google-signin-btn{background:#fff;color:#1a1a1a;border:1.5px solid transparent;}
+#acct-signin-footer #google-signin-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.15);border-color:var(--tx3);}
+#acct-signin-footer #github-signin-btn{background:var(--bg3);color:var(--tx);border:1.5px solid var(--bdr);}
+#acct-signin-footer #github-signin-btn:hover{background:var(--bg4);border-color:var(--tx3);}
+#acct-signin-footer #auth-error{font-size:12px;color:var(--danger);text-align:center;display:none;}
+#acct-signin-footer #auth-error.visible{display:block;}
+
+/* Default guest avatar: gray circle when no photo is set */
+#acct-avatar-sm.guest{border-color:var(--bdr);background:var(--bg4);}
+#acct-avatar-sm.guest::after{content:'';display:block;width:12px;height:12px;border-radius:50%;background:var(--tx3);}
+#acct-avatar-wrap #acct-avatar.guest{border-color:var(--bdr);background:var(--bg4);}
+#acct-avatar-wrap #acct-avatar.guest::after{content:'';display:block;width:22px;height:22px;border-radius:50%;background:var(--tx3);}
+
+/* (Sign-in lives in the account menu footer — see #acct-signin-footer above.) */
 
 /* ══════════════════════════════════════
    COLOR PICKER POPUP (verbatim from DexNote editor.css)

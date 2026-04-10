@@ -18,6 +18,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 import State from './state.js';
 import { normalizeUsername } from './users.js';
+import { setSigningIn } from './ui-events.js';
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -101,6 +102,10 @@ export async function signIn(providerName = 'google') {
   const provider = providerName === 'github'
     ? new GithubAuthProvider()
     : new GoogleAuthProvider();
+  // Block the account-menu outside-click handler so the popup opening
+  // (which can trigger a focus/blur click in the parent) doesn't dismiss
+  // the menu before the flow completes.
+  setSigningIn(true);
   try {
     await signInWithPopup(auth, provider);
   } catch (err) {
@@ -108,8 +113,14 @@ export async function signIn(providerName = 'google') {
     const errEl = document.getElementById('auth-error');
     if (errEl) {
       errEl.textContent = err.message || 'Sign-in failed';
+      errEl.classList.add('visible');
       errEl.style.display = 'block';
     }
+  } finally {
+    // Clear the flag after onAuthStateChanged has had a chance to fire.
+    // A short delay is enough — the click events from the popup focus
+    // transition happen in the same microtask burst.
+    setTimeout(() => setSigningIn(false), 500);
   }
 }
 

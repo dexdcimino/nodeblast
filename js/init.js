@@ -302,67 +302,89 @@ async function renderRoute() {
    Auth UI
 ══════════════════════════════════════ */
 
-function updateAuthUI(user, profile) {
-  const signinBtn = document.getElementById('signin-btn');
+function paintGuestProfilePill() {
+  // Default gray avatar, "Alchemist" label, guest footer visible, signed-in
+  // footer hidden. Called on boot before auth resolves, and whenever the
+  // user is signed out.
   const acctBtn = document.getElementById('acct-btn');
+  acctBtn.style.display = 'flex';
+
+  const avatarSm = document.getElementById('acct-avatar-sm');
+  const avatarLg = document.getElementById('acct-avatar');
+  if (avatarSm) { avatarSm.innerHTML = ''; avatarSm.classList.add('guest'); avatarSm.style.borderColor = ''; }
+  if (avatarLg) { avatarLg.innerHTML = ''; avatarLg.classList.add('guest'); avatarLg.style.borderColor = ''; }
+
+  document.getElementById('acct-name-short').textContent = 'Alchemist';
+  document.getElementById('acct-name').textContent = 'Alchemist';
+  document.getElementById('acct-hex-label').innerHTML = '';
+  document.getElementById('acct-hex-dot').style.background = 'var(--tx3)';
+  document.documentElement.style.setProperty('--acct-hex', 'var(--bdr)');
+
+  // Swap footers
+  document.getElementById('acct-footer').style.display = 'none';
+  document.getElementById('acct-signin-footer').classList.add('visible');
+
+  // Hide edit profile + view profile link for guests
+  document.getElementById('acct-edit-btn').style.display = 'none';
   const viewProfileLink = document.getElementById('acct-view-profile');
-  const hexColor = '#' + (profile?.hexCode || '5AAA72');
+  if (viewProfileLink) viewProfileLink.style.display = 'none';
+}
 
-  if (user) {
-    closeSigninMenu();
-    signinBtn.style.display = 'none';
-    acctBtn.style.display = 'flex';
+function updateAuthUI(user, profile) {
+  if (!user) {
+    paintGuestProfilePill();
+    _profileCache.clear();
+    renderRoute();
+    return;
+  }
 
-    setAvatarEl(document.getElementById('acct-avatar-sm'), profile, user);
-    setAvatarEl(document.getElementById('acct-avatar'), profile, user);
+  const acctBtn = document.getElementById('acct-btn');
+  acctBtn.style.display = 'flex';
 
-    const name = profile?.displayName || user.displayName || 'Account';
-    const hex = profile?.hexCode || '5aaa72';
-    const unameHtml = renderUsername(name);
-    // Pill: truncate to 14 chars like DexNote
-    const shortName = name.length > 14 ? name.slice(0, 14) + '…' : name;
-    document.getElementById('acct-name-short').textContent = shortName;
-    document.getElementById('acct-name').innerHTML = unameHtml;
-    // DexNote format: <span>#</span>5aaa72 — the # span has opacity 0.8 via CSS
-    document.getElementById('acct-hex-label').innerHTML = `<span>#</span>${escapeHtml(hex)}`;
+  // Swap footers: signed-in footer visible, guest footer hidden
+  document.getElementById('acct-footer').style.display = '';
+  document.getElementById('acct-signin-footer').classList.remove('visible');
 
-    // Paint the account hex everywhere (--acct-hex cascade)
-    document.documentElement.style.setProperty('--acct-hex', hexColor);
-    document.getElementById('acct-hex-dot').style.background = hexColor;
-    document.getElementById('acct-edit-color-preview').style.background = hexColor;
+  // Unhide edit profile button
+  const editBtn = document.getElementById('acct-edit-btn');
+  if (editBtn) editBtn.style.display = '';
 
-    if (viewProfileLink) {
-      viewProfileLink.style.display = 'inline-block';
-      viewProfileLink.dataset.username = name.toLowerCase();
-    }
-  } else {
-    signinBtn.style.display = 'inline-flex';
-    acctBtn.style.display = 'none';
-    if (viewProfileLink) viewProfileLink.style.display = 'none';
+  // Paint avatars — guest class must come off first
+  const avatarSm = document.getElementById('acct-avatar-sm');
+  const avatarLg = document.getElementById('acct-avatar');
+  if (avatarSm) avatarSm.classList.remove('guest');
+  if (avatarLg) avatarLg.classList.remove('guest');
+  setAvatarEl(avatarSm, profile, user);
+  setAvatarEl(avatarLg, profile, user);
+
+  const name = profile?.displayName || user.displayName || 'Account';
+  const hex = profile?.hexCode || '5aaa72';
+  const hexColor = '#' + hex;
+
+  const unameHtml = renderUsername(name);
+  const shortName = name.length > 14 ? name.slice(0, 14) + '…' : name;
+  document.getElementById('acct-name-short').textContent = shortName;
+  document.getElementById('acct-name').innerHTML = unameHtml;
+  document.getElementById('acct-hex-label').innerHTML = `<span>#</span>${escapeHtml(hex)}`;
+
+  // Paint the account hex everywhere via --acct-hex cascade
+  document.documentElement.style.setProperty('--acct-hex', hexColor);
+  if (avatarSm) avatarSm.style.borderColor = hexColor;
+  if (avatarLg) avatarLg.style.borderColor = hexColor;
+  document.getElementById('acct-hex-dot').style.background = hexColor;
+  document.getElementById('acct-edit-color-preview').style.background = hexColor;
+
+  const viewProfileLink = document.getElementById('acct-view-profile');
+  if (viewProfileLink) {
+    viewProfileLink.style.display = 'inline-block';
+    viewProfileLink.dataset.username = name.toLowerCase();
   }
 
   // Invalidate my own profile cache so "+" tile visibility updates correctly
   if (profile?.displayName) {
     _profileCache.delete(profile.displayName.toLowerCase());
   }
-  // Re-render the current route — auth state affects owner detection
   renderRoute();
-}
-
-function openSigninMenu() {
-  const menu = document.getElementById('signin-menu');
-  const btn = document.getElementById('signin-btn');
-  if (!menu || !btn) return;
-  const rect = btn.getBoundingClientRect();
-  menu.style.top = (rect.bottom + 6) + 'px';
-  menu.style.right = (window.innerWidth - rect.right) + 'px';
-  menu.style.left = 'auto';
-  menu.classList.add('open');
-}
-function closeSigninMenu() {
-  document.getElementById('signin-menu')?.classList.remove('open');
-  const err = document.getElementById('auth-error');
-  if (err) err.style.display = 'none';
 }
 
 /* ══════════════════════════════════════
@@ -422,28 +444,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // 404 → home
   document.getElementById('not-found-home')?.addEventListener('click', () => navigate('/'));
 
-  // Header sign-in button → open dropdown
-  document.getElementById('signin-btn')?.addEventListener('click', (e) => {
+  // Sign-in buttons live inside the account menu footer (guest mode).
+  // signIn() flips the _signingIn flag so the menu's outside-click
+  // handler doesn't dismiss during popup focus transitions.
+  document.getElementById('google-signin-btn')?.addEventListener('click', (e) => {
     e.stopPropagation();
-    const menu = document.getElementById('signin-menu');
-    if (menu?.classList.contains('open')) closeSigninMenu();
-    else openSigninMenu();
+    signIn('google');
   });
-  document.getElementById('google-signin-btn')?.addEventListener('click', async () => {
-    await signIn('google');
-    closeSigninMenu();
+  document.getElementById('github-signin-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    signIn('github');
   });
-  document.getElementById('github-signin-btn')?.addEventListener('click', async () => {
-    await signIn('github');
-    closeSigninMenu();
-  });
-  document.addEventListener('click', (e) => {
-    const menu = document.getElementById('signin-menu');
-    if (!menu?.classList.contains('open')) return;
-    if (menu.contains(e.target)) return;
-    if (document.getElementById('signin-btn')?.contains(e.target)) return;
-    closeSigninMenu();
-  });
+
+  // Guest mode by default — paint the pill immediately so the account
+  // menu is usable before auth resolves (or if the user never signs in).
+  paintGuestProfilePill();
 
   // Category filter pills (feed route)
   document.querySelectorAll('.cat-filter-pill').forEach((pill) => {

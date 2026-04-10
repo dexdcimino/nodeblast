@@ -7,6 +7,12 @@ import State from './state.js';
 import { openColorPopup, closeColorPopup } from './color.js';
 import { showModal as _showModal } from './modal.js';
 
+// Flag flipped by auth.js around signInWithPopup so the account menu
+// click-outside-to-close handler doesn't fire when the popup opens/blurs.
+let _signingIn = false;
+export function setSigningIn(v) { _signingIn = !!v; }
+export function isSigningIn() { return _signingIn; }
+
 // Re-export showModal so existing importers (catalysts.js, init.js) keep working.
 export const showModal = _showModal;
 
@@ -194,6 +200,7 @@ export function initAccountMenu(handlers) {
   document.getElementById('acct-menu-close')?.addEventListener('click', closeAccountMenu);
 
   document.addEventListener('click', (e) => {
+    if (_signingIn) return;
     const menu = document.getElementById('acct-menu');
     if (!menu?.classList.contains('open')) return;
     if (menu.contains(e.target)) return;
@@ -208,10 +215,15 @@ export function initAccountMenu(handlers) {
     }
   });
 
-  // Dropdown toggles — toggle .open on section; CSS handles body visibility
+  // Dropdown toggles — toggle .open on section; CSS handles body visibility.
+  // stopPropagation so the document click-outside handler doesn't race.
   document.querySelectorAll('.acct-dropdown-toggle').forEach((toggle) => {
-    toggle.addEventListener('click', () => {
-      toggle.closest('.acct-dropdown-section')?.classList.toggle('open');
+    toggle.setAttribute('type', 'button');
+    toggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const section = toggle.closest('.acct-dropdown-section');
+      if (section) section.classList.toggle('open');
     });
   });
 
