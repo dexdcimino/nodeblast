@@ -27,10 +27,27 @@ function randomHex() {
   return Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
 }
 
+function fallbackProfile(user, providerId) {
+  const provider = providerId.includes('github') ? 'github' : 'google';
+  return {
+    displayName: user.displayName || 'anon',
+    hexCode: randomHex(),
+    photoURL: user.photoURL || '',
+    provider,
+  };
+}
+
 async function loadOrCreateProfile(user, providerId) {
   const ref = doc(db, 'users', user.uid);
-  const snap = await getDoc(ref);
   const provider = providerId.includes('github') ? 'github' : 'google';
+
+  let snap;
+  try {
+    snap = await getDoc(ref);
+  } catch (err) {
+    console.warn('[auth] profile read failed, using fallback:', err);
+    return fallbackProfile(user, providerId);
+  }
 
   if (!snap.exists()) {
     const profile = {
@@ -41,11 +58,19 @@ async function loadOrCreateProfile(user, providerId) {
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
     };
-    await setDoc(ref, profile);
+    try {
+      await setDoc(ref, profile);
+    } catch (err) {
+      console.warn('[auth] profile create failed, using in-memory:', err);
+    }
     return profile;
   }
 
-  await updateDoc(ref, { lastLogin: serverTimestamp() });
+  // Existing profile (may have been created by DexNote) — touch lastLogin but
+  // don't let a failed write block the auth callbacks from firing.
+  updateDoc(ref, { lastLogin: serverTimestamp() }).catch((err) => {
+    console.warn('[auth] lastLogin update failed:', err);
+  });
   return snap.data();
 }
 
@@ -86,12 +111,20 @@ export function onAuthReady(cb) {
 
 onAuthStateChanged(auth, async (user) => {
   State.user = user;
-  if (user) {
-    const providerId = user.providerData[0]?.providerId || 'google.com';
-    State.profile = await loadOrCreateProfile(user, providerId);
-  } else {
-    State.profile = null;
+  try {
+    if (user) {
+      const providerId = user.providerData[0]?.providerId || 'google.com';
+      State.profile = await loadOrCreateProfile(user, providerId);
+    } else {
+      State.profile = null;
+    }
+  } catch (err) {
+    console.error('[auth] profile load threw unexpectedly:', err);
+    State.profile = user ? fallbackProfile(user, user.providerData[0]?.providerId || 'google.com') : null;
+  } finally {
+    authResolved = true;
+    readyCallbacks.forEach((cb) => {
+      try { cb(State.user, State.profile); } catch (e) { console.error('[auth] ready callback threw:', e); }
+    });
   }
-  authResolved = true;
-  readyCallbacks.forEach((cb) => cb(State.user, State.profile));
 });

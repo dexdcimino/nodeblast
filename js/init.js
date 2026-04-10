@@ -33,9 +33,10 @@ function updateAuthUI(user, profile) {
     setAvatarEl(document.getElementById('acct-avatar'), profile, user);
 
     const name = profile?.displayName || user.displayName || 'Account';
-    document.getElementById('acct-name-short').textContent = name;
+    const hex = profile?.hexCode || '5aaa72';
+    document.getElementById('acct-name-short').textContent = `${name}#${hex}`;
     document.getElementById('acct-name').textContent = name;
-    document.getElementById('acct-hex-label').textContent = '#' + (profile?.hexCode || '5aaa72');
+    document.getElementById('acct-hex-label').textContent = '#' + hex;
 
     document.getElementById('acct-avatar-sm').style.borderColor = hexColor;
     document.getElementById('acct-avatar').style.borderColor = hexColor;
