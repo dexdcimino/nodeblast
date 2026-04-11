@@ -44,6 +44,11 @@ import { initNotifications, initHelpPanel } from './notifications.js';
 import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest } from './friends.js';
 
 let _currentCategory = 'all';
+// Feed view mode — 'catalysts' (flat hex flow) or 'alchemists' (grouped
+// per-creator cards). Persisted in localStorage so the toggle survives
+// reloads. 'catalysts' is the spec default.
+let _feedViewMode = (localStorage.getItem('nb-feed-mode') === 'alchemists') ? 'alchemists' : 'catalysts';
+let _currentFeedSnapshot = [];
 let _currentRoute = null;
 let _currentTiles = [];
 let _currentShowAdd = false;
@@ -472,6 +477,58 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   groups.forEach((g) => list.appendChild(_buildCommunityCard(g)));
 }
 
+// "Catalysts" view: a single flow of hex tiles, sorted by createdAt
+// desc, with each tile carrying its creator avatar (per MD5). Renders
+// directly into #community-list via .community-flat — keeps the same
+// container so the feed-mode visibility flag still works.
+function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
+  const grid = document.getElementById('grid');
+  const list = document.getElementById('community-list');
+  if (!grid || !list) return;
+
+  grid.classList.add('feed-mode');
+  list.innerHTML = '';
+
+  if (!catalysts || catalysts.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'community-empty';
+    empty.textContent = emptyMessage || 'No catalysts yet. Be the first to share what you\'re building.';
+    list.appendChild(empty);
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'community-flat';
+  const sorted = catalysts.slice().sort((a, b) => {
+    const ta = a.createdAt?.toMillis?.() ?? 0;
+    const tb = b.createdAt?.toMillis?.() ?? 0;
+    return tb - ta;
+  });
+  sorted.forEach((cat) => {
+    const tile = createCatalystTileElement(
+      cat,
+      { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, showCreatorAvatar: true },
+      { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick },
+    );
+    wrap.appendChild(tile);
+  });
+  list.appendChild(wrap);
+}
+
+// Re-renders the feed view from the latest snapshot. Called by the
+// feed mode toggle so flipping between Catalysts and Alchemists is
+// instant — no Firestore round-trip.
+function _repaintFeed() {
+  const emptyMessage = _currentCategory === 'all'
+    ? 'No catalysts yet. Be the first to share what you\'re building.'
+    : 'No catalysts in this category yet.';
+  if (_feedViewMode === 'alchemists') {
+    renderCommunityHub(_currentFeedSnapshot, { emptyMessage });
+  } else {
+    renderCatalystsFlow(_currentFeedSnapshot, { emptyMessage });
+  }
+}
+
 async function renderFeedRoute() {
   hideAllViews();
   showFilterBar();
@@ -481,11 +538,10 @@ async function renderFeedRoute() {
   // to a community-shaped skeleton would double the code for a
   // sub-second difference.
   renderSkeleton();
-  const emptyMessage = _currentCategory === 'all'
-    ? 'No catalysts yet. Be the first to share what you\'re building.'
-    : 'No catalysts in this category yet.';
+  _currentFeedSnapshot = [];
   const unsub = subscribePublicFeed(_currentCategory, (catalysts) => {
-    renderCommunityHub(catalysts, { emptyMessage });
+    _currentFeedSnapshot = catalysts || [];
+    _repaintFeed();
   });
   trackSub(unsub);
 }
@@ -969,6 +1025,24 @@ document.addEventListener('DOMContentLoaded', () => {
       pill.classList.add('selected');
       _currentCategory = pill.dataset.cat;
       if (_currentRoute?.page === 'feed') renderFeedRoute();
+    });
+  });
+
+  // Feed view-mode toggle (Catalysts vs Alchemists). Switching mode
+  // re-renders from the cached snapshot — no Firestore round-trip.
+  // Initial selected state mirrors the persisted _feedViewMode.
+  document.querySelectorAll('.feed-mode-btn').forEach((btn) => {
+    btn.classList.toggle('selected', btn.dataset.mode === _feedViewMode);
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      if (mode !== 'catalysts' && mode !== 'alchemists') return;
+      if (mode === _feedViewMode) return;
+      _feedViewMode = mode;
+      try { localStorage.setItem('nb-feed-mode', mode); } catch {}
+      document.querySelectorAll('.feed-mode-btn').forEach((b) => {
+        b.classList.toggle('selected', b.dataset.mode === mode);
+      });
+      if (_currentRoute?.page === 'feed') _repaintFeed();
     });
   });
 

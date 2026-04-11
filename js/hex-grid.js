@@ -119,11 +119,18 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     avatarHTML = `<div class="hex-creator-avatar" style="border-color:#${hex}">${photo}</div>`;
   }
 
-  // Collaborator count placeholder. Data model has no collaborators
-  // field yet — keeping the default at 1 means the markup is skipped
-  // entirely. When the backend starts writing `collaborators: [...]`
-  // (future feature), counts > 1 start rendering automatically.
-  const collabCount = Array.isArray(cat.collaborators) ? cat.collaborators.length : 1;
+  // Collaborator count. The owner is implicit (not stored in the
+  // collaborators array), so total = 1 + extras. We prefer the
+  // denormalized collaboratorCount field when present, otherwise
+  // compute from the array length, otherwise default to 1.
+  let collabCount;
+  if (typeof cat.collaboratorCount === 'number') {
+    collabCount = cat.collaboratorCount;
+  } else if (Array.isArray(cat.collaborators)) {
+    collabCount = 1 + cat.collaborators.length;
+  } else {
+    collabCount = 1;
+  }
   const collabHTML = collabCount > 1
     ? `<div class="hex-collab-badge">${PEOPLE_MINI_SVG}<span>${collabCount}</span></div>`
     : '';

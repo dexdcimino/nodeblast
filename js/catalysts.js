@@ -26,8 +26,9 @@ import {
 import State from './state.js';
 import { uploadCatalystThumb, deleteCatalystThumb } from './storage.js';
 import { openColorPopup, closeColorPopup } from './color.js';
-import { toast, showModal, renderUsername } from './ui-events.js';
+import { toast, showModal, renderUsername, escapeHtml } from './ui-events.js';
 import { navigate, buildUserSlug } from './router.js';
+import { searchUsers } from './users.js';
 
 const db = getFirestore(app);
 
@@ -328,6 +329,12 @@ export async function createCatalyst(data, file) {
 
   const slug = await uniqueSlugForUser(State.user.uid, slugify(data.title));
 
+  // MD7 collaborator scaffold: empty array on create. The OWNER is
+  // implicit and never lives in this list — the array stores ADDITIONAL
+  // collaborators only. collaboratorCount denormalizes (1 + extras) so
+  // the hex tile can render without scanning the array.
+  const collaborators = Array.isArray(data.collaborators) ? data.collaborators : [];
+
   const doc1 = {
     ownerId: State.user.uid,
     ownerName: State.profile?.displayName || 'anon',
@@ -349,6 +356,8 @@ export async function createCatalyst(data, file) {
     frostCount: 0,
     viewCount: 0,
     isPublic: true,
+    collaborators,
+    collaboratorCount: 1 + collaborators.length,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -378,6 +387,14 @@ export async function updateCatalyst(id, data, file) {
     ownerIsAdmin: !!State.profile?.isAdmin,
     updatedAt: serverTimestamp(),
   };
+
+  // Collaborators only get written when the editor actually included
+  // a list. Avoids clobbering an existing value with `undefined` from
+  // a caller that doesn't care about collaborators.
+  if (Array.isArray(data.collaborators)) {
+    updates.collaborators = data.collaborators;
+    updates.collaboratorCount = 1 + data.collaborators.length;
+  }
 
   // Re-slug only if the title actually changed
   try {
@@ -474,6 +491,11 @@ let _editingId = null;
 let _pendingFile = null;
 let _accentColor = '#5AAA72';
 let _status = DEFAULT_STATUS;
+// Working set of collaborators while the edit modal is open. Each
+// entry: { uid, displayName, hexCode, photoURL, isAdmin }. Owner is
+// NOT included (it's implicit). Reset on every modal open.
+let _editingCollabs = [];
+let _collabSearchT = null;
 
 function _setPills(containerId, value) {
   document.querySelectorAll(`#${containerId} .cat-pill`).forEach((b) => {
@@ -517,6 +539,118 @@ function _setThumbPreview(src) {
   }
 }
 
+// Render the working collaborators list as a chip stack. The owner
+// gets a non-removable chip first; each working collaborator gets a
+// removable chip after.
+function _renderCollabChips() {
+  const list = document.getElementById('cat-collab-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  // Owner chip — pulled from State.profile, since the owner is always
+  // the editing user (only owners can open this modal in edit mode).
+  const ownerName = State.profile?.displayName || 'anon';
+  const ownerHex = State.profile?.hexCode || '5aaa72';
+  const ownerPhoto = State.profile?.photoURL || '';
+  const ownerInitial = escapeHtml((ownerName || 'A').charAt(0).toUpperCase());
+  const ownerAvatarInner = ownerPhoto
+    ? `<img src="${escapeHtml(ownerPhoto)}" alt="">`
+    : ownerInitial;
+  const ownerChip = document.createElement('span');
+  ownerChip.className = 'cat-collab-chip owner';
+  ownerChip.style.setProperty('--chip-hex', '#' + ownerHex);
+  ownerChip.innerHTML = `
+    <span class="cat-collab-chip-avatar">${ownerAvatarInner}</span>
+    <span class="cat-collab-chip-name">${escapeHtml(ownerName)}</span>
+    <span class="cat-collab-chip-hex">#${escapeHtml(ownerHex)}</span>
+  `;
+  list.appendChild(ownerChip);
+
+  _editingCollabs.forEach((c, i) => {
+    const initial = escapeHtml((c.displayName || 'A').charAt(0).toUpperCase());
+    const avatarInner = c.photoURL
+      ? `<img src="${escapeHtml(c.photoURL)}" alt="">`
+      : initial;
+    const chip = document.createElement('span');
+    chip.className = 'cat-collab-chip';
+    chip.style.setProperty('--chip-hex', '#' + (c.hexCode || '5aaa72'));
+    chip.innerHTML = `
+      <span class="cat-collab-chip-avatar">${avatarInner}</span>
+      <span class="cat-collab-chip-name">${escapeHtml(c.displayName || 'anon')}</span>
+      <span class="cat-collab-chip-hex">#${escapeHtml(c.hexCode || '5aaa72')}</span>
+      <button type="button" class="cat-collab-remove" data-idx="${i}" aria-label="Remove collaborator">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    `;
+    list.appendChild(chip);
+  });
+}
+
+function _hideCollabResults() {
+  const results = document.getElementById('cat-collab-results');
+  if (results) {
+    results.classList.remove('visible');
+    results.innerHTML = '';
+  }
+}
+
+async function _runCollabSearch(prefix) {
+  const results = document.getElementById('cat-collab-results');
+  if (!results) return;
+  if (!prefix || prefix.length < 1) {
+    _hideCollabResults();
+    return;
+  }
+  const users = await searchUsers(prefix);
+  const ownerUid = State.user?.uid;
+  // Filter out the owner + anyone already in the working list. Cap
+  // to 6 hits — the dropdown is short by design.
+  const filtered = users
+    .filter((u) => u.uid !== ownerUid)
+    .filter((u) => !_editingCollabs.some((c) => c.uid === u.uid))
+    .slice(0, 6);
+  results.innerHTML = '';
+  if (filtered.length === 0) {
+    results.innerHTML = '<div class="cat-collab-result-empty">No matching users</div>';
+    results.classList.add('visible');
+    return;
+  }
+  filtered.forEach((u) => {
+    const name = u.displayName || 'anon';
+    const hex = u.hexCode || '5aaa72';
+    const photo = u.photoURL || '';
+    const initial = escapeHtml((name || 'A').charAt(0).toUpperCase());
+    const avatarInner = photo
+      ? `<img src="${escapeHtml(photo)}" alt="">`
+      : initial;
+    const row = document.createElement('div');
+    row.className = 'cat-collab-result';
+    row.innerHTML = `
+      <div class="cat-collab-result-avatar" style="border-color:#${escapeHtml(hex)}">${avatarInner}</div>
+      <div class="cat-collab-result-body">
+        <span class="cat-collab-result-name">${escapeHtml(name)}</span>
+        <span class="cat-collab-result-hex">#${escapeHtml(hex)}</span>
+      </div>
+    `;
+    row.addEventListener('click', () => {
+      // Append to the working list, re-render chips, clear input.
+      _editingCollabs.push({
+        uid: u.uid,
+        displayName: name,
+        hexCode: hex,
+        photoURL: photo,
+        isAdmin: !!u.isAdmin,
+      });
+      _renderCollabChips();
+      const input = document.getElementById('cat-collab-input');
+      if (input) input.value = '';
+      _hideCollabResults();
+    });
+    results.appendChild(row);
+  });
+  results.classList.add('visible');
+}
+
 export function openCatalystModal(existing = null) {
   const modal = document.getElementById('cat-modal');
   if (!modal) return;
@@ -534,6 +668,17 @@ export function openCatalystModal(existing = null) {
   _setThumbPreview(existing?.thumbURL || '');
   _updateAccentBtn();
 
+  // Seed the collaborators working set. New catalysts start empty;
+  // edits clone the existing array so a Cancel doesn't mutate the
+  // catalyst doc that the rest of the app may still be referencing.
+  _editingCollabs = Array.isArray(existing?.collaborators)
+    ? existing.collaborators.map((c) => ({ ...c }))
+    : [];
+  _renderCollabChips();
+  _hideCollabResults();
+  const collabInput = document.getElementById('cat-collab-input');
+  if (collabInput) collabInput.value = '';
+
   document.getElementById('cat-submit-btn').textContent = existing ? 'Save Changes' : 'Create Catalyst';
   document.getElementById('cat-delete-btn').style.display = existing ? 'inline-flex' : 'none';
 
@@ -546,6 +691,9 @@ export function closeCatalystModal() {
   closeColorPopup();
   _editingId = null;
   _pendingFile = null;
+  _editingCollabs = [];
+  _hideCollabResults();
+  clearTimeout(_collabSearchT);
 }
 
 export function initCatalystModal(onSaved) {
@@ -624,6 +772,35 @@ export function initCatalystModal(onSaved) {
     }
   });
 
+  // Collaborator search input — debounced username prefix search.
+  // Results dropdown is populated by _runCollabSearch.
+  const collabInput = document.getElementById('cat-collab-input');
+  collabInput?.addEventListener('input', () => {
+    clearTimeout(_collabSearchT);
+    const q = (collabInput.value || '').trim();
+    if (!q) { _hideCollabResults(); return; }
+    _collabSearchT = setTimeout(() => _runCollabSearch(q), 220);
+  });
+  collabInput?.addEventListener('blur', () => {
+    // Delay so a click on a result row registers before the dropdown
+    // disappears.
+    setTimeout(_hideCollabResults, 160);
+  });
+  collabInput?.addEventListener('focus', () => {
+    const q = (collabInput.value || '').trim();
+    if (q) _runCollabSearch(q);
+  });
+
+  // Chip remove buttons (event delegation on the list).
+  document.getElementById('cat-collab-list')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.cat-collab-remove');
+    if (!btn) return;
+    const idx = Number(btn.dataset.idx);
+    if (!Number.isInteger(idx)) return;
+    _editingCollabs.splice(idx, 1);
+    _renderCollabChips();
+  });
+
   document.getElementById('cat-submit-btn')?.addEventListener('click', async () => {
     const title = document.getElementById('cat-title').value.trim();
     const url = document.getElementById('cat-url').value.trim();
@@ -641,6 +818,7 @@ export function initCatalystModal(onSaved) {
       platform: _getPill('cat-platform-pills') || 'web',
       status: _status,
       accentColor: _accentColor,
+      collaborators: _editingCollabs.slice(),
     };
     const submitBtn = document.getElementById('cat-submit-btn');
     submitBtn.disabled = true; submitBtn.textContent = 'Saving...';
@@ -771,13 +949,51 @@ export async function openCatalystDetail(catalyst) {
   document.getElementById('cat-detail-category').textContent = catalyst.category || 'sites';
   document.getElementById('cat-detail-platform').textContent = catalyst.platform || 'web';
 
-  // Collaborator placeholder — the data model has no collaborators list
-  // yet (MD6/future will add it). Default to 1 (the owner) so the row
-  // always displays something meaningful.
+  // Collaborator row + expandable list. Owner is implicit (always
+  // shows first); the catalyst doc's collaborators array stores the
+  // additional contributors. Click the row to toggle the list.
+  const collabRow = document.getElementById('cat-detail-collab');
   const collabText = document.getElementById('cat-detail-collab-text');
+  const collabList = document.getElementById('cat-detail-collab-list');
+  const extras = Array.isArray(catalyst.collaborators) ? catalyst.collaborators : [];
+  const totalCollabs = 1 + extras.length;
   if (collabText) {
-    const count = Array.isArray(catalyst.collaborators) ? catalyst.collaborators.length : 1;
-    collabText.textContent = count === 1 ? '1 contributor' : count + ' contributors';
+    collabText.textContent = totalCollabs === 1 ? '1 contributor' : totalCollabs + ' contributors';
+  }
+  if (collabRow) {
+    // Reset to collapsed each time the modal opens.
+    collabRow.dataset.expanded = 'false';
+    collabRow.style.cursor = totalCollabs > 1 ? 'pointer' : 'default';
+  }
+  if (collabList) {
+    collabList.classList.remove('visible');
+    if (totalCollabs > 1) {
+      const ownerName = catalyst.ownerName || 'anon';
+      const ownerHex = catalyst.ownerHex || '5aaa72';
+      const ownerPhoto = catalyst.ownerPhoto || '';
+      const ownerInitial = (ownerName || 'A').charAt(0).toUpperCase();
+      const buildAvatar = (photo, initial) => photo
+        ? `<img src="${escapeHtml(photo)}" alt="">`
+        : escapeHtml(initial);
+      const rows = [
+        `<div class="cat-detail-collab-item owner">
+           <div class="cat-detail-collab-avatar" style="border-color:#${escapeHtml(ownerHex)}">${buildAvatar(ownerPhoto, ownerInitial)}</div>
+           <div class="cat-detail-collab-name">${escapeHtml(ownerName)}<span class="cat-detail-collab-role">owner</span></div>
+         </div>`,
+        ...extras.map((c) => {
+          const name = c.displayName || 'anon';
+          const hex = c.hexCode || '5aaa72';
+          const photo = c.photoURL || '';
+          return `<div class="cat-detail-collab-item">
+            <div class="cat-detail-collab-avatar" style="border-color:#${escapeHtml(hex)}">${buildAvatar(photo, (name || 'A').charAt(0).toUpperCase())}</div>
+            <div class="cat-detail-collab-name">${escapeHtml(name)}<span class="cat-detail-collab-hex">#${escapeHtml(hex)}</span></div>
+          </div>`;
+        }),
+      ];
+      collabList.innerHTML = rows.join('');
+    } else {
+      collabList.innerHTML = '';
+    }
   }
 
   // URL display row with copy button. Shows domain text (linking to
@@ -871,6 +1087,17 @@ export function initCatalystDetail() {
   pop.addEventListener('click', (e) => { if (e.target === pop) closeCatalystDetail(); });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && pop.classList.contains('open')) closeCatalystDetail();
+  });
+
+  // Collaborator row click → toggle the chip list visibility. Only
+  // expandable when there's more than just the owner.
+  document.getElementById('cat-detail-collab')?.addEventListener('click', (e) => {
+    const row = e.currentTarget;
+    const list = document.getElementById('cat-detail-collab-list');
+    if (!row || !list || !list.children.length) return;
+    const isOpen = row.dataset.expanded === 'true';
+    row.dataset.expanded = isOpen ? 'false' : 'true';
+    list.classList.toggle('visible', !isOpen);
   });
 
   document.getElementById('cat-vote-fire')?.addEventListener('click', async (e) => {

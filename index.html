@@ -110,13 +110,19 @@
        CATEGORY FILTER BAR (feed route)
        ══════════════════════════════════════ -->
   <div id="cat-filter-bar">
-    <button class="cat-filter-pill selected" data-cat="all">All</button>
-    <button class="cat-filter-pill" data-cat="games">Games</button>
-    <button class="cat-filter-pill" data-cat="tools">Tools</button>
-    <button class="cat-filter-pill" data-cat="creative">Creative</button>
-    <button class="cat-filter-pill" data-cat="ai">AI</button>
-    <button class="cat-filter-pill" data-cat="sites">Sites</button>
-    <button class="cat-filter-pill" data-cat="wild">Wild</button>
+    <div id="feed-mode-toggle" role="tablist" aria-label="Feed view mode">
+      <button class="feed-mode-btn selected" id="feed-mode-catalysts" data-mode="catalysts" role="tab">Catalysts</button>
+      <button class="feed-mode-btn" id="feed-mode-alchemists" data-mode="alchemists" role="tab">Alchemists</button>
+    </div>
+    <div id="cat-filter-pills">
+      <button class="cat-filter-pill selected" data-cat="all">All</button>
+      <button class="cat-filter-pill" data-cat="games">Games</button>
+      <button class="cat-filter-pill" data-cat="tools">Tools</button>
+      <button class="cat-filter-pill" data-cat="creative">Creative</button>
+      <button class="cat-filter-pill" data-cat="ai">AI</button>
+      <button class="cat-filter-pill" data-cat="sites">Sites</button>
+      <button class="cat-filter-pill" data-cat="wild">Wild</button>
+    </div>
   </div>
 
   <!-- ══════════════════════════════════════
@@ -466,6 +472,15 @@
         </div>
       </div>
 
+      <div class="cat-field">
+        <label class="cat-label">Collaborators</label>
+        <div id="cat-collab-list"><!-- chips populated by initCatalystModal --></div>
+        <div id="cat-collab-add-row">
+          <input id="cat-collab-input" type="text" placeholder="Add by username" spellcheck="false" autocomplete="off" />
+          <div id="cat-collab-results"><!-- search results dropdown --></div>
+        </div>
+      </div>
+
       <div class="cat-field cat-field-row">
         <div class="cat-field-col" style="flex:1">
           <label class="cat-label">Thumbnail</label>
@@ -506,10 +521,12 @@
           <span id="cat-detail-status" class="cat-detail-status"></span>
         </div>
         <div id="cat-detail-creator"></div>
-        <div id="cat-detail-collab">
+        <div id="cat-detail-collab" data-expanded="false">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span id="cat-detail-collab-text">1 contributor</span>
+          <svg id="cat-detail-collab-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
+        <div id="cat-detail-collab-list"></div>
         <div id="cat-detail-badges">
           <span class="cat-detail-badge" id="cat-detail-category"></span>
           <span class="cat-detail-badge" id="cat-detail-platform"></span>
