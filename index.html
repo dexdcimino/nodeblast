@@ -13,7 +13,7 @@
   <meta name="twitter:title" content="nodeblast" />
   <meta name="twitter:description" content="A launchpad for creators." />
   <link rel="canonical" href="https://nodeblast.dev" />
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="assets/nodeblast_logo_v1.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -34,12 +34,37 @@
        ══════════════════════════════════════ -->
   <div id="hdr">
     <div id="hdr-left">
-      <div id="hdr-logo" data-tip="Home">
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="50,3 97,28 97,72 50,97 3,72 3,28" fill="currentColor"/>
-        </svg>
+      <div id="hdr-logo-wrap">
+        <div id="hdr-logo" data-tip="Home">
+          <svg id="hdr-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 234.7 256">
+            <path id="nodeblast_circle_bottom" fill="#ffffff" d="M162.3,18.5C150.8,7.1,134.9,0,117.3,0s-33.4,7.1-45,18.5l-48.1,27.8C9.2,54.9,0,70.9,0,88.2v79.7c0,17.3,9.2,33.2,24.2,41.9h0c13.1,7.5,29.3-2,29.2-17.1v-.6c0-35.4,28.7-64,64-64s64-28.7,64-64-7.3-33.9-19-45.5ZM118.9,87.9c-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4Z"/>
+            <g id="nodeblast_logo_bottom" fill="#ed2355">
+              <path d="M72.3,237.5c11.6,11.4,27.5,18.5,45,18.5s33.4-7.1,45-18.5l48.1-27.8c15-8.6,24.2-24.6,24.2-41.9v-79.7c0-17.3-9.2-33.2-24.2-41.9h0c-13.1-7.5-29.3,2-29.2,17.1v.6c0,35.3-28.6,64-64,64s-64,28.6-64,64,7.3,33.9,19,45.5h0ZM115.8,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>
+            </g>
+            <path id="nodeblast_circle_top" fill="#ed2355" d="M118.9,87.9c-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4Z"/>
+            <path id="nodeblast_logo_top" fill="#ffffff" d="M115.8,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>
+          </svg>
+        </div>
+        <div id="logo-picker">
+          <div class="logo-picker-col" data-col="top">
+            <button class="logo-swatch" data-color="#1199ff" style="background:#1199ff"></button>
+            <button class="logo-swatch" data-color="#ff6b6b" style="background:#ff6b6b"></button>
+            <button class="logo-swatch" data-color="#f59e0b" style="background:#f59e0b"></button>
+            <button class="logo-swatch" data-color="#a78bfa" style="background:#a78bfa"></button>
+            <button class="logo-swatch" data-color="#14b8a6" style="background:#14b8a6"></button>
+            <button class="logo-swatch" data-color="#ffffff" style="background:#ffffff"></button>
+          </div>
+          <div class="logo-picker-col" data-col="bot">
+            <button class="logo-swatch" data-color="#84cc16" style="background:#84cc16"></button>
+            <button class="logo-swatch" data-color="#ec4899" style="background:#ec4899"></button>
+            <button class="logo-swatch" data-color="#f97316" style="background:#f97316"></button>
+            <button class="logo-swatch" data-color="#4f46e5" style="background:#4f46e5"></button>
+            <button class="logo-swatch" data-color="#10b981" style="background:#10b981"></button>
+            <button class="logo-swatch" data-color="#cbd5e1" style="background:#cbd5e1"></button>
+          </div>
+        </div>
       </div>
-      <div id="hdr-brand">nodeblast</div>
+      <div id="hdr-brand"><span id="brand-node">node</span><span id="brand-blast">blast</span></div>
       <div id="hdr-tag">create. share. detonate.</div>
     </div>
     <div id="hdr-mid">

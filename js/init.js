@@ -1,4 +1,4 @@
-import State, { BRAND } from './state.js';
+import State from './state.js';
 import { signIn, signOut, onAuthReady, saveProfile } from './auth.js';
 import { applyTheme, applyPalette, initThemeToggle, initPalettePickers } from './theme.js';
 import { initColorPicker } from './color.js';
@@ -397,8 +397,88 @@ function updateAuthUI(user, profile) {
    Boot
 ══════════════════════════════════════ */
 
+// ══════════════════════════════════════════════════════════════
+//  Logo color easter egg
+// ──────────────────────────────────────────────────────────────
+//  TOP color (left column) paints: #nodeblast_logo_top,
+//    #nodeblast_circle_bottom, #brand-blast
+//  BOT color (right column) paints: #nodeblast_logo_bottom,
+//    #nodeblast_circle_top, #brand-node
+//  Both colors persist in localStorage.
+// ══════════════════════════════════════════════════════════════
+
+const LOGO_TOP_KEY = 'nb-logo-top-color';
+const LOGO_BOT_KEY = 'nb-logo-bot-color';
+const LOGO_TOP_DEFAULT = '#ffffff';
+const LOGO_BOT_DEFAULT = '#ed2355';
+
+function applyLogoColors(top, bot) {
+  const topEl1 = document.getElementById('nodeblast_logo_top');
+  const topEl2 = document.getElementById('nodeblast_circle_bottom');
+  if (topEl1) topEl1.setAttribute('fill', top);
+  if (topEl2) topEl2.setAttribute('fill', top);
+
+  const botG = document.getElementById('nodeblast_logo_bottom');
+  const botEl2 = document.getElementById('nodeblast_circle_top');
+  if (botG) botG.setAttribute('fill', bot);
+  if (botEl2) botEl2.setAttribute('fill', bot);
+
+  const blastEl = document.getElementById('brand-blast');
+  const nodeEl = document.getElementById('brand-node');
+  if (blastEl) blastEl.style.color = top;
+  if (nodeEl) nodeEl.style.color = bot;
+
+  try {
+    localStorage.setItem(LOGO_TOP_KEY, top);
+    localStorage.setItem(LOGO_BOT_KEY, bot);
+  } catch {}
+
+  // Mark selected swatches
+  document.querySelectorAll('#logo-picker .logo-picker-col[data-col="top"] .logo-swatch')
+    .forEach((b) => b.classList.toggle('selected', b.dataset.color.toLowerCase() === top.toLowerCase()));
+  document.querySelectorAll('#logo-picker .logo-picker-col[data-col="bot"] .logo-swatch')
+    .forEach((b) => b.classList.toggle('selected', b.dataset.color.toLowerCase() === bot.toLowerCase()));
+}
+
+function initLogoPicker() {
+  const topColor = localStorage.getItem(LOGO_TOP_KEY) || LOGO_TOP_DEFAULT;
+  const botColor = localStorage.getItem(LOGO_BOT_KEY) || LOGO_BOT_DEFAULT;
+  applyLogoColors(topColor, botColor);
+
+  const picker = document.getElementById('logo-picker');
+  const logoEl = document.getElementById('hdr-logo');
+  if (!picker || !logoEl) return;
+
+  let hideTimer = null;
+  const show = () => {
+    clearTimeout(hideTimer); hideTimer = null;
+    picker.classList.add('open');
+  };
+  const hide = () => {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => picker.classList.remove('open'), 180);
+  };
+  logoEl.addEventListener('mouseenter', show);
+  logoEl.addEventListener('mouseleave', hide);
+  picker.addEventListener('mouseenter', show);
+  picker.addEventListener('mouseleave', hide);
+
+  picker.querySelectorAll('.logo-swatch').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const col = btn.closest('.logo-picker-col')?.dataset.col;
+      const newColor = btn.dataset.color;
+      if (!col || !newColor) return;
+      const currentTop = localStorage.getItem(LOGO_TOP_KEY) || LOGO_TOP_DEFAULT;
+      const currentBot = localStorage.getItem(LOGO_BOT_KEY) || LOGO_BOT_DEFAULT;
+      if (col === 'top') applyLogoColors(newColor, currentBot);
+      else applyLogoColors(currentTop, newColor);
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('hdr-brand').textContent = BRAND;
+  initLogoPicker();
 
   applyTheme(State.theme, true);
   applyPalette(State.palette);

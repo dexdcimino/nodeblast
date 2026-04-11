@@ -49,11 +49,22 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #hdr-mid{display:flex;align-items:center;justify-content:center;gap:4px;position:relative;}
 #hdr-right{display:flex;align-items:center;justify-content:flex-end;gap:5px;min-width:0;overflow:hidden;}
 
-#hdr-logo{width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--clr-adj);cursor:pointer;transition:transform var(--ease);border-radius:8px;}
-#hdr-logo svg{width:26px;height:26px;display:block;transition:transform var(--ease);}
-#hdr-logo:hover svg{transform:scale(1.15);}
+#hdr-logo-wrap{position:relative;flex-shrink:0;}
+#hdr-logo{width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform var(--ease);border-radius:8px;}
+#hdr-logo svg{width:30px;height:30px;display:block;transition:transform var(--ease);}
+#hdr-logo:hover svg{transform:scale(1.1);}
 
-#hdr-brand{font-size:20px;font-weight:700;color:var(--clr-adj);letter-spacing:-0.5px;line-height:1;cursor:pointer;}
+/* Logo color picker — hover easter egg */
+#logo-picker{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:150;background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:8px;box-shadow:0 12px 32px rgba(0,0,0,.45);gap:6px;}
+#logo-picker.open{display:flex;}
+.logo-picker-col{display:flex;flex-direction:column;gap:6px;}
+.logo-swatch{width:22px;height:22px;border-radius:50%;border:none;padding:0;cursor:pointer;transition:transform var(--ease),box-shadow var(--ease);box-shadow:0 0 0 1px rgba(255,255,255,.08);}
+.logo-swatch:hover{transform:scale(1.15);}
+.logo-swatch.selected{box-shadow:0 0 0 2px var(--tx);}
+
+#hdr-brand{font-size:26px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:baseline;}
+#hdr-brand #brand-node{color:#ed2355;}
+#hdr-brand #brand-blast{color:#ffffff;}
 #hdr-tag{font-size:13px;color:var(--tx3);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 .hdr-sep{width:1px;height:22px;background:var(--bdr);margin:0 4px;flex-shrink:0;}
@@ -497,7 +508,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 }
 @media (max-width: 640px) {
   #hdr{padding:0 12px;}
-  #hdr-brand{font-size:18px;}
+  #hdr-brand{font-size:22px;}
   #acct-name-short{max-width:110px;}
   #search-wrap.open #search-input-shell{width:min(220px,52vw);}
   #profile-bar{height:70px;padding:0 14px;}
