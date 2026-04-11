@@ -128,7 +128,14 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .logo-swatch:hover{transform:scale(1.18);}
 .logo-swatch.selected{box-shadow:0 0 0 2px var(--tx),0 0 0 3px var(--bg2);}
 
-#hdr-brand{font-size:30px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:center;height:100%;}
+/* Optical vertical alignment: Outfit at line-height:1 has ~6px of empty
+   space below the baseline for descenders. "nodeblast" has none, so the
+   line-box center sits ~2px BELOW the text ink center — flex centering
+   then puts the ink ~2px above the header midline. The translateY shifts
+   the ink back onto center without changing layout. Do NOT replace with
+   padding/height — no CSS property can measure ink position, so a
+   layout-based fix will drift whenever the font or size changes. */
+#hdr-brand{font-size:30px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:center;height:100%;transform:translateY(2px);}
 #hdr-brand #brand-node{color:#ed2355;}
 #hdr-brand #brand-blast{color:#ffffff;}
 
