@@ -647,6 +647,18 @@ body.dragging-active{touch-action:none;}
 .cat-field-error{font-size:12px;color:var(--danger);display:none;}
 .cat-field-error.visible{display:block;}
 
+/* URL input + copy-link button row. Flex row so the button hugs the
+   right edge of the input, same height as the input, matching border.
+   The field-error sits underneath (as a sibling of .cat-url-row). */
+.cat-url-row{display:flex;align-items:stretch;gap:8px;}
+.cat-url-row #cat-url{flex:1;min-width:0;}
+.cat-url-copy-btn{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:42px;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx2);cursor:pointer;transition:border-color var(--ease),color var(--ease),background var(--ease);}
+.cat-url-copy-btn:hover{color:var(--tx);border-color:var(--tx3);}
+.cat-url-copy-btn .icon-check{display:none;color:var(--clr-adj);}
+.cat-url-copy-btn.copied .icon-copy{display:none;}
+.cat-url-copy-btn.copied .icon-check{display:inline-block;}
+.cat-url-copy-btn.copied{border-color:var(--clr-adj);}
+
 .cat-pills{display:flex;flex-wrap:wrap;gap:6px;}
 .cat-pill{padding:6px 14px;border-radius:20px;background:var(--bg3);border:1px solid var(--bdr);color:var(--tx2);font-family:var(--fn);font-size:12px;font-weight:500;cursor:pointer;transition:all var(--ease);}
 .cat-pill:hover{color:var(--tx);border-color:var(--tx3);}

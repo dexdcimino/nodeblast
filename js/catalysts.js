@@ -599,6 +599,23 @@ export function initCatalystModal(onSaved) {
   }
   urlInput?.addEventListener('input', _clearUrlError);
 
+  // Copy-link button next to the URL input. Copies the live input value
+  // (not the saved catalyst URL) so users can verify what they're about
+  // to save. Empty input toasts instead of writing an empty clipboard.
+  const copyBtn = document.getElementById('cat-url-copy-btn');
+  copyBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const value = (urlInput?.value || '').trim();
+    if (!value) { toast('No URL to copy'); return; }
+    try {
+      await navigator.clipboard.writeText(value);
+      copyBtn.classList.add('copied');
+      setTimeout(() => copyBtn.classList.remove('copied'), 1200);
+    } catch {
+      toast(value);
+    }
+  });
+
   document.getElementById('cat-submit-btn')?.addEventListener('click', async () => {
     const title = document.getElementById('cat-title').value.trim();
     const url = document.getElementById('cat-url').value.trim();

@@ -37,6 +37,26 @@ export const DEFAULT_LOGO_BOT = '#9AA5B4';   // cool gray
 
 let _transTimer = null;
 let _currentAccent = null;
+const _logoRepaintListeners = [];
+
+// Register a callback to re-apply the logo paint whenever the theme
+// changes. init.js subscribes to this so its paintLogo() can re-run
+// with the light-mode-adjusted colors without theme.js having to
+// import anything from init.js (one-way dependency).
+export function onThemeChange(cb) {
+  if (typeof cb === 'function') _logoRepaintListeners.push(cb);
+}
+
+// Darken a raw picker color for light-mode rendering of the SVG logo
+// and "nodeblast" wordmark. The picker swatches themselves keep their
+// unadjusted hex; this is only used at paint time. Mirrors the 25%
+// black-mix used by applyAccent below, which is the same amount DexNote
+// darkens its session color in light mode.
+export function getThemeAdjustedLogoColor(hex) {
+  if (!hex) return hex;
+  if (State.theme === 'dark') return hex;
+  return _mixBlack(hex, 0.22);
+}
 
 export function applyTheme(theme, skipTransition = false) {
   if (!skipTransition && document.documentElement.dataset.theme && document.documentElement.dataset.theme !== theme) {
@@ -53,6 +73,9 @@ export function applyTheme(theme, skipTransition = false) {
   // Reapply the accent so the light-mode darkening kicks in after a
   // dark → light toggle (and vice versa).
   if (_currentAccent) applyAccent(_currentAccent);
+  // Notify subscribers so the logo SVG + wordmark can re-paint with
+  // the theme-adjusted colors.
+  _logoRepaintListeners.forEach((cb) => { try { cb(theme); } catch (e) { console.warn(e); } });
 }
 
 export function applyPalette(name) {

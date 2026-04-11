@@ -10,6 +10,8 @@ import {
   LOGO_PALETTE,
   DEFAULT_LOGO_TOP,
   DEFAULT_LOGO_BOT,
+  getThemeAdjustedLogoColor,
+  onThemeChange,
 } from './theme.js';
 import { initColorPicker } from './color.js';
 import {
@@ -729,18 +731,25 @@ function paintLogo(top, bot) {
   // Spec: top half pairs with "node" + left column color, bottom
   // half pairs with "blast" + right column color, both small dots
   // are transparent negative space.
+  //
+  // Light-mode adjustment: getThemeAdjustedLogoColor() mixes the raw
+  // picker color with ~22% black so the logo and wordmark keep enough
+  // contrast against the light background. In dark mode it returns
+  // the raw hex unchanged, so this is a no-op there.
+  const topAdj = getThemeAdjustedLogoColor(top);
+  const botAdj = getThemeAdjustedLogoColor(bot);
 
   // Left column (top color) → big top half + "node" wordmark.
   const bigTop = document.getElementById('nodeblast_circle_bottom');
   const nodeEl = document.getElementById('brand-node');
-  if (bigTop) bigTop.setAttribute('fill', top);
-  if (nodeEl) nodeEl.style.color = top;
+  if (bigTop) bigTop.setAttribute('fill', topAdj);
+  if (nodeEl) nodeEl.style.color = topAdj;
 
   // Right column (bot color) → big bottom half + "blast" wordmark.
   const bigBot  = document.getElementById('nodeblast_logo_bottom');
   const blastEl = document.getElementById('brand-blast');
-  if (bigBot)  bigBot.setAttribute('fill', bot);
-  if (blastEl) blastEl.style.color = bot;
+  if (bigBot)  bigBot.setAttribute('fill', botAdj);
+  if (blastEl) blastEl.style.color = botAdj;
 
   // Both small inner dots → transparent (header bg shows through).
   const upperDot = document.getElementById('nodeblast_circle_top');
@@ -805,6 +814,12 @@ function initLogoPicker() {
   const initialTop = localStorage.getItem(LOGO_TOP_KEY) || DEFAULT_LOGO_TOP;
   const initialBot = localStorage.getItem(LOGO_BOT_KEY) || DEFAULT_LOGO_BOT;
   setLogoColors(initialTop, initialBot);
+
+  // Re-paint the logo whenever the theme toggles so the light-mode
+  // darkening is recomputed against the current _logoTop/_logoBot.
+  // applyFavicon uses the raw (unadjusted) colors intentionally — a
+  // darkened favicon would look worse on dark OS chrome.
+  onThemeChange(() => paintLogo(_logoTop, _logoBot));
 
   let hideTimer = null;
   const show = () => {

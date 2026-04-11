@@ -430,7 +430,13 @@
 
       <div class="cat-field">
         <label class="cat-label">URL</label>
-        <input id="cat-url" type="text" placeholder="https://..." spellcheck="false" autocomplete="off" />
+        <div class="cat-url-row">
+          <input id="cat-url" type="text" placeholder="https://..." spellcheck="false" autocomplete="off" />
+          <button type="button" id="cat-url-copy-btn" class="cat-url-copy-btn" data-tip="Copy link">
+            <svg class="icon-copy" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg class="icon-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
         <div id="cat-url-error" class="cat-field-error"></div>
       </div>
 
