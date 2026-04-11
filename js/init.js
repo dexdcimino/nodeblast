@@ -199,6 +199,32 @@ window._nbRefreshFriendBtn = () => {
   _applyFriendButton(_viewingOther);
 };
 
+// Paints the Community / My Profile segmented toggle in the header
+// based on the current route + sign-in state. Safe to call any time
+// — it only touches classes + the disabled flag.
+function _updateViewToggle() {
+  const community = document.getElementById('view-toggle-community');
+  const profile = document.getElementById('view-toggle-profile');
+  if (!community || !profile) return;
+  const route = _currentRoute || getRoute();
+  const signedIn = !!State.user;
+  community.classList.toggle('selected', route.page === 'feed');
+
+  // "My Profile" is the selected view only when we're on our OWN
+  // profile route — visiting another user's profile should leave
+  // both tabs inactive (we're viewing a third party).
+  const myLower = (State.profile?.displayName || '').toLowerCase();
+  const myHex = (State.profile?.hexCode || '').toLowerCase();
+  const routeLower = (route.username || '').toLowerCase();
+  const routeHex = (route.hex || '').toLowerCase();
+  const isOwnProfile = route.page === 'profile'
+    && signedIn
+    && routeLower === myLower
+    && (routeHex ? routeHex === myHex : true);
+  profile.classList.toggle('selected', isOwnProfile);
+  profile.disabled = !signedIn;
+}
+
 function openAccountMenuFromPill() {
   document.getElementById('acct-btn')?.click();
 }
@@ -366,6 +392,7 @@ async function renderRoute() {
 
   const route = getRoute();
   _currentRoute = route;
+  _updateViewToggle();
   const honey = document.getElementById('honeycomb');
 
   // Smooth fade between routes (skip the very first render)
@@ -416,10 +443,9 @@ function paintGuestProfilePill() {
   document.getElementById('acct-footer').style.display = 'none';
   document.getElementById('acct-signin-footer').classList.add('visible');
 
-  // Hide edit profile + view profile link for guests
+  // Hide edit profile for guests
   document.getElementById('acct-edit-btn').style.display = 'none';
-  const viewProfileLink = document.getElementById('acct-view-profile');
-  if (viewProfileLink) viewProfileLink.style.display = 'none';
+  _updateViewToggle();
 }
 
 function updateAuthUI(user, profile) {
@@ -489,12 +515,7 @@ function updateAuthUI(user, profile) {
   document.getElementById('acct-hex-dot').style.background = hexColor;
   document.getElementById('acct-edit-color-preview').style.background = hexColor;
 
-  const viewProfileLink = document.getElementById('acct-view-profile');
-  if (viewProfileLink) {
-    viewProfileLink.style.display = 'inline-block';
-    viewProfileLink.dataset.username = name.toLowerCase();
-    viewProfileLink.dataset.hex = hex;
-  }
+  _updateViewToggle();
 
   // Invalidate my own profile cache so "+" tile visibility updates correctly
   if (profile?.displayName) {
@@ -714,15 +735,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('hdr-brand')?.addEventListener('click', () => navigate('/'));
   document.getElementById('hdr-logo')?.addEventListener('click', () => navigate('/'));
 
-  // "View my profile" link in account menu
-  document.getElementById('acct-view-profile')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    const username = e.currentTarget.dataset.username;
-    const hex = e.currentTarget.dataset.hex || '';
-    if (username) {
-      navigate('/' + buildUserSlug(username, hex));
-      closeAccountMenu();
-    }
+  // Community / My Profile view toggle in the header.
+  document.getElementById('view-toggle-community')?.addEventListener('click', () => {
+    navigate('/');
+  });
+  document.getElementById('view-toggle-profile')?.addEventListener('click', () => {
+    if (!State.user) { toast('Sign in to view your profile'); return; }
+    const name = (State.profile?.displayName || '').toLowerCase();
+    const hex = State.profile?.hexCode || '';
+    if (name) navigate('/' + buildUserSlug(name, hex));
   });
 
   // 404 → home
