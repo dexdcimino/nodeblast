@@ -131,9 +131,15 @@ function buildLogoSvg(topColor, botColor) {
   // paths have those dots cut out as inner subpaths (even-odd fill),
   // so leaving the small-dot fill paths off gives us the negative
   // space the picker spec calls for.
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 234.7 256">`
+  //
+  // The wrapping <g> rotates the artwork 90° CW around its center
+  // (117.35, 128). The viewBox is shifted so the rotated bounding
+  // box (256 × 234.7) sits flush at origin (-10.65, 10.65).
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10.65 10.65 256 234.7">`
+    + `<g transform="rotate(90 117.35 128)">`
     + `<path fill="${topColor}" d="M162.3,18.5C150.8,7.1,134.9,0,117.3,0s-33.4,7.1-45,18.5l-48.1,27.8C9.2,54.9,0,70.9,0,88.2v79.7c0,17.3,9.2,33.2,24.2,41.9h0c13.1,7.5,29.3-2,29.2-17.1v-.6c0-35.4,28.7-64,64-64s64-28.7,64-64-7.3-33.9-19-45.5ZM118.9,87.9c-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4Z"/>`
     + `<path fill="${botColor}" d="M72.3,237.5c11.6,11.4,27.5,18.5,45,18.5s33.4-7.1,45-18.5l48.1-27.8c15-8.6,24.2-24.6,24.2-41.9v-79.7c0-17.3-9.2-33.2-24.2-41.9h0c-13.1-7.5-29.3,2-29.2,17.1v.6c0,35.3-28.6,64-64,64s-64,28.6-64,64,7.3,33.9,19,45.5h0ZM115.8,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>`
+    + `</g>`
     + `</svg>`;
 }
 
