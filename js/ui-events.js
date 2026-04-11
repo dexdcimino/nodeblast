@@ -227,11 +227,21 @@ export function initAccountMenu(handlers) {
     });
   });
 
-  // Edit profile
-  document.getElementById('acct-edit-btn')?.addEventListener('click', () => {
+  // Edit profile — pencil icon, plus the hex dot and hex label act as
+  // shortcuts into the same edit panel (DexNote parity).
+  const toggleEdit = () => {
     const p = document.getElementById('acct-edit-panel');
-    if (p.style.display === 'flex') _closeEditPanel();
+    if (p && p.style.display === 'flex') _closeEditPanel();
     else _openEditPanel();
+  };
+  document.getElementById('acct-edit-btn')?.addEventListener('click', toggleEdit);
+  document.getElementById('acct-hex-dot')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleEdit();
+  });
+  document.getElementById('acct-hex-label')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleEdit();
   });
   document.getElementById('acct-edit-cancel-btn')?.addEventListener('click', _closeEditPanel);
   document.getElementById('acct-edit-save-btn')?.addEventListener('click', async () => {

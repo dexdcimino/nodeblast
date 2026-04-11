@@ -167,7 +167,14 @@ export function subscribeUserCatalysts(uid, callback) {
   return onSnapshot(
     q,
     (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-    (err) => console.warn('[catalysts] user sub error:', err),
+    (err) => {
+      console.warn('[catalysts] user sub error:', err);
+      // Fire the callback with an empty array so the UI escapes the
+      // skeleton loading state and can render the empty message / + tile.
+      // Without this, a missing composite index leaves the grid stuck on
+      // skeleton placeholders forever.
+      callback([]);
+    },
   );
 }
 
@@ -183,7 +190,10 @@ export function subscribePublicFeed(category, callback, max = 24) {
   return onSnapshot(
     query(collection(db, 'catalysts'), ...constraints),
     (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-    (err) => console.warn('[catalysts] feed sub error:', err),
+    (err) => {
+      console.warn('[catalysts] feed sub error:', err);
+      callback([]);
+    },
   );
 }
 
