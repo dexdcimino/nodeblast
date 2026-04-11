@@ -129,8 +129,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-edit-panel{padding:10px 16px 12px;border-top:1px solid var(--bdr);background:color-mix(in srgb,var(--bg3) 60%,transparent);display:none;flex-direction:column;gap:8px;overflow:hidden;position:relative;z-index:6;}
 .acct-edit-field{display:flex;align-items:center;gap:8px;}
 .acct-edit-label{font-family:var(--fn);font-size:15px;font-weight:600;color:var(--tx2);white-space:nowrap;min-width:38px;}
-#acct-username-input{flex:1;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:15px;font-weight:700;padding:5px 10px;outline:none;text-align:center;transition:border-color var(--ease);}
+#acct-username-input-wrap{flex:1;display:flex;align-items:center;gap:4px;min-width:0;}
+#acct-username-input{flex:1;min-width:0;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:15px;font-weight:700;padding:5px 10px;outline:none;text-align:center;transition:border-color var(--ease);}
 #acct-username-input:focus{border-color:var(--tx3);}
+#acct-username-dev-badge{flex-shrink:0;font-size:13px;padding-right:4px;}
 #acct-edit-color-pick{flex:1;min-width:0;display:flex;align-items:center;gap:0;border:1.5px solid var(--bdr);border-radius:999px;padding:0;transition:border-color var(--ease);}
 #acct-edit-color-pick:hover,#acct-edit-color-pick:focus-within{border-color:var(--tx3);}
 #acct-edit-color-btn{display:flex;align-items:center;background:none;border:none;padding:6px 6px 6px 10px;cursor:pointer;flex-shrink:0;}

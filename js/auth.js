@@ -17,7 +17,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 import State from './state.js';
 import { normalizeUsername } from './users.js';
-import { setSigningIn } from './ui-events.js';
+import { setSigningIn, stripDevSuffix } from './ui-events.js';
+
+// Hardcoded admin emails. Firestore isAdmin field is the source of
+// truth, but any user whose auth email is in this list gets isAdmin
+// automatically on sign-in and the field is backfilled to their doc.
+const ADMIN_EMAILS = new Set(['dexdcimino@gmail.com']);
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -59,24 +64,28 @@ function stripHash(h) {
 
 function mergeProfileDocs(topData, prefsData, user, providerId) {
   const provider = (providerId || '').includes('github') ? 'github' : 'google';
-  // DexNote subdoc wins for displayName + hexCode
-  const displayName =
+  // DexNote subdoc wins for displayName + hexCode. ".dev" is an admin
+  // display badge, never part of the stored name — strip any legacy
+  // value that still has it baked in.
+  const rawName =
     prefsData?.username ||
     topData?.displayName ||
     user.displayName ||
     'anon';
+  const displayName = stripDevSuffix(rawName) || 'anon';
   const hexCode =
     stripHash(prefsData?.hexColor) ||
     stripHash(topData?.hexCode) ||
     null;
   const photoURL = topData?.photoURL || user.photoURL || '';
+  const emailIsAdmin = !!(user?.email && ADMIN_EMAILS.has(user.email.toLowerCase()));
   return {
     displayName,
     hexCode,
     photoURL,
     provider,
     usernameLower: normalizeUsername(displayName),
-    isAdmin: topData?.isAdmin || false,
+    isAdmin: !!topData?.isAdmin || emailIsAdmin,
   };
 }
 
@@ -121,16 +130,25 @@ async function loadOrCreateProfile(user, providerId) {
     lastLogin: serverTimestamp(),
   };
   if (!topData?.createdAt) topUpdate.createdAt = serverTimestamp();
+  // Persist isAdmin if the email match promoted a user that Firestore
+  // didn't have flagged yet.
+  if (merged.isAdmin && !topData?.isAdmin) topUpdate.isAdmin = true;
   setDoc(topRef, topUpdate, { merge: true }).catch((err) => {
     console.error('[auth] top-level profile write failed:', err);
   });
 
-  // Backfill the DexNote subdoc only if it's missing, so we never overwrite
-  // DexNote's own live data.
+  // If the stored DexNote subdoc username has a legacy ".dev" baked in,
+  // rewrite it to the stripped form so both sites stay consistent.
+  const prefsNeedsStrip = prefsData && prefsData.username && prefsData.username !== merged.displayName;
   if (!prefsData) {
     setDoc(prefsRef, {
       username: merged.displayName,
       hexColor: '#' + merged.hexCode,
+      updatedAt: serverTimestamp(),
+    }, { merge: true }).catch(() => {});
+  } else if (prefsNeedsStrip) {
+    setDoc(prefsRef, {
+      username: merged.displayName,
       updatedAt: serverTimestamp(),
     }, { merge: true }).catch(() => {});
   }
@@ -207,9 +225,10 @@ export async function signOut() {
 
 export async function saveProfile(updates) {
   if (updates.displayName) {
-    if (/\.dev/i.test(updates.displayName) && !State.profile?.isAdmin) {
-      throw new Error('.dev usernames are reserved for admins');
-    }
+    // ".dev" is an admin badge, not user-controlled text. Strip any
+    // suffix the user typed (or legacy data still carries) so the
+    // stored value is always the base name.
+    updates.displayName = stripDevSuffix(updates.displayName) || 'anon';
     updates.usernameLower = normalizeUsername(updates.displayName);
   }
   if (!State.user) {

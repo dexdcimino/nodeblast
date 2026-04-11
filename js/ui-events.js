@@ -26,19 +26,26 @@ export function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
-// Render a username, styling any trailing/embedded ".dev" suffix as an
-// admin badge (gray, slightly smaller) regardless of the parent color.
-export function renderUsername(name, hexColor) {
-  const safeName = escapeHtml(name || 'anon');
-  const lower = safeName.toLowerCase();
-  const idx = lower.indexOf('.dev');
+// Strip any ".dev" suffix from a display name. ".dev" is an automatic
+// admin badge now — never part of the stored username — so this is
+// applied defensively wherever we read a legacy value that still has
+// it baked in.
+export function stripDevSuffix(name) {
+  return String(name ?? '').replace(/\.dev$/i, '').trim();
+}
+
+// Render a username with an automatic ".dev" admin badge when isAdmin
+// is true. The badge is a gray, slightly smaller suffix rendered via a
+// separate span so it doesn't inherit the parent color. Any ".dev"
+// stored inside the name itself is stripped first — it's never supposed
+// to be part of the stored value, but legacy profiles may still have it.
+export function renderUsername(name, hexColor, isAdmin = false) {
+  const base = stripDevSuffix(name || 'anon');
+  const safeName = escapeHtml(base);
   const colorAttr = hexColor ? ` style="color:${escapeHtml(hexColor)}"` : '';
-  if (idx === -1) {
-    return `<span class="uname-main"${colorAttr}>${safeName}</span>`;
-  }
-  const main = safeName.slice(0, idx);
-  const tag = safeName.slice(idx);
-  return `<span class="uname-main"${colorAttr}>${main}</span><span class="uname-dev-tag">${tag}</span>`;
+  const main = `<span class="uname-main"${colorAttr}>${safeName}</span>`;
+  if (!isAdmin) return main;
+  return `${main}<span class="uname-dev-tag">.dev</span>`;
 }
 
 /* ── Toast (DexNote-verbatim) ── */
@@ -145,7 +152,10 @@ function _openEditPanel() {
   document.getElementById('acct-menu-scroll')?.classList.add('edit-panel-active');
   const nameIn = document.getElementById('acct-username-input');
   const hexIn = document.getElementById('acct-edit-hex-input');
-  if (nameIn) { nameIn.value = State.profile?.displayName || ''; nameIn.focus(); }
+  // Strip any legacy ".dev" suffix from the input so admins see just
+  // their base name — the badge lives next to the input as a static
+  // span controlled by isAdmin.
+  if (nameIn) { nameIn.value = stripDevSuffix(State.profile?.displayName || ''); nameIn.focus(); }
   if (hexIn) hexIn.value = '#' + (State.profile?.hexCode || '5AAA72').toUpperCase();
   _updateEditColorPreview();
 }

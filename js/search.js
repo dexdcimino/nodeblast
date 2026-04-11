@@ -76,7 +76,7 @@ function renderResults() {
         <div class="search-result" data-kind="user" data-idx="${i}">
           <div class="search-result-avatar" style="border-color:#${escapeHtml(hex)}">${photo}</div>
           <div class="search-result-body">
-            <div class="search-result-name">${renderUsername(name)}<span style="color:var(--tx3)">#${escapeHtml(hex)}</span></div>
+            <div class="search-result-name">${renderUsername(name, null, !!u.isAdmin)}<span style="color:var(--tx3)">#${escapeHtml(hex)}</span></div>
           </div>
         </div>
       `;
@@ -86,7 +86,7 @@ function renderResults() {
     html += '<div class="search-section-title">Catalysts</div>';
     catalysts.forEach((c, i) => {
       const title = escapeHtml(c.title || '');
-      const owner = renderUsername(c.ownerName || 'anon');
+      const owner = renderUsername(c.ownerName || 'anon', null, !!c.ownerIsAdmin);
       const category = escapeHtml(c.category || 'sites');
       html += `
         <div class="search-result" data-kind="catalyst" data-idx="${i}">

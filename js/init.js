@@ -98,7 +98,7 @@ function showProfileBar(user, catalystCount, isOwn) {
   }
   avatar.style.borderColor = hexColor;
 
-  document.getElementById('profile-bar-name').innerHTML = renderUsername(user.displayName || 'anon');
+  document.getElementById('profile-bar-name').innerHTML = renderUsername(user.displayName || 'anon', null, !!user.isAdmin);
   document.getElementById('profile-bar-hex-dot').style.background = hexColor;
   document.getElementById('profile-bar-hex-label').textContent = '#' + (user.hexCode || '5aaa72');
   document.getElementById('profile-bar-count').textContent =
@@ -361,10 +361,15 @@ function updateAuthUI(user, profile) {
   const hex = profile?.hexCode || '5aaa72';
   const hexColor = '#' + hex;
 
-  const unameHtml = renderUsername(name);
+  const isAdmin = !!profile?.isAdmin;
+  const unameHtml = renderUsername(name, null, isAdmin);
   const shortName = name.length > 14 ? name.slice(0, 14) + '…' : name;
-  document.getElementById('acct-name-short').innerHTML = renderUsername(shortName);
+  document.getElementById('acct-name-short').innerHTML = renderUsername(shortName, null, isAdmin);
   document.getElementById('acct-name').innerHTML = unameHtml;
+  // Toggle the static .dev badge next to the edit username input so the
+  // user understands the suffix is automatic.
+  const usernameDevBadge = document.getElementById('acct-username-dev-badge');
+  if (usernameDevBadge) usernameDevBadge.style.display = isAdmin ? 'inline' : 'none';
   document.getElementById('acct-hex-label').innerHTML = `<span>#</span>${escapeHtml(hex)}`;
 
   // Paint the account hex everywhere via --acct-hex cascade

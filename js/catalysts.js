@@ -241,6 +241,7 @@ export async function createCatalyst(data, file) {
     ownerUsernameLower: (State.profile?.displayName || 'anon').toLowerCase(),
     ownerHex: State.profile?.hexCode || '5aaa72',
     ownerPhoto: State.profile?.photoURL || '',
+    ownerIsAdmin: !!State.profile?.isAdmin,
     title: data.title.slice(0, 40),
     slug,
     url: normalizeUrl(data.url),
@@ -273,6 +274,13 @@ export async function updateCatalyst(id, data, file) {
     category: CATEGORIES.includes(data.category) ? data.category : 'sites',
     platform: PLATFORMS.includes(data.platform) ? data.platform : 'web',
     accentColor: data.accentColor || '#5AAA72',
+    // Refresh the owner-denormalized fields in case the editor changed
+    // their profile between catalyst creation and this edit.
+    ownerName: State.profile?.displayName || 'anon',
+    ownerUsernameLower: (State.profile?.displayName || 'anon').toLowerCase(),
+    ownerHex: State.profile?.hexCode || '5aaa72',
+    ownerPhoto: State.profile?.photoURL || '',
+    ownerIsAdmin: !!State.profile?.isAdmin,
     updatedAt: serverTimestamp(),
   };
 
@@ -576,7 +584,7 @@ export async function openCatalystDetail(catalyst) {
 
   const creator = document.getElementById('cat-detail-creator');
   const hex = catalyst.ownerHex || '5aaa72';
-  const unameHtml = renderUsername(catalyst.ownerName || 'anon', '#' + hex);
+  const unameHtml = renderUsername(catalyst.ownerName || 'anon', '#' + hex, !!catalyst.ownerIsAdmin);
   creator.innerHTML = `
     <div class="cat-detail-creator-avatar" style="border-color:#${hex}">
       ${catalyst.ownerPhoto ? `<img src="${catalyst.ownerPhoto}" alt="">` : ''}

@@ -169,7 +169,10 @@
       <div id="acct-edit-panel">
         <div class="acct-edit-field">
           <label class="acct-edit-label" for="acct-username-input">User:</label>
-          <input id="acct-username-input" type="text" maxlength="16" placeholder="Name" autocomplete="off" spellcheck="false" />
+          <div id="acct-username-input-wrap">
+            <input id="acct-username-input" type="text" maxlength="16" placeholder="Name" autocomplete="off" spellcheck="false" />
+            <span id="acct-username-dev-badge" class="uname-dev-tag" style="display:none">.dev</span>
+          </div>
         </div>
         <div class="acct-edit-field acct-edit-hex-row">
           <label class="acct-edit-label">Hex:</label>

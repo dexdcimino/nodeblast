@@ -82,7 +82,7 @@ function catalystTileHTML(cat) {
   const title = escapeHtml(cat.title || '');
   const accent = cat.accentColor || '#5AAA72';
   const hex = escapeHtml(cat.ownerHex || '5aaa72');
-  const unameHtml = renderUsername(cat.ownerName || 'anon', accent);
+  const unameHtml = renderUsername(cat.ownerName || 'anon', accent, !!cat.ownerIsAdmin);
   const faviconHtml = domain
     ? `<img class="hex-favicon" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" alt="" onerror="this.style.display='none'">`
     : '';
