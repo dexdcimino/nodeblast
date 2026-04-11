@@ -5,8 +5,12 @@
 
 import { renderUsername, escapeHtml } from './ui-events.js';
 
-const GAP = 36;
-const GRID_TOP_PAD = 32;
+// Spacing knobs for the honeycomb layout. Bumped significantly from
+// previous values: wider gaps + a deeper top padding so the hex grid
+// has breathing room around it after the profile bar was detached
+// into the main content area and given its own margin.
+const GAP = 60;
+const GRID_TOP_PAD = 56;
 const ROUND_R = 0.08;
 
 // Pointy-top hex vertices (objectBoundingBox 0..1)
@@ -85,22 +89,18 @@ function statusBadgeHTML(status) {
   return '<div class="hex-status" data-status="live"></div>';
 }
 
-// Inline globe glyph used in place of a network-fetched favicon.
-// Google's s2/favicons endpoint was 404ing for a large share of
-// domains and spamming the console on every render — the inline
-// SVG is zero-network, always-white-on-hex, and can't fail.
-const GLOBE_SVG = '<svg class="hex-favicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
-
 function catalystTileHTML(cat) {
   const domain = safeDomain(cat.url);
   const title = escapeHtml(cat.title || '');
   const accent = cat.accentColor || '#5AAA72';
   const hex = escapeHtml(cat.ownerHex || '5aaa72');
   const unameHtml = renderUsername(cat.ownerName || 'anon', accent, !!cat.ownerIsAdmin);
-  const faviconHtml = domain ? GLOBE_SVG : '';
   const status = cat.status || 'live';
+  // No avatar / favicon icon in the tile center — the spec calls for
+  // negative space there. Title + URL are centered; the creator line
+  // sits at the bottom of the info stack (still inside the hex shape,
+  // but clearly below the main content).
   return `
-    ${faviconHtml}
     ${statusBadgeHTML(status)}
     <div class="hex-fade"></div>
     <div class="hex-info">

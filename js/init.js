@@ -90,7 +90,7 @@ function hideAllViews() {
   document.getElementById('not-found').classList.remove('visible');
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
-  grid.classList.remove('with-filter', 'with-profile-bar');
+  grid.classList.remove('with-filter');
 }
 
 function showFilterBar() {
@@ -101,7 +101,6 @@ function showFilterBar() {
 function showProfileBar(user, catalystCount, isOwn) {
   const bar = document.getElementById('profile-bar');
   bar.classList.add('visible');
-  document.getElementById('grid').classList.add('with-profile-bar');
 
   const hexColor = '#' + (user.hexCode || '5aaa72');
   bar.style.setProperty('--acct-hex', hexColor);
