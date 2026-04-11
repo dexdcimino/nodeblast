@@ -403,6 +403,12 @@ export async function deleteCatalyst(id) {
   await deleteDoc(doc(db, 'catalysts', id));
 }
 
+// MD6 NOTE ON NAMING: the vote type value `'frost'` and the document
+// field `frostCount` are kept as-is for zero-migration compatibility
+// with existing catalyst + vote docs. The UI displays a 💩 emoji
+// instead — "poop" is a DISPLAY concept, not a storage concept. Any
+// vote cast before MD6 still highlights the poop button correctly
+// because the internal value is unchanged.
 export async function voteCatalyst(catalystId, type) {
   if (!State.user) { toast('Sign in to vote'); return null; }
   if (type !== 'fire' && type !== 'frost') return null;
@@ -415,6 +421,8 @@ export async function voteCatalyst(catalystId, type) {
       const [catSnap, voteSnap] = await Promise.all([tx.get(catRef), tx.get(voteRef)]);
       if (!catSnap.exists()) throw new Error('Catalyst missing');
       const cat = catSnap.data();
+      // Block self-voting. Users can't bump their own stuff.
+      if (cat.ownerId === uid) throw new Error("Can't vote on your own catalyst");
       let fire = cat.fireCount || 0;
       let frost = cat.frostCount || 0;
       let newState = null;
@@ -442,7 +450,7 @@ export async function voteCatalyst(catalystId, type) {
     });
   } catch (err) {
     console.warn('[catalysts] voteCatalyst failed:', err);
-    toast('Vote failed');
+    toast(err?.message?.includes("your own") ? err.message : 'Vote failed');
     return null;
   }
 }
@@ -696,6 +704,22 @@ function _renderVoteButtons() {
   frost.classList.toggle('active', _myVote === 'frost');
   fire.querySelector('.vote-count').textContent = _detailCatalyst.fireCount || 0;
   frost.querySelector('.vote-count').textContent = _detailCatalyst.frostCount || 0;
+
+  // Disabled states:
+  //   - Guest viewers can't vote → "Sign in to vote" tooltip.
+  //   - Owners can't self-vote → "Can't vote on your own catalyst".
+  // The transaction in voteCatalyst is still the source of truth;
+  // these UI states just short-circuit the click before we hit it.
+  const isGuest = !State.user;
+  const isOwner = !!(State.user && _detailCatalyst.ownerId === State.user.uid);
+  const disabled = isGuest || isOwner;
+  [fire, frost].forEach((btn) => {
+    btn.disabled = disabled;
+    if (isGuest) btn.dataset.tip = 'Sign in to vote';
+    else if (isOwner) btn.dataset.tip = "Can't vote on your own catalyst";
+    else if (btn === fire) btn.dataset.tip = 'Fire it up';
+    else btn.dataset.tip = 'Not a fan';
+  });
 }
 
 export async function openCatalystDetail(catalyst) {
@@ -849,8 +873,12 @@ export function initCatalystDetail() {
     if (e.key === 'Escape' && pop.classList.contains('open')) closeCatalystDetail();
   });
 
-  document.getElementById('cat-vote-fire')?.addEventListener('click', async () => {
+  document.getElementById('cat-vote-fire')?.addEventListener('click', async (e) => {
     if (!_detailCatalyst) return;
+    // Guest tap → toast instead of silent failure. Owner self-votes
+    // are blocked at the button-disabled level + inside the transaction.
+    if (!State.user) { toast('Sign in to vote'); return; }
+    if (e.currentTarget.disabled) return;
     const result = await voteCatalyst(_detailCatalyst.id, 'fire');
     if (result) {
       _myVote = result.type;
@@ -859,8 +887,10 @@ export function initCatalystDetail() {
       _renderVoteButtons();
     }
   });
-  document.getElementById('cat-vote-frost')?.addEventListener('click', async () => {
+  document.getElementById('cat-vote-frost')?.addEventListener('click', async (e) => {
     if (!_detailCatalyst) return;
+    if (!State.user) { toast('Sign in to vote'); return; }
+    if (e.currentTarget.disabled) return;
     const result = await voteCatalyst(_detailCatalyst.id, 'frost');
     if (result) {
       _myVote = result.type;

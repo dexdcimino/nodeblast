@@ -565,10 +565,21 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-creator-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
 .hex-creator-avatar-initial{line-height:1;}
 
-/* Collaborator count chip — bottom-right. Default is 1 so the DOM
-   is skipped entirely; only renders when the template sees > 1. */
-.hex-collab-badge{position:absolute;bottom:14%;right:18%;display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 7px;border-radius:12px;z-index:3;pointer-events:none;}
+/* Collaborator count chip — top-left corner. Moved from bottom-right
+   in MD6 so the bottom corners are free for fire/poop vote badges.
+   Default is 1 so the DOM is skipped entirely; only renders when the
+   template sees > 1. */
+.hex-collab-badge{position:absolute;top:18%;left:12%;display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 7px;border-radius:12px;z-index:3;pointer-events:none;}
 .hex-collab-badge svg{width:10px;height:10px;}
+
+/* Fire + poop vote badges — bottom corners of the hex. Positioned at
+   bottom:22% (where the hex clip is still reasonably wide) so they
+   sit above the title without getting clipped by the rounded bottom
+   point. Only rendered when count > 0. */
+.hex-vote{position:absolute;bottom:22%;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 8px;border-radius:12px;z-index:3;pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
+.hex-vote-fire{left:12%;}
+.hex-vote-poop{right:12%;}
+.hex-vote-emoji{font-size:12px;line-height:1;}
 
 /* Status badge moved to top-right so it never conflicts with the
    top-center creator avatar. The .hex-status wrapper is still absolute;
@@ -727,10 +738,13 @@ body.dragging-active{touch-action:none;}
 #cat-detail-open{width:100%;padding:12px;justify-content:center;font-size:15px;font-weight:600;border-radius:8px;background:var(--clr-adj);color:var(--clr-adj-on,#fff);border-color:var(--clr-adj);}
 #cat-detail-open:hover{opacity:0.88;}
 #cat-detail-vote{display:flex;gap:8px;justify-content:center;padding-top:8px;border-top:1px solid var(--bdr);}
-.vote-btn{display:flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;background:var(--bg3);border:1.5px solid var(--bdr);color:var(--tx2);font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:all var(--ease);}
+.vote-btn{display:flex;align-items:center;gap:8px;padding:9px 18px;border-radius:10px;background:var(--bg3);border:1.5px solid var(--bdr);color:var(--tx2);font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:all var(--ease);}
 .vote-btn:hover{color:var(--tx);border-color:var(--tx3);}
+.vote-btn[disabled]{opacity:.55;cursor:not-allowed;}
+.vote-btn[disabled]:hover{color:var(--tx2);border-color:var(--bdr);}
+.vote-emoji{font-size:17px;line-height:1;filter:saturate(1.1);}
 #cat-vote-fire.active{background:color-mix(in srgb,#ff6b2b 20%,var(--bg3));border-color:#ff6b2b;color:#ff8844;}
-#cat-vote-frost.active{background:color-mix(in srgb,#4db6ff 20%,var(--bg3));border-color:#4db6ff;color:#6bc5ff;}
+#cat-vote-frost.active{background:color-mix(in srgb,#8b5a2b 22%,var(--bg3));border-color:#a67244;color:#c28a52;}
 .vote-count{font-variant-numeric:tabular-nums;font-weight:700;}
 #cat-detail-views{display:flex;align-items:center;justify-content:center;gap:5px;padding-top:10px;color:var(--tx3);font-size:12px;font-variant-numeric:tabular-nums;}
 #cat-detail-views svg{color:var(--tx3);}

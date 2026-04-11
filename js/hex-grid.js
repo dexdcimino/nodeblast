@@ -128,16 +128,33 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     ? `<div class="hex-collab-badge">${PEOPLE_MINI_SVG}<span>${collabCount}</span></div>`
     : '';
 
+  // Fire / poop vote badges. Only render when count > 0 so the static
+  // face stays clean for fresh catalysts. Fire → bottom-left, poop →
+  // bottom-right. The vote type value is still 'frost' internally
+  // (see voteCatalyst comment) — `frostCount` on the catalyst doc is
+  // the poop count in UI land.
+  const fireCount = cat.fireCount || 0;
+  const poopCount = cat.frostCount || 0;
+  const fireHTML = fireCount > 0
+    ? `<div class="hex-vote hex-vote-fire"><span class="hex-vote-emoji">🔥</span><span>${fireCount}</span></div>`
+    : '';
+  const poopHTML = poopCount > 0
+    ? `<div class="hex-vote hex-vote-poop"><span class="hex-vote-emoji">💩</span><span>${poopCount}</span></div>`
+    : '';
+
   // Layers, top → bottom:
   //   .hex-creator-avatar — top center, community tiles only
   //   .hex-status         — top right corner (see CSS), never conflicts with avatar
-  //   .hex-collab-badge   — bottom right corner, conditional
+  //   .hex-collab-badge   — top left corner (conditional)
+  //   .hex-vote-fire/poop — bottom corners (conditional on count > 0)
   //   .hex-fade           — bottom linear gradient for title legibility
   //   .hex-info           — title + (hover) domain, anchored bottom
   return `
     ${avatarHTML}
     ${statusBadgeHTML(status)}
     ${collabHTML}
+    ${fireHTML}
+    ${poopHTML}
     <div class="hex-fade"></div>
     <div class="hex-info">
       <div class="hex-title">${title}</div>
