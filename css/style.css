@@ -533,44 +533,52 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    container instead of the absolutely-positioned honeycomb. Used by
    the community hub cards to drop tiles into a simple flex-wrap row. */
 .hex-tile.hex-tile-flow{position:relative;flex-shrink:0;}
-.hex-tile::before{content:'';position:absolute;inset:0;background-image:var(--thumb,none);background-size:cover;background-position:center;opacity:0.45;transition:opacity .25s ease,filter .25s ease;}
-.hex-tile:hover::before{opacity:0.8;filter:brightness(1.15);}
-.hex-tile:hover{transform:scale(1.06);z-index:10;}
-.hex-fade{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 10%,var(--bg2) 65%);pointer-events:none;}
+/* Background image is the hero — bump default opacity so the thumb
+   is clearly the star of the tile. The hover brightness bump stays. */
+.hex-tile::before{content:'';position:absolute;inset:0;background-image:var(--thumb,none);background-size:cover;background-position:center;opacity:0.88;transition:opacity .25s ease,filter .25s ease;}
+.hex-tile:hover::before{opacity:1;filter:brightness(1.08);}
+.hex-tile:hover{transform:scale(1.04);z-index:10;}
 
-/* The info stack is a vertical flexbox centered in the hex. The
-   .hex-static block holds the always-visible title + domain; the
-   .hex-hover block holds the creator + badges and fades in on hover.
-   Everything is pointer-events:none by default — individual interactive
-   spans (data-url-link, data-creator-link) re-enable pointer events. */
-.hex-info{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8% 12%;pointer-events:none;gap:4px;}
-.hex-static{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:100%;transition:transform .25s ease;}
-.hex-title{font-size:clamp(17px,1.9vw,26px);font-weight:800;color:var(--tx);line-height:1.15;letter-spacing:-0.01em;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-.hex-domain{display:inline-flex;align-items:center;gap:5px;font-size:clamp(11px,0.95vw,14px);color:var(--tx2);pointer-events:auto;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.hex-domain:hover{color:var(--tx);text-decoration:underline;}
+/* Bottom gradient for title legibility. Replaces the MD2 radial dim —
+   nothing is centered anymore, so we only need to darken the bottom
+   third where the title sits. Starts transparent at ~55% and fades
+   to ~85% black at the bottom. */
+.hex-fade{position:absolute;left:0;right:0;bottom:0;top:0;background:linear-gradient(to top,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.58) 22%,rgba(0,0,0,0) 55%);pointer-events:none;}
+
+/* Title + hover domain — anchored to the bottom of the hex inside the
+   narrowing bottom quadrant. Padding-bottom keeps the text above the
+   bottom point; padding-x keeps it inside the hex where it narrows. */
+.hex-info{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding:0 16% 14%;pointer-events:none;gap:3px;}
+.hex-title{font-size:clamp(14px,1.55vw,22px);font-weight:800;color:#fff;line-height:1.15;letter-spacing:-0.01em;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-shadow:0 1px 4px rgba(0,0,0,0.65);}
+.hex-domain{display:inline-flex;align-items:center;gap:5px;font-size:clamp(10px,0.9vw,13px);color:rgba(255,255,255,0.85);pointer-events:none;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:0;transform:translateY(2px);transition:opacity .22s ease,transform .22s ease;text-shadow:0 1px 3px rgba(0,0,0,0.65);}
 .hex-domain span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.hex-globe-mini{width:12px;height:12px;flex-shrink:0;opacity:0.8;}
+.hex-domain:hover{color:#fff;text-decoration:underline;}
+.hex-tile:hover .hex-domain{opacity:1;pointer-events:auto;transform:translateY(0);}
+.hex-globe-mini{width:12px;height:12px;flex-shrink:0;opacity:0.9;}
 
-/* Hover layer — hidden by default, fades in when the tile is hovered.
-   pointer-events:none while hidden prevents accidental taps landing on
-   the creator/badges that nobody can see; the hover rule re-enables it. */
-.hex-hover{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:8px;opacity:0;pointer-events:none;transform:translateY(4px);transition:opacity .22s ease,transform .22s ease;}
-.hex-tile:hover .hex-hover{opacity:1;pointer-events:auto;transform:translateY(0);}
-.hex-tile:hover .hex-static{transform:translateY(-2px);}
-.hex-hover-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;}
-.hex-badge{font-size:clamp(9px,0.75vw,11px);font-weight:600;padding:2px 8px;border-radius:10px;background:color-mix(in srgb,var(--bg) 70%,transparent);border:1px solid var(--bdr);color:var(--tx2);text-transform:capitalize;letter-spacing:0.02em;}
-.hex-collab{font-size:clamp(9px,0.75vw,11px);font-weight:600;padding:2px 8px;border-radius:10px;background:color-mix(in srgb,var(--clr) 18%,transparent);border:1px solid color-mix(in srgb,var(--clr) 35%,transparent);color:var(--tx);}
-.hex-creator{display:inline-flex;align-items:center;gap:5px;font-size:clamp(11px,0.95vw,13px);font-weight:500;pointer-events:auto;cursor:pointer;max-width:100%;overflow:hidden;}
-.hex-creator-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.hex-creator-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.hex-creator-hex{font-family:var(--fn);}
-.hex-creator-name .uname-main{color:var(--accent,var(--clr-adj));}
+/* Creator avatar — top center, community tiles only (renders only when
+   showCreatorAvatar is passed). pointer-events:none so a click passes
+   through to the tile body handler, which opens the detail modal.
+   Percentage top scales correctly with the fixed community tile size
+   and any future profile-page usage. */
+.hex-creator-avatar{position:absolute;top:8%;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;border:2px solid var(--clr-adj);background:var(--bg3);overflow:hidden;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
+.hex-creator-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+.hex-creator-avatar-initial{line-height:1;}
 
-/* Status badge on hex tile — top-center just below the rounded peak */
-.hex-status{position:absolute;top:12%;left:50%;transform:translateX(-50%);z-index:2;pointer-events:none;display:flex;align-items:center;justify-content:center;}
-.hex-status[data-status="live"]{width:8px;height:8px;border-radius:50%;background:var(--clr);box-shadow:0 0 0 1px rgba(0,0,0,.25),0 0 6px color-mix(in srgb,var(--clr) 60%,transparent);}
-.hex-status[data-status="early"]{padding:2px 6px;border-radius:10px;background:rgba(232,133,58,.85);color:#fff;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
-.hex-status[data-status="placeholder"]{padding:2px 6px;border-radius:10px;background:rgba(130,132,143,.65);color:#ddd;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
+/* Collaborator count chip — bottom-right. Default is 1 so the DOM
+   is skipped entirely; only renders when the template sees > 1. */
+.hex-collab-badge{position:absolute;bottom:14%;right:18%;display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 7px;border-radius:12px;z-index:3;pointer-events:none;}
+.hex-collab-badge svg{width:10px;height:10px;}
+
+/* Status badge moved to top-right so it never conflicts with the
+   top-center creator avatar. The .hex-status wrapper is still absolute;
+   only the position offsets changed. Live is a tiny dot, early/placeholder
+   are short pills — both fit inside the narrowing upper quadrant at this
+   offset across every tile size we use. */
+.hex-status{position:absolute;top:14%;right:24%;z-index:2;pointer-events:none;display:flex;align-items:center;justify-content:center;}
+.hex-status[data-status="live"]{width:8px;height:8px;border-radius:50%;background:var(--clr);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 6px color-mix(in srgb,var(--clr) 60%,transparent);}
+.hex-status[data-status="early"]{padding:2px 6px;border-radius:10px;background:rgba(232,133,58,.88);color:#fff;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
+.hex-status[data-status="placeholder"]{padding:2px 6px;border-radius:10px;background:rgba(130,132,143,.7);color:#ddd;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
 
 /* WIP tiles render normally — no pulse, no extra dimming. The
    "WIP" status badge in the top-right is enough signal. */
@@ -707,8 +715,15 @@ body.dragging-active{touch-action:none;}
 .cat-detail-creator-avatar img{width:100%;height:100%;object-fit:cover;}
 #cat-detail-badges{display:flex;gap:6px;flex-wrap:wrap;}
 .cat-detail-badge{padding:4px 10px;border-radius:12px;background:var(--bg3);border:1px solid var(--bdr);color:var(--tx2);font-size:11px;font-weight:600;text-transform:capitalize;}
+#cat-detail-collab{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx3);}
+#cat-detail-collab svg{color:var(--tx3);flex-shrink:0;}
 #cat-detail-desc{font-size:13px;color:var(--tx2);line-height:1.55;white-space:pre-wrap;}
 #cat-detail-desc:empty{display:none;}
+#cat-detail-url-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;}
+#cat-detail-url-row .cat-detail-url-globe{color:var(--tx3);flex-shrink:0;}
+#cat-detail-url-text{flex:1;min-width:0;color:var(--tx2);font-size:13px;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#cat-detail-url-text:hover{color:var(--tx);text-decoration:underline;}
+#cat-detail-url-row .cat-url-copy-btn{width:32px;height:28px;padding:0;border-width:1px;}
 #cat-detail-open{width:100%;padding:12px;justify-content:center;font-size:15px;font-weight:600;border-radius:8px;background:var(--clr-adj);color:var(--clr-adj-on,#fff);border-color:var(--clr-adj);}
 #cat-detail-open:hover{opacity:0.88;}
 #cat-detail-vote{display:flex;gap:8px;justify-content:center;padding-top:8px;border-top:1px solid var(--bdr);}

@@ -438,7 +438,7 @@ function _buildCommunityCard(group) {
   _sortCardTiles(group.catalysts).forEach((cat) => {
     const tile = createCatalystTileElement(
       cat,
-      { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H },
+      { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, showCreatorAvatar: true },
       { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick },
     );
     body.appendChild(tile);

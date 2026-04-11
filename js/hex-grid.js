@@ -89,52 +89,59 @@ function statusBadgeHTML(status) {
   return '<div class="hex-status" data-status="live"></div>';
 }
 
-// Tiny inline globe glyph. Used as a small decorative marker next to
-// the domain in the static view — pure CSS currentColor, no network.
+// Tiny inline globe glyph for the hover domain line. Pure SVG with
+// currentColor stroke — no network fetch, works in any theme.
 const GLOBE_MINI_SVG = '<svg class="hex-globe-mini" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
 
-function catalystTileHTML(cat) {
+// Small people icon for the collaborator-count badge. Currently hidden
+// (collaborator data model doesn't exist yet), but the markup renders
+// conditionally so flipping on a future write pushes it live without
+// another tile refactor.
+const PEOPLE_MINI_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+
+function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   const domain = safeDomain(cat.url);
   const title = escapeHtml(cat.title || '');
-  const accent = cat.accentColor || '#5AAA72';
   const hex = escapeHtml(cat.ownerHex || '5aaa72');
-  const unameHtml = renderUsername(cat.ownerName || 'anon', accent, !!cat.ownerIsAdmin);
   const status = cat.status || 'live';
-  const category = escapeHtml(cat.category || 'sites');
-  const platform = escapeHtml(cat.platform || 'web');
 
-  // Collaborator count is an optional denormalized field. The data
-  // model doesn't currently write it, but render a chip if present
-  // so a future contributor feature works without another tile refactor.
-  const collabCount = Array.isArray(cat.collaborators) ? cat.collaborators.length : 0;
-  const collabHTML = collabCount > 0
-    ? `<span class="hex-collab">${collabCount} people</span>`
+  // Creator avatar on community tiles only. Profile pages show the
+  // creator prominently in the profile bar above, so repeating them
+  // on every tile is visual noise. The avatar is informational —
+  // pointer-events:none in CSS — so clicks pass through to the
+  // tile-body click handler which opens the detail modal.
+  let avatarHTML = '';
+  if (showCreatorAvatar) {
+    const initial = escapeHtml((cat.ownerName || 'A').charAt(0).toUpperCase());
+    const photo = cat.ownerPhoto
+      ? `<img src="${escapeHtml(cat.ownerPhoto)}" alt="">`
+      : `<span class="hex-creator-avatar-initial">${initial}</span>`;
+    avatarHTML = `<div class="hex-creator-avatar" style="border-color:#${hex}">${photo}</div>`;
+  }
+
+  // Collaborator count placeholder. Data model has no collaborators
+  // field yet — keeping the default at 1 means the markup is skipped
+  // entirely. When the backend starts writing `collaborators: [...]`
+  // (future feature), counts > 1 start rendering automatically.
+  const collabCount = Array.isArray(cat.collaborators) ? cat.collaborators.length : 1;
+  const collabHTML = collabCount > 1
+    ? `<div class="hex-collab-badge">${PEOPLE_MINI_SVG}<span>${collabCount}</span></div>`
     : '';
 
-  // Three display layers:
-  //   .hex-static — title + domain indicator, always visible
-  //   .hex-hover  — creator + badges, fades in on :hover
-  //   .hex-fade   — background dim for legibility
+  // Layers, top → bottom:
+  //   .hex-creator-avatar — top center, community tiles only
+  //   .hex-status         — top right corner (see CSS), never conflicts with avatar
+  //   .hex-collab-badge   — bottom right corner, conditional
+  //   .hex-fade           — bottom linear gradient for title legibility
+  //   .hex-info           — title + (hover) domain, anchored bottom
   return `
+    ${avatarHTML}
     ${statusBadgeHTML(status)}
+    ${collabHTML}
     <div class="hex-fade"></div>
     <div class="hex-info">
-      <div class="hex-static">
-        <div class="hex-title">${title}</div>
-        ${domain ? `<div class="hex-domain" data-url-link>${GLOBE_MINI_SVG}<span>${escapeHtml(domain)}</span></div>` : ''}
-      </div>
-      <div class="hex-hover">
-        <div class="hex-hover-badges">
-          <span class="hex-badge hex-badge-cat">${category}</span>
-          <span class="hex-badge hex-badge-plat">${platform}</span>
-          ${collabHTML}
-        </div>
-        <div class="hex-creator" data-creator-link>
-          <span class="hex-creator-dot" style="background:#${hex}"></span>
-          <span class="hex-creator-name">${unameHtml}</span>
-          <span class="hex-creator-hex" style="color:#${hex}">#${hex}</span>
-        </div>
-      </div>
+      <div class="hex-title">${title}</div>
+      ${domain ? `<div class="hex-domain" data-url-link>${GLOBE_MINI_SVG}<span>${escapeHtml(domain)}</span></div>` : ''}
     </div>
   `;
 }
@@ -246,7 +253,7 @@ function _renderNow(state) {
       el.style.setProperty('--accent', accent);
       if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
       if (tile.status === 'placeholder') el.classList.add('wip');
-      el.innerHTML = catalystTileHTML(tile);
+      el.innerHTML = catalystTileHTML(tile, { showCreatorAvatar: !!state.showCreatorAvatar });
       el.addEventListener('click', (e) => {
         if (_suppressNextClick) { _suppressNextClick = false; return; }
         if (e.target.closest('[data-creator-link]')) {
@@ -537,7 +544,7 @@ function _teardownListeners(ctx) {
 // position:absolute → relative so flex wrap works. The click handlers
 // mirror the honeycomb path exactly: url/creator link delegation, then
 // tile click. No drag wiring (community tiles are never reorderable).
-export function createCatalystTileElement(cat, { width, height } = {}, handlers = {}) {
+export function createCatalystTileElement(cat, { width, height, showCreatorAvatar = false } = {}, handlers = {}) {
   const el = document.createElement('div');
   el.className = 'hex-tile hex-tile-flow';
   if (width)  el.style.width  = typeof width  === 'number' ? width  + 'px' : width;
@@ -547,7 +554,7 @@ export function createCatalystTileElement(cat, { width, height } = {}, handlers 
   el.style.setProperty('--accent', accent);
   if (cat.thumbURL) el.style.setProperty('--thumb', `url("${cat.thumbURL}")`);
   if (cat.status === 'placeholder') el.classList.add('wip');
-  el.innerHTML = catalystTileHTML(cat);
+  el.innerHTML = catalystTileHTML(cat, { showCreatorAvatar });
 
   el.addEventListener('click', (e) => {
     if (_suppressNextClick) { _suppressNextClick = false; return; }

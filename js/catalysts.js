@@ -747,6 +747,46 @@ export async function openCatalystDetail(catalyst) {
   document.getElementById('cat-detail-category').textContent = catalyst.category || 'sites';
   document.getElementById('cat-detail-platform').textContent = catalyst.platform || 'web';
 
+  // Collaborator placeholder — the data model has no collaborators list
+  // yet (MD6/future will add it). Default to 1 (the owner) so the row
+  // always displays something meaningful.
+  const collabText = document.getElementById('cat-detail-collab-text');
+  if (collabText) {
+    const count = Array.isArray(catalyst.collaborators) ? catalyst.collaborators.length : 1;
+    collabText.textContent = count === 1 ? '1 contributor' : count + ' contributors';
+  }
+
+  // URL display row with copy button. Shows domain text (linking to
+  // the full URL) + a small clipboard button. Hidden entirely for
+  // placeholder catalysts with no URL.
+  const urlRow = document.getElementById('cat-detail-url-row');
+  const urlLink = document.getElementById('cat-detail-url-text');
+  const urlCopy = document.getElementById('cat-detail-url-copy');
+  if (urlRow && urlLink) {
+    if (catalyst.url) {
+      urlRow.style.display = '';
+      urlLink.textContent = safeDomain(catalyst.url);
+      urlLink.href = catalyst.url;
+    } else {
+      urlRow.style.display = 'none';
+      urlLink.textContent = '';
+      urlLink.removeAttribute('href');
+    }
+  }
+  if (urlCopy) {
+    urlCopy.onclick = async (e) => {
+      e.preventDefault();
+      if (!catalyst.url) return;
+      try {
+        await navigator.clipboard.writeText(catalyst.url);
+        urlCopy.classList.add('copied');
+        setTimeout(() => urlCopy.classList.remove('copied'), 1200);
+      } catch {
+        toast(catalyst.url);
+      }
+    };
+  }
+
   // Open button: hidden entirely for placeholder catalysts with no URL,
   // "Open (Early — may have bugs)" for early-stage catalysts, standard
   // text otherwise.
