@@ -111,26 +111,26 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    HEADER
 ══════════════════════════════════════ */
 #hdr{position:fixed;top:0;left:0;right:0;height:var(--hdr);background:var(--bg2);border-bottom:1px solid var(--bdr);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 16px;box-shadow:0 2px 8px rgba(0,0,0,.1);z-index:100;}
-#hdr-left{display:flex;align-items:center;gap:12px;min-width:0;}
+#hdr-left{display:flex;align-items:center;gap:14px;min-width:0;height:100%;}
 #hdr-mid{display:flex;align-items:center;justify-content:center;gap:4px;position:relative;}
 #hdr-right{display:flex;align-items:center;justify-content:flex-end;gap:5px;min-width:0;overflow:hidden;}
 
-#hdr-logo-wrap{position:relative;flex-shrink:0;}
-#hdr-logo{width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform var(--ease);border-radius:8px;}
-#hdr-logo svg{width:30px;height:30px;display:block;transition:transform var(--ease);}
+#hdr-logo-wrap{position:relative;flex-shrink:0;display:flex;align-items:center;height:100%;}
+#hdr-logo{width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform var(--ease);border-radius:8px;}
+#hdr-logo svg{width:36px;height:36px;display:block;transition:transform var(--ease);}
 #hdr-logo:hover svg{transform:scale(1.1);}
 
-/* Logo color picker — hover easter egg */
-#logo-picker{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:150;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:6px;box-shadow:0 14px 36px rgba(0,0,0,.5);flex-direction:column;gap:5px;}
+/* Logo color picker — two columns, one for each yin-yang half */
+#logo-picker{display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:150;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:8px;box-shadow:0 14px 36px rgba(0,0,0,.5);flex-direction:row;gap:8px;}
 #logo-picker.open{display:flex;}
+.logo-picker-col{display:flex;flex-direction:column;gap:6px;}
 .logo-swatch{width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;transition:transform var(--ease),box-shadow var(--ease);box-shadow:0 0 0 1px rgba(255,255,255,.08);}
 .logo-swatch:hover{transform:scale(1.18);}
 .logo-swatch.selected{box-shadow:0 0 0 2px var(--tx),0 0 0 3px var(--bg2);}
 
-#hdr-brand{font-size:26px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:baseline;}
+#hdr-brand{font-size:30px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:center;height:100%;}
 #hdr-brand #brand-node{color:#ed2355;}
 #hdr-brand #brand-blast{color:#ffffff;}
-#hdr-tag{font-size:13px;color:var(--tx3);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 .hdr-sep{width:1px;height:22px;background:var(--bdr);margin:0 4px;flex-shrink:0;}
 
@@ -256,7 +256,29 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-friends-add-input::placeholder,#acct-cat-add-input::placeholder{color:var(--tx3);}
 #acct-friends-add-btn,#acct-cat-add-btn{background:var(--clr-adj);color:var(--clr-adj-on,#fff);border:none;border-radius:6px;padding:5px 14px;font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:opacity var(--ease);flex-shrink:0;}
 #acct-friends-add-btn:hover,#acct-cat-add-btn:hover{opacity:.85;}
-#acct-friends-list{display:flex;flex-direction:column;gap:2px;padding:4px 0;max-height:232px;overflow-y:auto;}
+#acct-friends-list{display:flex;flex-direction:column;gap:4px;padding:4px 0;max-height:232px;overflow-y:auto;}
+#acct-friends-list .friend-empty{padding:10px 8px;font-size:12px;color:var(--tx3);text-align:center;}
+.friend-card{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;cursor:pointer;transition:background var(--ease);}
+.friend-card:hover{background:var(--bg3);}
+.friend-card .friend-avatar{width:30px;height:30px;border-radius:50%;border:2px solid var(--friend-hex,var(--clr-adj));background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:13px;font-weight:700;flex-shrink:0;}
+.friend-card .friend-body{flex:1;min-width:0;display:flex;flex-direction:column;}
+.friend-card .friend-name{font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.friend-card .friend-hex{font-size:11px;color:var(--friend-hex,var(--tx3));font-family:var(--fn);}
+.friend-card .friend-remove-btn{background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;border-radius:4px;display:none;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
+.friend-card:hover .friend-remove-btn{display:inline-flex;}
+.friend-card .friend-remove-btn:hover{color:#ff6b6b;background:var(--bg4);}
+
+/* "Add Friend" / "✓ Friends" state on the profile bar action button */
+#profile-bar-action.is-friend{opacity:.75;cursor:default;}
+
+/* Friend-request notif action buttons (Accept / Decline) */
+.notif-item-text .notif-actions{display:flex;gap:6px;margin-top:6px;}
+.notif-item-text .notif-btn-primary,.notif-item-text .notif-btn-secondary{font-family:var(--fn);font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--bdr);transition:opacity var(--ease),background var(--ease);}
+.notif-item-text .notif-btn-primary{background:var(--clr-adj);color:#fff;border-color:var(--clr-adj);}
+.notif-item-text .notif-btn-primary:hover{opacity:.85;}
+.notif-item-text .notif-btn-secondary{background:transparent;color:var(--tx2);}
+.notif-item-text .notif-btn-secondary:hover{background:var(--bg3);}
+
 #acct-catalysts-list{padding:4px 0;font-size:13px;color:var(--tx3);text-align:center;}
 
 /* Settings view */
@@ -457,10 +479,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-tile:hover{transform:scale(1.06);z-index:10;}
 .hex-fade{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 10%,var(--bg2) 65%);pointer-events:none;}
 .hex-info{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10% 14%;pointer-events:none;}
-.hex-title{font-size:clamp(12px,1.2vw,16px);font-weight:700;color:var(--tx);margin-bottom:4px;line-height:1.2;}
-.hex-url{font-size:clamp(9px,0.8vw,12px);color:var(--tx3);margin-bottom:6px;pointer-events:auto;cursor:pointer;}
+.hex-title{font-size:clamp(15px,1.6vw,22px);font-weight:700;color:var(--tx);margin-bottom:6px;line-height:1.2;}
+.hex-url{font-size:clamp(11px,1vw,15px);color:var(--tx3);margin-bottom:8px;pointer-events:auto;cursor:pointer;}
 .hex-url:hover{color:var(--tx2);text-decoration:underline;}
-.hex-creator{font-size:clamp(8px,0.7vw,11px);font-weight:500;pointer-events:auto;cursor:pointer;}
+.hex-creator{font-size:clamp(11px,1vw,15px);font-weight:500;pointer-events:auto;cursor:pointer;}
 .hex-creator-name .uname-main{color:var(--accent,var(--clr-adj));}
 .hex-favicon{position:absolute;top:18%;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:3px;opacity:0.6;pointer-events:none;color:var(--tx2);}
 
@@ -470,10 +492,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-status[data-status="early"]{padding:2px 6px;border-radius:10px;background:rgba(232,133,58,.85);color:#fff;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
 .hex-status[data-status="placeholder"]{padding:2px 6px;border-radius:10px;background:rgba(130,132,143,.65);color:#ddd;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
 
-/* WIP tile gets dimmed + a subtle pulse so it reads as "reserved, not ready" */
-@keyframes hex-wip-pulse{0%,100%{opacity:.5;}50%{opacity:.72;}}
-.hex-tile.wip{animation:hex-wip-pulse 3s ease-in-out infinite;}
-.hex-tile.wip::before{filter:grayscale(0.4);}
+/* WIP tiles render normally — no pulse, no extra dimming. The
+   "WIP" status badge in the top-right is enough signal. */
 
 .hex-tile.hex-skeleton{cursor:default;pointer-events:none;}
 .hex-tile.hex-skeleton::before{display:none;}
@@ -622,12 +642,11 @@ body.dragging-active{touch-action:none;}
    RESPONSIVE
 ══════════════════════════════════════ */
 @media (max-width: 800px) {
-  #hdr-tag{display:none;}
   #profile-bar{padding:0 16px;gap:12px;}
 }
 @media (max-width: 640px) {
   #hdr{padding:0 12px;}
-  #hdr-brand{font-size:22px;}
+  #hdr-brand{font-size:24px;}
   #acct-name-short{max-width:110px;}
   #search-wrap.open #search-input-shell{width:min(220px,52vw);}
   #profile-bar{height:70px;padding:0 14px;}

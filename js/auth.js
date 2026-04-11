@@ -87,7 +87,8 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     provider,
     usernameLower: normalizeUsername(displayName),
     isAdmin: !!topData?.isAdmin || emailIsAdmin,
-    accentColor: topData?.accentColor || null,
+    logoTopColor: topData?.logoTopColor || null,
+    logoBotColor: topData?.logoBotColor || null,
   };
 }
 
@@ -192,19 +193,24 @@ async function writeUserLookup(uid, username, hex, oldKey = null) {
   }
 }
 
-// Persist the user's chosen accent color to the top-level users doc.
+// Persist the user's chosen logo colors to the top-level users doc.
 // Fire-and-forget from the caller's perspective — callers already
 // update the UI synchronously. Safe to call while signed out (no-op).
-export async function saveAccentColor(hex) {
-  if (!State.user || !hex) return;
+// Pass either or both of { logoTopColor, logoBotColor }.
+export async function saveLogoColors(updates) {
+  if (!State.user || !updates) return;
+  const patch = {};
+  if (updates.logoTopColor) patch.logoTopColor = updates.logoTopColor;
+  if (updates.logoBotColor) patch.logoBotColor = updates.logoBotColor;
+  if (Object.keys(patch).length === 0) return;
   try {
     await setDoc(doc(db, 'users', State.user.uid), {
-      accentColor: hex,
+      ...patch,
       updatedAt: serverTimestamp(),
     }, { merge: true });
-    State.profile = { ...State.profile, accentColor: hex };
+    State.profile = { ...State.profile, ...patch };
   } catch (err) {
-    console.warn('[auth] saveAccentColor failed:', err);
+    console.warn('[auth] saveLogoColors failed:', err);
   }
 }
 

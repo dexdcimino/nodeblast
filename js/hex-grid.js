@@ -5,7 +5,8 @@
 
 import { renderUsername, escapeHtml } from './ui-events.js';
 
-const GAP = 10;
+const GAP = 36;
+const GRID_TOP_PAD = 32;
 const ROUND_R = 0.08;
 
 // Pointy-top hex vertices (objectBoundingBox 0..1)
@@ -256,7 +257,7 @@ function _renderNow(state) {
     const caption = document.createElement('div');
     caption.className = 'hex-empty-caption';
     caption.textContent = state.emptyMessage;
-    caption.style.top = (GAP + hexH + 12) + 'px';
+    caption.style.top = (GRID_TOP_PAD + hexH + 16) + 'px';
     honey.appendChild(caption);
   }
 }
@@ -275,7 +276,7 @@ function _renderTiles(honey, containerW, COLS, count, decorate) {
     const rowCount = rowCounts[row];
     const rowWidth = rowCount * hexW + (rowCount - 1) * GAP;
     const rowLeft = (containerW - rowWidth) / 2;
-    const top = GAP + row * stepY;
+    const top = GRID_TOP_PAD + row * stepY;
 
     for (let col = 0; col < rowCount; col++) {
       const left = rowLeft + col * stepX;
@@ -292,7 +293,7 @@ function _renderTiles(honey, containerW, COLS, count, decorate) {
     }
   }
 
-  const totalH = GAP + rowCounts.length * stepY;
+  const totalH = GRID_TOP_PAD + rowCounts.length * stepY + GAP;
   honey.style.height = totalH + 'px';
   return slots;
 }

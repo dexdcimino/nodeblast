@@ -1,14 +1,15 @@
 import State from './state.js';
-import { signIn, signOut, onAuthReady, saveProfile, saveAccentColor } from './auth.js';
+import { signIn, signOut, onAuthReady, saveProfile, saveLogoColors } from './auth.js';
 import {
   applyTheme,
   applyPalette,
   applyAccent,
+  applyFavicon,
   initThemeToggle,
   initPalettePickers,
-  ACCENTS,
-  ACCENT_GRAY,
-  DEFAULT_ACCENT,
+  LOGO_PALETTE,
+  DEFAULT_LOGO_TOP,
+  DEFAULT_LOGO_BOT,
 } from './theme.js';
 import { initColorPicker } from './color.js';
 import {
@@ -38,6 +39,7 @@ import { getUserByUsernameHex } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './router.js';
 import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js';
 import { initNotifications, initHelpPanel } from './notifications.js';
+import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest } from './friends.js';
 
 let _currentCategory = 'all';
 let _currentRoute = null;
@@ -46,6 +48,7 @@ let _currentShowAdd = false;
 let _currentEmptyMessage = '';
 let _firstRender = true;
 let _profileCache = new Map(); // "name#hex" or "name" -> { user, catalysts }
+let _viewingOther = null;       // { uid, displayName, hexCode } for the profile currently shown
 
 function profileCacheKey(username, hex) {
   const lower = (username || '').toLowerCase();
@@ -124,8 +127,10 @@ function showProfileBar(user, catalystCount, isOwn) {
   const actionBtn = document.getElementById('profile-bar-action');
   const shareBtn = document.getElementById('profile-bar-share');
   if (isOwn) {
+    _viewingOther = null;
     actionBtn.textContent = 'Edit Profile';
     actionBtn.disabled = false;
+    actionBtn.classList.remove('is-friend');
     actionBtn.onclick = () => {
       openAccountMenuFromPill();
       setTimeout(() => document.getElementById('acct-edit-btn')?.click(), 80);
@@ -146,12 +151,53 @@ function showProfileBar(user, catalystCount, isOwn) {
       };
     }
   } else {
-    actionBtn.textContent = 'Message';
-    actionBtn.disabled = true;
-    actionBtn.onclick = null;
+    // Not our own profile — the action button becomes "Add Friend" /
+    // "✓ Friends" so people can connect directly from a profile page.
+    // The Friends check is driven by the live friends cache, so the
+    // button can flip from "Add Friend" → "✓ Friends" automatically
+    // the moment the Firestore write is mirrored back.
+    _viewingOther = { uid: user.uid, displayName: user.displayName, hexCode: user.hexCode };
+    _applyFriendButton(user);
     if (shareBtn) { shareBtn.style.display = 'none'; shareBtn.onclick = null; }
   }
 }
+
+function _applyFriendButton(user) {
+  const actionBtn = document.getElementById('profile-bar-action');
+  if (!actionBtn || !user) return;
+  const signedIn = !!State.user;
+  const already = signedIn && isFriend(user.uid);
+  if (already) {
+    actionBtn.textContent = '✓ Friends';
+    actionBtn.disabled = true;
+    actionBtn.classList.add('is-friend');
+    actionBtn.onclick = null;
+  } else {
+    actionBtn.textContent = 'Add Friend';
+    actionBtn.disabled = !signedIn;
+    actionBtn.classList.remove('is-friend');
+    actionBtn.onclick = async () => {
+      if (!State.user) { toast('Sign in to add friends'); return; }
+      actionBtn.disabled = true;
+      actionBtn.textContent = 'Sending…';
+      await sendFriendRequest(user.uid);
+      // Reset label — the friends listener will flip us to "✓ Friends"
+      // once the other side accepts.
+      actionBtn.textContent = 'Request sent';
+      setTimeout(() => {
+        if (_viewingOther?.uid === user.uid) _applyFriendButton(user);
+      }, 1800);
+    };
+  }
+}
+
+// Called by friends.js whenever the live friends list changes so the
+// "Add Friend" button on the profile bar flips to "✓ Friends" without
+// a manual refresh.
+window._nbRefreshFriendBtn = () => {
+  if (!_viewingOther) return;
+  _applyFriendButton(_viewingOther);
+};
 
 function openAccountMenuFromPill() {
   document.getElementById('acct-btn')?.click();
@@ -380,17 +426,26 @@ function updateAuthUI(user, profile) {
   if (!user) {
     paintGuestProfilePill();
     _profileCache.clear();
+    _viewingOther = null;
+    setFriendsCurrentUser(null);
     renderRoute();
     return;
   }
 
-  // Sync the saved accent color across devices. If the signed-in
-  // user has a stored accentColor in their profile doc, adopt it
-  // (and update the local cache). Otherwise leave whatever the
-  // guest-mode picker left behind.
-  if (profile?.accentColor) {
-    const cached = localStorage.getItem(ACCENT_KEY);
-    if (cached !== profile.accentColor) setAccent(profile.accentColor);
+  // Attach the friends/requests listeners to this user. Safe to call
+  // on every auth resolution — setFriendsCurrentUser tears down the
+  // previous subscription before starting a new one.
+  setFriendsCurrentUser(user.uid);
+
+  // Sync the saved logo colors across devices. If the signed-in
+  // user has stored values in their profile doc, adopt them.
+  // Otherwise leave whatever the guest-mode picker left behind.
+  if (profile?.logoTopColor || profile?.logoBotColor) {
+    const nextTop = profile.logoTopColor || _logoTop;
+    const nextBot = profile.logoBotColor || _logoBot;
+    if (nextTop !== _logoTop || nextBot !== _logoBot) {
+      setLogoColors(nextTop, nextBot);
+    }
   }
 
   const acctBtn = document.getElementById('acct-btn');
@@ -455,56 +510,82 @@ function updateAuthUI(user, profile) {
 ══════════════════════════════════════ */
 
 // ══════════════════════════════════════════════════════════════
-//  Logo accent picker
+//  Logo color picker (two columns)
 // ──────────────────────────────────────────────────────────────
-//  Hovering the logo reveals a single column of 10 accent swatches
-//  (see ACCENTS in theme.js). Picking one sets the site-wide accent
-//  via applyAccent() — driving --clr and friends — and paints one
-//  half of the logo / the "node" wordmark with the chosen color.
-//  The other half of the logo and the "blast" wordmark always use
-//  ACCENT_GRAY. Default is DexNote blue; guest choices persist in
-//  localStorage, signed-in choices sync to Firestore.
+//  Hovering the logo opens a 2-column dropdown. Both columns share
+//  the same 10-color LOGO_PALETTE. The LEFT (top) column paints
+//  the "top" half of the logo, the "blast" wordmark, and drives
+//  the site-wide accent (--clr). The RIGHT (bot) column paints the
+//  other half of the logo and the "node" wordmark. The favicon
+//  rebuilds via applyFavicon() on every change.
+//  Guests persist to localStorage; signed-in users also sync to
+//  Firestore (logoTopColor / logoBotColor on users/{uid}).
 // ══════════════════════════════════════════════════════════════
 
-const ACCENT_KEY = 'nb-accent-color';
+const LOGO_TOP_KEY = 'nb-logo-top-color';
+const LOGO_BOT_KEY = 'nb-logo-bot-color';
 
-function paintLogo(accent) {
-  const gray = ACCENT_GRAY;
-  // Accent half: #nodeblast_logo_top path + #nodeblast_circle_bottom
-  // dot + the word "node" in the wordmark.
-  const accentPath = document.getElementById('nodeblast_logo_top');
-  const accentDot  = document.getElementById('nodeblast_circle_bottom');
-  const nodeEl     = document.getElementById('brand-node');
-  if (accentPath) accentPath.setAttribute('fill', accent);
-  if (accentDot)  accentDot.setAttribute('fill', accent);
-  if (nodeEl)     nodeEl.style.color = accent;
+let _logoTop = DEFAULT_LOGO_TOP;
+let _logoBot = DEFAULT_LOGO_BOT;
 
-  // Gray half: the other yin-yang shape + the other dot + "blast".
-  const grayG   = document.getElementById('nodeblast_logo_bottom');
-  const grayDot = document.getElementById('nodeblast_circle_top');
+function paintLogo(top, bot) {
+  // Top color: yin-yang "top" path + the bottom dot + "blast" word.
+  const topPath = document.getElementById('nodeblast_logo_top');
+  const topDot  = document.getElementById('nodeblast_circle_bottom');
   const blastEl = document.getElementById('brand-blast');
-  if (grayG)   grayG.setAttribute('fill', gray);
-  if (grayDot) grayDot.setAttribute('fill', gray);
-  if (blastEl) blastEl.style.color = gray;
+  if (topPath) topPath.setAttribute('fill', top);
+  if (topDot)  topDot.setAttribute('fill', top);
+  if (blastEl) blastEl.style.color = top;
+
+  // Bot color: yin-yang "bottom" group + the top dot + "node" word.
+  const botG   = document.getElementById('nodeblast_logo_bottom');
+  const botDot = document.getElementById('nodeblast_circle_top');
+  const nodeEl = document.getElementById('brand-node');
+  if (botG)   botG.setAttribute('fill', bot);
+  if (botDot) botDot.setAttribute('fill', bot);
+  if (nodeEl) nodeEl.style.color = bot;
 }
 
-function markSelectedSwatch(accent) {
-  const lc = (accent || '').toLowerCase();
-  document.querySelectorAll('#logo-picker .logo-swatch').forEach((b) => {
-    b.classList.toggle('selected', b.dataset.color.toLowerCase() === lc);
+function markSelectedSwatches() {
+  const topLc = (_logoTop || '').toLowerCase();
+  const botLc = (_logoBot || '').toLowerCase();
+  document.querySelectorAll('#logo-picker .logo-picker-col[data-col="top"] .logo-swatch')
+    .forEach((b) => b.classList.toggle('selected', b.dataset.color.toLowerCase() === topLc));
+  document.querySelectorAll('#logo-picker .logo-picker-col[data-col="bot"] .logo-swatch')
+    .forEach((b) => b.classList.toggle('selected', b.dataset.color.toLowerCase() === botLc));
+}
+
+// Apply both colors end-to-end: SVG paint, wordmark color, the
+// site-wide accent (driven by the TOP color), favicon, swatch
+// rings, and localStorage. Firestore persistence is layered on
+// top by the picker click handler when a signed-in user clicks.
+function setLogoColors(top, bot) {
+  _logoTop = top || DEFAULT_LOGO_TOP;
+  _logoBot = bot || DEFAULT_LOGO_BOT;
+  paintLogo(_logoTop, _logoBot);
+  applyAccent(_logoTop);            // site --clr follows the top color
+  applyFavicon(_logoTop, _logoBot); // rebuild the browser tab icon
+  markSelectedSwatches();
+  try {
+    localStorage.setItem(LOGO_TOP_KEY, _logoTop);
+    localStorage.setItem(LOGO_BOT_KEY, _logoBot);
+  } catch {}
+}
+
+function buildPickerColumn(col) {
+  const wrap = document.createElement('div');
+  wrap.className = 'logo-picker-col';
+  wrap.dataset.col = col;
+  LOGO_PALETTE.forEach((c) => {
+    const btn = document.createElement('button');
+    btn.className = 'logo-swatch';
+    btn.type = 'button';
+    btn.dataset.color = c.hex;
+    btn.style.background = c.hex;
+    btn.title = c.name;
+    wrap.appendChild(btn);
   });
-}
-
-// Apply the accent end-to-end: site variables (--clr + friends),
-// the logo paint, the selected swatch ring, and the cached local
-// value. Firestore persistence is layered on top by the picker
-// click handler once the user is signed in.
-function setAccent(hex) {
-  const color = hex || DEFAULT_ACCENT;
-  applyAccent(color);
-  paintLogo(color);
-  markSelectedSwatch(color);
-  try { localStorage.setItem(ACCENT_KEY, color); } catch {}
+  return wrap;
 }
 
 function initLogoPicker() {
@@ -512,23 +593,15 @@ function initLogoPicker() {
   const logoEl = document.getElementById('hdr-logo');
   if (!picker || !logoEl) return;
 
-  // Populate the 10 swatches from the ACCENTS list. Keeping the
-  // palette in theme.js means there's one source of truth.
   picker.innerHTML = '';
-  ACCENTS.forEach((a) => {
-    const btn = document.createElement('button');
-    btn.className = 'logo-swatch';
-    btn.type = 'button';
-    btn.dataset.color = a.hex;
-    btn.style.background = a.hex;
-    btn.title = a.name;
-    picker.appendChild(btn);
-  });
+  picker.appendChild(buildPickerColumn('top'));
+  picker.appendChild(buildPickerColumn('bot'));
 
-  // Initial paint — respect any cached value the user picked on a
-  // previous visit, else fall back to the DexNote-blue default.
-  const initial = localStorage.getItem(ACCENT_KEY) || DEFAULT_ACCENT;
-  setAccent(initial);
+  // Initial paint — respect any cached values the user picked on a
+  // previous visit, else fall back to the defaults.
+  const initialTop = localStorage.getItem(LOGO_TOP_KEY) || DEFAULT_LOGO_TOP;
+  const initialBot = localStorage.getItem(LOGO_BOT_KEY) || DEFAULT_LOGO_BOT;
+  setLogoColors(initialTop, initialBot);
 
   let hideTimer = null;
   const show = () => {
@@ -548,12 +621,16 @@ function initLogoPicker() {
     const btn = e.target.closest('.logo-swatch');
     if (!btn) return;
     e.stopPropagation();
+    const col = btn.closest('.logo-picker-col')?.dataset.col;
     const newColor = btn.dataset.color;
-    if (!newColor) return;
-    setAccent(newColor);
-    // Signed-in: mirror the choice to Firestore so it follows the
-    // user across devices. Guests only get localStorage.
-    if (State.user) saveAccentColor(newColor);
+    if (!col || !newColor) return;
+    if (col === 'top') setLogoColors(newColor, _logoBot);
+    else               setLogoColors(_logoTop, newColor);
+    if (State.user) {
+      saveLogoColors(col === 'top'
+        ? { logoTopColor: newColor }
+        : { logoBotColor: newColor });
+    }
   });
 }
 
@@ -631,6 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSearch();
   initNotifications();
   initHelpPanel();
+  initFriends();
 
   // Brand + logo → home
   document.getElementById('hdr-brand')?.addEventListener('click', () => navigate('/'));
