@@ -363,7 +363,7 @@ function updateAuthUI(user, profile) {
 
   const unameHtml = renderUsername(name);
   const shortName = name.length > 14 ? name.slice(0, 14) + '…' : name;
-  document.getElementById('acct-name-short').textContent = shortName;
+  document.getElementById('acct-name-short').innerHTML = renderUsername(shortName);
   document.getElementById('acct-name').innerHTML = unameHtml;
   document.getElementById('acct-hex-label').innerHTML = `<span>#</span>${escapeHtml(hex)}`;
 
