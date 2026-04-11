@@ -22,7 +22,7 @@ import {
   escapeHtml,
   toast,
 } from './ui-events.js';
-import { renderHexGrid } from './hex-grid.js';
+import { renderHexGrid, createCatalystTileElement } from './hex-grid.js';
 import {
   openCatalystModal,
   openCatalystDetail,
@@ -91,7 +91,11 @@ function hideAllViews() {
   document.getElementById('not-found').classList.remove('visible');
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
-  grid.classList.remove('with-filter');
+  grid.classList.remove('with-filter', 'feed-mode');
+  // Empty the community list so a previous render doesn't flash back
+  // while a new subscription is warming up.
+  const list = document.getElementById('community-list');
+  if (list) list.innerHTML = '';
 }
 
 function showFilterBar() {
@@ -319,17 +323,167 @@ function renderSkeleton() {
   renderHexGrid({ loading: true });
 }
 
+/* ══════════════════════════════════════
+   Community hub — per-creator cards
+══════════════════════════════════════ */
+
+// Group an array of catalysts by ownerId. Returns a Map of
+// ownerId → { creator, catalysts } where creator captures the latest
+// denormalized owner fields we can read from any of that creator's
+// catalysts (all of their tiles should agree, so reading from the
+// first one is fine; the freshest tile wins if there's drift).
+function _groupCatalystsByCreator(catalysts) {
+  const groups = new Map();
+  for (const cat of catalysts) {
+    const ownerId = cat.ownerId || 'anon';
+    let g = groups.get(ownerId);
+    if (!g) {
+      g = {
+        uid: ownerId,
+        displayName: cat.ownerName || 'anon',
+        hexCode: (cat.ownerHex || '5aaa72').toLowerCase(),
+        photoURL: cat.ownerPhoto || '',
+        isAdmin: !!cat.ownerIsAdmin,
+        catalysts: [],
+        latestCreatedAt: 0,
+      };
+      groups.set(ownerId, g);
+    }
+    g.catalysts.push(cat);
+    const ts = cat.createdAt?.toMillis?.() ?? 0;
+    if (ts > g.latestCreatedAt) g.latestCreatedAt = ts;
+  }
+  return groups;
+}
+
+// Sort comparator for tiles within a creator card. sortOrder (explicit
+// drag-arranged position) wins when present; falls back to createdAt
+// desc so fresh uploads bubble up. Mirrors sortUserCatalysts() in
+// catalysts.js but is duplicated here to keep hex-grid.js → init.js
+// dependencies one-way.
+function _sortCardTiles(tiles) {
+  return tiles.slice().sort((a, b) => {
+    const aHas = a.sortOrder != null;
+    const bHas = b.sortOrder != null;
+    if (aHas && bHas) return a.sortOrder - b.sortOrder;
+    if (aHas) return 1;
+    if (bHas) return -1;
+    const ta = a.createdAt?.toMillis?.() ?? 0;
+    const tb = b.createdAt?.toMillis?.() ?? 0;
+    return tb - ta;
+  });
+}
+
+// Size for community-card tiles. Kept fixed rather than computed
+// against container width so tiles stay visually consistent between
+// cards no matter how many catalysts a creator has. 180px works well
+// alongside the card's padding and the grid's side margins.
+const COMMUNITY_TILE_W = 180;
+const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_W * 1.1547);
+
+function _buildCommunityCard(group) {
+  const hex = group.hexCode;
+  const hexColor = '#' + hex;
+  const card = document.createElement('div');
+  card.className = 'community-card';
+  card.style.setProperty('--card-hex', hexColor);
+
+  // Header row — avatar + name + hex + count. Clicking anywhere in the
+  // header navigates to the creator's full profile page.
+  const hdr = document.createElement('div');
+  hdr.className = 'community-card-hdr';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'community-card-avatar';
+  if (group.photoURL) {
+    const img = document.createElement('img');
+    img.src = group.photoURL;
+    img.alt = '';
+    avatar.appendChild(img);
+  } else {
+    avatar.textContent = (group.displayName || 'A').charAt(0).toUpperCase();
+  }
+  hdr.appendChild(avatar);
+
+  const meta = document.createElement('div');
+  meta.className = 'community-card-meta';
+  const nameEl = document.createElement('span');
+  nameEl.className = 'community-card-name';
+  nameEl.innerHTML = renderUsername(group.displayName || 'anon', null, !!group.isAdmin);
+  const hexRow = document.createElement('span');
+  hexRow.className = 'community-card-hex-row';
+  hexRow.innerHTML = `<span class="community-card-hex-dot"></span><span class="community-card-hex">#${escapeHtml(hex)}</span>`;
+  meta.appendChild(nameEl);
+  meta.appendChild(hexRow);
+  hdr.appendChild(meta);
+
+  const count = document.createElement('span');
+  count.className = 'community-card-count';
+  const n = group.catalysts.length;
+  count.textContent = n + (n === 1 ? ' catalyst' : ' catalysts');
+  hdr.appendChild(count);
+
+  hdr.addEventListener('click', () => {
+    const lower = (group.displayName || '').toLowerCase();
+    navigate('/' + buildUserSlug(lower, hex));
+  });
+
+  card.appendChild(hdr);
+
+  // Body — flex-wrap row of standalone hex tiles.
+  const body = document.createElement('div');
+  body.className = 'community-tiles';
+  _sortCardTiles(group.catalysts).forEach((cat) => {
+    const tile = createCatalystTileElement(
+      cat,
+      { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H },
+      { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick },
+    );
+    body.appendChild(tile);
+  });
+  card.appendChild(body);
+
+  return card;
+}
+
+function renderCommunityHub(catalysts, { emptyMessage } = {}) {
+  const grid = document.getElementById('grid');
+  const list = document.getElementById('community-list');
+  if (!grid || !list) return;
+
+  grid.classList.add('feed-mode');
+  list.innerHTML = '';
+
+  if (!catalysts || catalysts.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'community-empty';
+    empty.textContent = emptyMessage || 'No catalysts yet. Be the first to share what you\'re building.';
+    list.appendChild(empty);
+    return;
+  }
+
+  // Group, then sort creators by most recent activity (biggest
+  // createdAt among their catalysts wins). Within each card, tiles
+  // honor sortOrder → createdAt via _sortCardTiles.
+  const groups = Array.from(_groupCatalystsByCreator(catalysts).values());
+  groups.sort((a, b) => b.latestCreatedAt - a.latestCreatedAt);
+  groups.forEach((g) => list.appendChild(_buildCommunityCard(g)));
+}
+
 async function renderFeedRoute() {
   hideAllViews();
   showFilterBar();
   setPageTitle([]);
+  // Skeleton briefly paints into #honeycomb before .feed-mode flips
+  // over to the community list. Acceptable loading flash — swapping
+  // to a community-shaped skeleton would double the code for a
+  // sub-second difference.
   renderSkeleton();
   const emptyMessage = _currentCategory === 'all'
     ? 'No catalysts yet. Be the first to share what you\'re building.'
     : 'No catalysts in this category yet.';
-  // Live feed subscription — updates as new catalysts are added or votes change.
-  const unsub = subscribePublicFeed(_currentCategory, (tiles) => {
-    renderGrid(tiles, { showAdd: false, emptyMessage });
+  const unsub = subscribePublicFeed(_currentCategory, (catalysts) => {
+    renderCommunityHub(catalysts, { emptyMessage });
   });
   trackSub(unsub);
 }

@@ -523,3 +523,46 @@ function _teardownListeners(ctx) {
   window.removeEventListener('pointerup', ctx.onUp);
   window.removeEventListener('pointercancel', ctx.onUp);
 }
+
+/* ══════════════════════════════════════
+   Standalone tile factory (for the community hub)
+══════════════════════════════════════ */
+
+// Returns a standalone .hex-tile element suitable for dropping into any
+// flow-layout container — the community hub's per-creator cards use
+// this to build a simple flex-wrap row of hexes instead of the full
+// staggered honeycomb. The returned element uses the SAME visual CSS
+// (clip-path, hover layer, backdrop dim) as honeycomb tiles — the only
+// difference is the `hex-tile-flow` modifier class which flips
+// position:absolute → relative so flex wrap works. The click handlers
+// mirror the honeycomb path exactly: url/creator link delegation, then
+// tile click. No drag wiring (community tiles are never reorderable).
+export function createCatalystTileElement(cat, { width, height } = {}, handlers = {}) {
+  const el = document.createElement('div');
+  el.className = 'hex-tile hex-tile-flow';
+  if (width)  el.style.width  = typeof width  === 'number' ? width  + 'px' : width;
+  if (height) el.style.height = typeof height === 'number' ? height + 'px' : height;
+
+  const accent = cat.accentColor || '#5AAA72';
+  el.style.setProperty('--accent', accent);
+  if (cat.thumbURL) el.style.setProperty('--thumb', `url("${cat.thumbURL}")`);
+  if (cat.status === 'placeholder') el.classList.add('wip');
+  el.innerHTML = catalystTileHTML(cat);
+
+  el.addEventListener('click', (e) => {
+    if (_suppressNextClick) { _suppressNextClick = false; return; }
+    if (e.target.closest('[data-creator-link]')) {
+      e.stopPropagation();
+      handlers.onCreatorClick?.(cat);
+      return;
+    }
+    if (e.target.closest('[data-url-link]')) {
+      e.stopPropagation();
+      if (cat.url) window.open(cat.url, '_blank', 'noopener');
+      return;
+    }
+    handlers.onTileClick?.(cat);
+  });
+
+  return el;
+}

@@ -203,10 +203,18 @@ export function subscribeUserCatalysts(uid, callback) {
   );
 }
 
-export function subscribePublicFeed(category, callback, max = 24) {
+// Public feed subscription.
+//
+// MD3 switched this from `fireCount desc` (popular) to `createdAt desc`
+// (recent activity) because the community hub groups catalysts by
+// creator and sorts creators by most-recent activity. Ordering the
+// underlying query by createdAt keeps the snapshot representative of
+// "what's new" across the widest set of creators. Limit bumped from
+// 24 → 60 so the hub has enough breadth for meaningful grouping.
+export function subscribePublicFeed(category, callback, max = 60) {
   const constraints = [
     where('isPublic', '==', true),
-    orderBy('fireCount', 'desc'),
+    orderBy('createdAt', 'desc'),
     limit(max),
   ];
   if (category && category !== 'all') {
