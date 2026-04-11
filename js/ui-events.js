@@ -143,6 +143,13 @@ function _updateEditColorPreview() {
   if (preview) preview.style.background = hex;
 }
 
+function _updateBioCount() {
+  const input = document.getElementById('acct-bio-input');
+  const count = document.getElementById('acct-bio-count');
+  if (!input || !count) return;
+  count.textContent = (input.value || '').length + '/150';
+}
+
 function _openEditPanel() {
   const p = document.getElementById('acct-edit-panel');
   const editBtn = document.getElementById('acct-edit-btn');
@@ -152,12 +159,15 @@ function _openEditPanel() {
   document.getElementById('acct-menu-scroll')?.classList.add('edit-panel-active');
   const nameIn = document.getElementById('acct-username-input');
   const hexIn = document.getElementById('acct-edit-hex-input');
+  const bioIn = document.getElementById('acct-bio-input');
   // Strip any legacy ".dev" suffix from the input so admins see just
   // their base name — the badge lives next to the input as a static
   // span controlled by isAdmin.
   if (nameIn) { nameIn.value = stripDevSuffix(State.profile?.displayName || ''); nameIn.focus(); }
   if (hexIn) hexIn.value = '#' + (State.profile?.hexCode || '5AAA72').toUpperCase();
+  if (bioIn) bioIn.value = State.profile?.bio || '';
   _updateEditColorPreview();
+  _updateBioCount();
 }
 function _closeEditPanel() {
   const p = document.getElementById('acct-edit-panel');
@@ -257,15 +267,18 @@ export function initAccountMenu(handlers) {
   document.getElementById('acct-edit-save-btn')?.addEventListener('click', async () => {
     const name = document.getElementById('acct-username-input').value.trim();
     const hex = document.getElementById('acct-edit-hex-input').value.replace('#', '').toLowerCase();
+    const bio = (document.getElementById('acct-bio-input')?.value || '').trim().slice(0, 150);
     if (!/^[0-9a-f]{6}$/.test(hex)) { toast('Invalid hex color'); return; }
     try {
-      await onSaveProfile?.({ displayName: name || 'anon', hexCode: hex });
+      await onSaveProfile?.({ displayName: name || 'anon', hexCode: hex, bio });
       _closeEditPanel();
       toast('Profile saved');
     } catch (err) {
       toast(err?.message || 'Could not save profile');
     }
   });
+  // Live character counter for the bio textarea
+  document.getElementById('acct-bio-input')?.addEventListener('input', _updateBioCount);
   // Enter in username input → save
   document.getElementById('acct-username-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); document.getElementById('acct-edit-save-btn')?.click(); }

@@ -89,6 +89,10 @@ function statusBadgeHTML(status) {
   return '<div class="hex-status" data-status="live"></div>';
 }
 
+// Tiny inline globe glyph. Used as a small decorative marker next to
+// the domain in the static view — pure CSS currentColor, no network.
+const GLOBE_MINI_SVG = '<svg class="hex-globe-mini" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+
 function catalystTileHTML(cat) {
   const domain = safeDomain(cat.url);
   const title = escapeHtml(cat.title || '');
@@ -96,17 +100,41 @@ function catalystTileHTML(cat) {
   const hex = escapeHtml(cat.ownerHex || '5aaa72');
   const unameHtml = renderUsername(cat.ownerName || 'anon', accent, !!cat.ownerIsAdmin);
   const status = cat.status || 'live';
-  // No avatar / favicon icon in the tile center — the spec calls for
-  // negative space there. Title + URL are centered; the creator line
-  // sits at the bottom of the info stack (still inside the hex shape,
-  // but clearly below the main content).
+  const category = escapeHtml(cat.category || 'sites');
+  const platform = escapeHtml(cat.platform || 'web');
+
+  // Collaborator count is an optional denormalized field. The data
+  // model doesn't currently write it, but render a chip if present
+  // so a future contributor feature works without another tile refactor.
+  const collabCount = Array.isArray(cat.collaborators) ? cat.collaborators.length : 0;
+  const collabHTML = collabCount > 0
+    ? `<span class="hex-collab">${collabCount} people</span>`
+    : '';
+
+  // Three display layers:
+  //   .hex-static — title + domain indicator, always visible
+  //   .hex-hover  — creator + badges, fades in on :hover
+  //   .hex-fade   — background dim for legibility
   return `
     ${statusBadgeHTML(status)}
     <div class="hex-fade"></div>
     <div class="hex-info">
-      <div class="hex-title">${title}</div>
-      <div class="hex-url" data-url-link>${escapeHtml(domain)}</div>
-      <div class="hex-creator" data-creator-link><span class="hex-creator-name">${unameHtml}</span><span class="hex-creator-hex" style="color:${escapeHtml(accent)}">#${hex}</span></div>
+      <div class="hex-static">
+        <div class="hex-title">${title}</div>
+        ${domain ? `<div class="hex-domain" data-url-link>${GLOBE_MINI_SVG}<span>${escapeHtml(domain)}</span></div>` : ''}
+      </div>
+      <div class="hex-hover">
+        <div class="hex-hover-badges">
+          <span class="hex-badge hex-badge-cat">${category}</span>
+          <span class="hex-badge hex-badge-plat">${platform}</span>
+          ${collabHTML}
+        </div>
+        <div class="hex-creator" data-creator-link>
+          <span class="hex-creator-dot" style="background:#${hex}"></span>
+          <span class="hex-creator-name">${unameHtml}</span>
+          <span class="hex-creator-hex" style="color:#${hex}">#${hex}</span>
+        </div>
+      </div>
     </div>
   `;
 }

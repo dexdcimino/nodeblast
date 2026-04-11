@@ -80,6 +80,9 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     null;
   const photoURL = topData?.photoURL || user.photoURL || '';
   const emailIsAdmin = !!(user?.email && ADMIN_EMAILS.has(user.email.toLowerCase()));
+  // Bio: DexNote subdoc wins, top-level doc is the fallback. Either
+  // undefined → empty string so the UI can treat "no bio" uniformly.
+  const bio = (prefsData?.bio ?? topData?.bio ?? '').toString();
   return {
     displayName,
     hexCode,
@@ -89,6 +92,7 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     isAdmin: !!topData?.isAdmin || emailIsAdmin,
     logoTopColor: topData?.logoTopColor || null,
     logoBotColor: topData?.logoBotColor || null,
+    bio,
   };
 }
 
@@ -317,6 +321,11 @@ export async function saveProfile(updates) {
     }
   }
 
+  // Clamp bio length + trim, in case a caller forgot.
+  if (typeof updates.bio === 'string') {
+    updates.bio = updates.bio.slice(0, 150).trim();
+  }
+
   const topRef = doc(db, 'users', State.user.uid);
   const prefsRef = doc(db, 'users', State.user.uid, 'prefs', 'profile');
 
@@ -325,12 +334,13 @@ export async function saveProfile(updates) {
   const prefsUpdates = { updatedAt: serverTimestamp() };
   if (updates.displayName) prefsUpdates.username = updates.displayName;
   if (updates.hexCode) prefsUpdates.hexColor = '#' + updates.hexCode;
+  // Bio mirrors directly with the same field name on both docs.
+  if (typeof updates.bio === 'string') prefsUpdates.bio = updates.bio;
 
+  const writePrefs = updates.displayName || updates.hexCode || typeof updates.bio === 'string';
   await Promise.all([
     setDoc(topRef, topUpdates, { merge: true }),
-    (updates.displayName || updates.hexCode)
-      ? setDoc(prefsRef, prefsUpdates, { merge: true })
-      : Promise.resolve(),
+    writePrefs ? setDoc(prefsRef, prefsUpdates, { merge: true }) : Promise.resolve(),
   ]);
   State.profile = { ...State.profile, ...updates };
 

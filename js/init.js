@@ -87,6 +87,7 @@ function setAvatarEl(el, profile, user) {
 function hideAllViews() {
   document.getElementById('cat-filter-bar').classList.remove('visible');
   document.getElementById('profile-bar').classList.remove('visible');
+  document.getElementById('profile-bio')?.classList.remove('visible');
   document.getElementById('not-found').classList.remove('visible');
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
@@ -122,6 +123,20 @@ function showProfileBar(user, catalystCount, isOwn) {
   document.getElementById('profile-bar-hex-label').textContent = '#' + (user.hexCode || '5aaa72');
   document.getElementById('profile-bar-count').textContent =
     catalystCount + (catalystCount === 1 ? ' catalyst' : ' catalysts');
+
+  // Bio: show only if set. Empty bios render no placeholder at all
+  // so the grid sits flush under the profile bar.
+  const bioEl = document.getElementById('profile-bio');
+  if (bioEl) {
+    const bio = (user.bio || '').toString().trim();
+    if (bio) {
+      bioEl.textContent = bio;
+      bioEl.classList.add('visible');
+    } else {
+      bioEl.textContent = '';
+      bioEl.classList.remove('visible');
+    }
+  }
 
   const actionBtn = document.getElementById('profile-bar-action');
   const shareBtn = document.getElementById('profile-bar-share');
