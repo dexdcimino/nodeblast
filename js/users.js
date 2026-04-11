@@ -13,6 +13,7 @@ import {
   orderBy,
   getDocs,
   doc,
+  getDoc,
   updateDoc,
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
@@ -22,10 +23,37 @@ export function normalizeUsername(name) {
   return (name || '').toLowerCase().trim();
 }
 
-export async function getUserByUsername(username) {
+// Build the canonical userLookup document key: "name#hex" (both lowercase).
+// The `userLookup` collection enforces that a given {displayName, hexCode}
+// combo is owned by exactly one uid.
+export function userLookupKey(username, hex) {
+  const lower = normalizeUsername(username);
+  const h = (hex || '').toLowerCase();
+  if (!lower || !h) return '';
+  return lower + '#' + h;
+}
+
+// Exact lookup via the userLookup collection when hex is provided; falls
+// back to a username-only query otherwise (backwards compat for legacy
+// `/username` URLs that have no hex suffix).
+export async function getUserByUsernameHex(username, hex) {
   const lower = normalizeUsername(username);
   if (!lower) return null;
   try {
+    if (hex) {
+      const key = lower + '#' + hex.toLowerCase();
+      const lookupSnap = await getDoc(doc(db, 'userLookup', key));
+      if (lookupSnap.exists()) {
+        const data = lookupSnap.data();
+        const userSnap = await getDoc(doc(db, 'users', data.uid));
+        const profile = userSnap.exists() ? userSnap.data() : {};
+        return { uid: data.uid, ...profile };
+      }
+      // Fall through to username-only search if lookup missing.
+      // This covers accounts that existed before the userLookup
+      // collection was populated.
+    }
+
     const q = query(
       collection(db, 'users'),
       where('usernameLower', '==', lower),
@@ -36,9 +64,14 @@ export async function getUserByUsername(username) {
     const d = snap.docs[0];
     return { uid: d.id, ...d.data() };
   } catch (err) {
-    console.warn('[users] getUserByUsername failed:', err);
+    console.warn('[users] getUserByUsernameHex failed:', err);
     return null;
   }
+}
+
+// Back-compat wrapper used by code paths that don't yet pass the hex.
+export async function getUserByUsername(username) {
+  return getUserByUsernameHex(username, null);
 }
 
 // Prefix search on the users collection, used by the header search bar.

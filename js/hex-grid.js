@@ -84,15 +84,19 @@ function statusBadgeHTML(status) {
   return '<div class="hex-status" data-status="live"></div>';
 }
 
+// Inline globe glyph used in place of a network-fetched favicon.
+// Google's s2/favicons endpoint was 404ing for a large share of
+// domains and spamming the console on every render — the inline
+// SVG is zero-network, always-white-on-hex, and can't fail.
+const GLOBE_SVG = '<svg class="hex-favicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+
 function catalystTileHTML(cat) {
   const domain = safeDomain(cat.url);
   const title = escapeHtml(cat.title || '');
   const accent = cat.accentColor || '#5AAA72';
   const hex = escapeHtml(cat.ownerHex || '5aaa72');
   const unameHtml = renderUsername(cat.ownerName || 'anon', accent, !!cat.ownerIsAdmin);
-  const faviconHtml = domain
-    ? `<img class="hex-favicon" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" alt="" onerror="this.style.display='none'">`
-    : '';
+  const faviconHtml = domain ? GLOBE_SVG : '';
   const status = cat.status || 'live';
   return `
     ${faviconHtml}
@@ -120,17 +124,48 @@ function skeletonHTML() {
   return `<div class="hex-skeleton-inner"></div>`;
 }
 
+// ══════════════════════════════════════════════════════════════
+//  Drag-to-reorder state
+// ──────────────────────────────────────────────────────────────
+//  _dragState is non-null whenever a pointerdown on a reorderable
+//  tile has started a (possibly pending) drag. Only .active becomes
+//  true once the hold timer fires or the mouse has moved past the
+//  threshold. While .active is set, renderHexGrid() defers any
+//  incoming re-renders so the Firestore snapshot that fires right
+//  after the drop-commit can't clobber the drag animation.
+// ══════════════════════════════════════════════════════════════
+
+let _dragState = null;
+let _suppressNextClick = false;
+let _deferredRender = false;
 let _lastState = null;
 
-export function renderHexGrid(state) {
-  if (!state) state = _lastState;
-  if (!state) return;
-  _lastState = state;
+// Hold-to-drag delay. Desktop users can also start drag immediately
+// by moving the mouse past HOLD_MOVE_THRESHOLD.
+const HOLD_DELAY_MS = 180;
+const HOLD_MOVE_THRESHOLD = 8;
 
+export function renderHexGrid(state) {
+  if (state) _lastState = state;
+  if (!_lastState) return;
+
+  // Defer re-renders while a drag is in progress (or during the brief
+  // post-drop animation cooldown). The deferred render runs once the
+  // drag state clears.
+  if (_dragState && _dragState.active) {
+    _deferredRender = true;
+    return;
+  }
+
+  _renderNow(_lastState);
+}
+
+function _renderNow(state) {
   ensureClipPath();
   const honey = document.getElementById('honeycomb');
   if (!honey) return;
   honey.innerHTML = '';
+  honey.classList.remove('reordering');
 
   const containerW = honey.clientWidth;
   if (containerW <= 0) return;
@@ -164,20 +199,27 @@ export function renderHexGrid(state) {
   // underneath so the user gets both the affordance and the prompt.
   const isOwnEmpty = tiles.length === 0 && showAdd && state.emptyMessage;
 
-  _renderTiles(honey, containerW, COLS, totalTiles, (i, el) => {
+  const tileEls = new Array(tiles.length);
+
+  const slots = _renderTiles(honey, containerW, COLS, totalTiles, (i, el) => {
     const isAdd = showAdd && i === tiles.length;
     if (isAdd) {
       el.classList.add('add-tile');
       el.innerHTML = addTileHTML();
-      el.addEventListener('click', () => state.onAddClick?.());
+      el.addEventListener('click', () => {
+        if (_suppressNextClick) { _suppressNextClick = false; return; }
+        state.onAddClick?.();
+      });
     } else {
       const tile = tiles[i];
+      tileEls[i] = el;
       const accent = tile.accentColor || '#5AAA72';
       el.style.setProperty('--accent', accent);
       if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
       if (tile.status === 'placeholder') el.classList.add('wip');
       el.innerHTML = catalystTileHTML(tile);
       el.addEventListener('click', (e) => {
+        if (_suppressNextClick) { _suppressNextClick = false; return; }
         if (e.target.closest('[data-creator-link]')) {
           e.stopPropagation();
           state.onCreatorClick?.(tile);
@@ -192,6 +234,20 @@ export function renderHexGrid(state) {
       });
     }
   });
+
+  // Attach drag handlers to the user's own tiles (the add tile is
+  // never reorderable). `showAdd` is only true on the signed-in
+  // user's own profile route, so gating on onReorder + showAdd gives
+  // us the "own profile only" requirement for free.
+  console.log('[drag] gate', {
+    hasOnReorder: !!state.onReorder,
+    showAdd,
+    tileCount: tiles.length,
+    willAttach: !!(state.onReorder && showAdd && tiles.length > 1),
+  });
+  if (state.onReorder && showAdd && tiles.length > 1) {
+    _attachDragReorder(honey, tileEls, tiles, slots.slice(0, tiles.length), state.onReorder);
+  }
 
   if (isOwnEmpty) {
     // Position the caption just below the single + tile.
@@ -212,6 +268,7 @@ function _renderTiles(honey, containerW, COLS, count, decorate) {
   const stepY = hexH * 0.75 + GAP;
 
   const rowCounts = layoutRows(count, COLS);
+  const slots = [];
 
   let idx = 0;
   for (let row = 0; row < rowCounts.length; row++) {
@@ -228,6 +285,7 @@ function _renderTiles(honey, containerW, COLS, count, decorate) {
       el.style.height = hexH + 'px';
       el.style.left = left + 'px';
       el.style.top = top + 'px';
+      slots.push({ left, top, width: hexW, height: hexH });
       decorate(idx, el);
       honey.appendChild(el);
       idx++;
@@ -236,4 +294,203 @@ function _renderTiles(honey, containerW, COLS, count, decorate) {
 
   const totalH = GAP + rowCounts.length * stepY;
   honey.style.height = totalH + 'px';
+  return slots;
+}
+
+/* ══════════════════════════════════════
+   DRAG TO REORDER
+══════════════════════════════════════ */
+
+function _attachDragReorder(honey, tileEls, tiles, slots, onReorder) {
+  console.log('[drag] _attachDragReorder called', tileEls.length);
+  tileEls.forEach((el) => {
+    if (!el) return;
+    el.addEventListener('pointerdown', (e) => _onPointerDown(e, el, honey, tileEls, tiles, slots, onReorder));
+  });
+}
+
+function _onPointerDown(e, el, honey, tileEls, tiles, slots, onReorder) {
+  console.log('[drag] pointerdown on tile', {
+    pointerType: e.pointerType,
+    button: e.button,
+    target: e.target?.className || e.target?.tagName,
+    onUrlLink: !!e.target.closest?.('[data-url-link]'),
+    onCreatorLink: !!e.target.closest?.('[data-creator-link]'),
+    alreadyDragging: !!_dragState,
+  });
+  if (_dragState) return;
+  if (e.button !== undefined && e.button !== 0) return;
+  // Don't start a drag when the user clicks the inline url/creator
+  // links inside the tile — those have their own click targets.
+  if (e.target.closest('[data-url-link]') || e.target.closest('[data-creator-link]')) return;
+
+  const ctx = {
+    active: false,
+    pointerType: e.pointerType,
+    startX: e.clientX,
+    startY: e.clientY,
+    el,
+    idx: tileEls.indexOf(el),
+    order: tileEls.slice(),        // mutable: elements in current visual order
+    tileOrder: tiles.slice(),      // mutable: tile data in parallel order
+    slots,
+    honey,
+    onReorder,
+    offsetX: 0,
+    offsetY: 0,
+    holdTimer: null,
+    onMove: null,
+    onUp: null,
+  };
+
+  // Offset from tile's layout origin (style.left/top, pre-transform)
+  // to the pointer. We translate against the honeycomb container so
+  // the tile follows the cursor even if the page has been scrolled.
+  const honeyRect = honey.getBoundingClientRect();
+  const tileLeft = parseFloat(el.style.left) || 0;
+  const tileTop = parseFloat(el.style.top) || 0;
+  ctx.offsetX = e.clientX - (honeyRect.left + tileLeft);
+  ctx.offsetY = e.clientY - (honeyRect.top + tileTop);
+
+  ctx.onMove = (ev) => _onPointerMove(ctx, ev);
+  ctx.onUp = (ev) => _onPointerUp(ctx, ev);
+
+  window.addEventListener('pointermove', ctx.onMove, { passive: false });
+  window.addEventListener('pointerup', ctx.onUp);
+  window.addEventListener('pointercancel', ctx.onUp);
+
+  ctx.holdTimer = setTimeout(() => {
+    if (_dragState === ctx && !ctx.active) _beginDrag(ctx, ctx.startX, ctx.startY);
+  }, HOLD_DELAY_MS);
+
+  _dragState = ctx;
+}
+
+function _beginDrag(ctx, clientX, clientY) {
+  ctx.active = true;
+  ctx.el.classList.add('dragging');
+  ctx.honey.classList.add('reordering');
+  document.body.classList.add('dragging-active');
+  _moveDraggedTile(ctx, clientX, clientY);
+}
+
+function _moveDraggedTile(ctx, clientX, clientY) {
+  const rect = ctx.honey.getBoundingClientRect();
+  const x = clientX - rect.left - ctx.offsetX;
+  const y = clientY - rect.top - ctx.offsetY;
+  ctx.el.style.left = x + 'px';
+  ctx.el.style.top = y + 'px';
+}
+
+function _onPointerMove(ctx, ev) {
+  if (!ctx.active) {
+    const dx = ev.clientX - ctx.startX;
+    const dy = ev.clientY - ctx.startY;
+    if (Math.hypot(dx, dy) < HOLD_MOVE_THRESHOLD) return;
+
+    if (ctx.pointerType === 'mouse') {
+      // Desktop: movement before the hold timer instantly starts the
+      // drag, rather than forcing a deliberate hold.
+      clearTimeout(ctx.holdTimer);
+      _beginDrag(ctx, ev.clientX, ev.clientY);
+    } else {
+      // Touch / pen: the user is probably scrolling. Abort.
+      _teardownListeners(ctx);
+      _dragState = null;
+    }
+    return;
+  }
+
+  // Active drag — keep the page from scrolling or selecting text
+  // while we move the tile around.
+  if (ev.cancelable) ev.preventDefault();
+  _moveDraggedTile(ctx, ev.clientX, ev.clientY);
+
+  // Find the slot whose center is closest to the pointer. We only
+  // consider real tile slots (the + tile is excluded via slots.slice
+  // in the caller), so a drop can never land on the add tile.
+  const rect = ctx.honey.getBoundingClientRect();
+  const localX = ev.clientX - rect.left;
+  const localY = ev.clientY - rect.top;
+
+  let best = ctx.idx;
+  let bestDist = Infinity;
+  for (let i = 0; i < ctx.slots.length; i++) {
+    const s = ctx.slots[i];
+    const cx = s.left + s.width / 2;
+    const cy = s.top + s.height / 2;
+    const dx = localX - cx;
+    const dy = localY - cy;
+    const d = dx * dx + dy * dy;
+    if (d < bestDist) { bestDist = d; best = i; }
+  }
+
+  if (best !== ctx.idx) {
+    // splice from the old index into the new one — tiles between the
+    // two positions shift by one, matching how app-icon reorders
+    // behave on iOS/Android.
+    const [movedEl] = ctx.order.splice(ctx.idx, 1);
+    const [movedTile] = ctx.tileOrder.splice(ctx.idx, 1);
+    ctx.order.splice(best, 0, movedEl);
+    ctx.tileOrder.splice(best, 0, movedTile);
+    ctx.idx = best;
+
+    // Reposition every non-dragged element to its new slot. The
+    // dragged element keeps its cursor-driven position.
+    ctx.order.forEach((elA, i) => {
+      if (elA === ctx.el) return;
+      const s = ctx.slots[i];
+      elA.style.left = s.left + 'px';
+      elA.style.top = s.top + 'px';
+    });
+  }
+}
+
+function _onPointerUp(ctx, ev) {
+  if (!ctx.active) {
+    // Released before drag ever started — treat as a plain click.
+    _teardownListeners(ctx);
+    _dragState = null;
+    return;
+  }
+
+  // Snap the dragged tile into its final slot. Removing .dragging
+  // restores the CSS transition, so the tile smoothly animates from
+  // its cursor position into the slot position.
+  const finalSlot = ctx.slots[ctx.idx];
+  ctx.el.classList.remove('dragging');
+  ctx.el.style.left = finalSlot.left + 'px';
+  ctx.el.style.top = finalSlot.top + 'px';
+
+  const orderedIds = ctx.tileOrder.map((t) => t.id);
+
+  _teardownListeners(ctx);
+
+  // Keep _dragState.active true during the snap-back animation so
+  // any Firestore snapshot that fires from the optimistic write
+  // doesn't trigger a mid-animation re-render.
+  setTimeout(() => {
+    ctx.honey.classList.remove('reordering');
+    document.body.classList.remove('dragging-active');
+    _dragState = null;
+    if (_deferredRender) {
+      _deferredRender = false;
+      renderHexGrid();
+    }
+  }, 280);
+
+  // Swallow the synthetic click event that follows the pointerup so
+  // releasing a drop on top of a tile doesn't open the catalyst detail
+  // popup.
+  _suppressNextClick = true;
+  setTimeout(() => { _suppressNextClick = false; }, 120);
+
+  ctx.onReorder?.(orderedIds);
+}
+
+function _teardownListeners(ctx) {
+  clearTimeout(ctx.holdTimer);
+  window.removeEventListener('pointermove', ctx.onMove);
+  window.removeEventListener('pointerup', ctx.onUp);
+  window.removeEventListener('pointercancel', ctx.onUp);
 }

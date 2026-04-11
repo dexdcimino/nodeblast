@@ -5,16 +5,43 @@
 
 let _renderRoute = null;
 
+// Parse "dex.1199ff" → { username: "dex", hex: "1199ff" }
+// Parse "dex"         → { username: "dex", hex: null }         (backwards compat)
+// Parse "dex.dev.1199ff" → { username: "dex.dev", hex: "1199ff" }
+//
+// Matches the LAST dot followed by exactly 6 hex chars, so names
+// that legitimately contain dots (admin ".dev" badge, etc.) still
+// parse correctly.
+export function parseUserSlug(slug) {
+  const match = (slug || '').match(/^(.+)\.([0-9a-fA-F]{6})$/);
+  if (match) {
+    return { username: match[1], hex: match[2].toLowerCase() };
+  }
+  return { username: slug || '', hex: null };
+}
+
+export function buildUserSlug(username, hex) {
+  const name = (username || '').toLowerCase();
+  if (!hex) return encodeURIComponent(name);
+  return encodeURIComponent(name + '.' + hex.toLowerCase());
+}
+
 export function getRoute() {
   const path = window.location.pathname;
   if (path === '/' || path === '') return { page: 'feed' };
 
   const parts = path.split('/').filter(Boolean);
-  if (parts.length === 1) return { page: 'profile', username: decodeURIComponent(parts[0]) };
+
+  if (parts.length === 1) {
+    const parsed = parseUserSlug(decodeURIComponent(parts[0]));
+    return { page: 'profile', username: parsed.username, hex: parsed.hex };
+  }
   if (parts.length === 2) {
+    const parsed = parseUserSlug(decodeURIComponent(parts[0]));
     return {
       page: 'catalyst',
-      username: decodeURIComponent(parts[0]),
+      username: parsed.username,
+      hex: parsed.hex,
       slug: decodeURIComponent(parts[1]),
     };
   }

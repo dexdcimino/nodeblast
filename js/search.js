@@ -5,7 +5,7 @@
 
 import { searchUsers } from './users.js';
 import { searchCatalysts } from './catalysts.js';
-import { navigate } from './router.js';
+import { navigate, buildUserSlug } from './router.js';
 import { renderUsername, escapeHtml } from './ui-events.js';
 
 const DEBOUNCE_MS = 300;
@@ -43,15 +43,17 @@ export function focusSearch() {
 function navigateToUser(user) {
   const lower = (user.usernameLower || user.displayName || '').toLowerCase();
   if (!lower) return;
-  navigate('/' + encodeURIComponent(lower));
+  navigate('/' + buildUserSlug(lower, user.hexCode || ''));
   closeSearch();
 }
 
 function navigateToCatalyst(cat) {
   const owner = (cat.ownerName || 'anon').toLowerCase();
+  const hex = cat.ownerHex || '';
   const slug = cat.slug || '';
-  if (slug) navigate(`/${encodeURIComponent(owner)}/${encodeURIComponent(slug)}`);
-  else navigate('/' + encodeURIComponent(owner));
+  const userPart = buildUserSlug(owner, hex);
+  if (slug) navigate(`/${userPart}/${encodeURIComponent(slug)}`);
+  else navigate('/' + userPart);
   closeSearch();
 }
 

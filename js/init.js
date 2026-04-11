@@ -1,6 +1,15 @@
 import State from './state.js';
-import { signIn, signOut, onAuthReady, saveProfile } from './auth.js';
-import { applyTheme, applyPalette, initThemeToggle, initPalettePickers } from './theme.js';
+import { signIn, signOut, onAuthReady, saveProfile, saveAccentColor } from './auth.js';
+import {
+  applyTheme,
+  applyPalette,
+  applyAccent,
+  initThemeToggle,
+  initPalettePickers,
+  ACCENTS,
+  ACCENT_GRAY,
+  DEFAULT_ACCENT,
+} from './theme.js';
 import { initColorPicker } from './color.js';
 import {
   initTooltips,
@@ -23,9 +32,10 @@ import {
   subscribeUserCatalysts,
   subscribePublicFeed,
   refreshOwnerOnAllCatalysts,
+  reorderCatalysts,
 } from './catalysts.js';
-import { getUserByUsername } from './users.js';
-import { initRouter, navigate, getRoute, setPageTitle } from './router.js';
+import { getUserByUsernameHex } from './users.js';
+import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './router.js';
 import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js';
 import { initNotifications, initHelpPanel } from './notifications.js';
 
@@ -35,7 +45,12 @@ let _currentTiles = [];
 let _currentShowAdd = false;
 let _currentEmptyMessage = '';
 let _firstRender = true;
-let _profileCache = new Map(); // usernameLower -> { user, catalysts }
+let _profileCache = new Map(); // "name#hex" or "name" -> { user, catalysts }
+
+function profileCacheKey(username, hex) {
+  const lower = (username || '').toLowerCase();
+  return hex ? lower + '#' + hex.toLowerCase() : lower;
+}
 
 // Active Firestore listeners for the current route. Cleared on every
 // renderRoute() so we don't leak listeners across navigation.
@@ -118,8 +133,10 @@ function showProfileBar(user, catalystCount, isOwn) {
     if (shareBtn) {
       shareBtn.style.display = 'inline-flex';
       const usernameLower = (user.usernameLower || (user.displayName || '').toLowerCase());
+      const hex = user.hexCode || '';
       shareBtn.onclick = async () => {
-        const link = `${window.location.origin}/${encodeURIComponent(usernameLower)}`;
+        const slug = buildUserSlug(usernameLower, hex);
+        const link = `${window.location.origin}/${slug}`;
         try {
           await navigator.clipboard.writeText(link);
           toast('Profile link copied!');
@@ -157,9 +174,11 @@ function handleTileClick(cat) {
     openCatalystModal(cat);
   } else {
     const ownerName = (cat.ownerName || 'anon').toLowerCase();
+    const ownerHex = cat.ownerHex || '';
     const slug = cat.slug || '';
     if (slug) {
-      history.pushState({}, '', `/${encodeURIComponent(ownerName)}/${encodeURIComponent(slug)}`);
+      const userPart = buildUserSlug(ownerName, ownerHex);
+      history.pushState({}, '', `/${userPart}/${encodeURIComponent(slug)}`);
       setPageTitle([cat.title, cat.ownerName || 'anon']);
     }
     openCatalystDetail(cat);
@@ -167,8 +186,32 @@ function handleTileClick(cat) {
 }
 
 function handleCreatorClick(cat) {
-  const name = (cat.ownerName || 'anon');
-  navigate('/' + encodeURIComponent(name.toLowerCase()));
+  const name = (cat.ownerName || 'anon').toLowerCase();
+  const hex = cat.ownerHex || '';
+  navigate('/' + buildUserSlug(name, hex));
+}
+
+async function handleReorder(orderedIds) {
+  if (!State.user) return;
+  // Optimistically reorder the local tile list so subsequent renders
+  // (resize, etc.) don't flash the old order while Firestore catches up.
+  const byId = new Map(_currentTiles.map((t) => [t.id, t]));
+  const next = [];
+  orderedIds.forEach((id, i) => {
+    const t = byId.get(id);
+    if (!t) return;
+    // Mirror the sortOrder the write will apply, so sortUserCatalysts
+    // in the subscription callback produces the same order when the
+    // snapshot fires.
+    next.push({ ...t, sortOrder: i });
+  });
+  _currentTiles = next;
+  try {
+    await reorderCatalysts(State.user.uid, orderedIds);
+  } catch (err) {
+    console.warn('[init] reorder persist failed:', err);
+    toast('Reorder failed');
+  }
 }
 
 function renderGrid(tiles, { showAdd = false, emptyMessage = '' } = {}) {
@@ -182,6 +225,7 @@ function renderGrid(tiles, { showAdd = false, emptyMessage = '' } = {}) {
     onTileClick: handleTileClick,
     onAddClick: () => openCatalystModal(null),
     onCreatorClick: handleCreatorClick,
+    onReorder: showAdd ? handleReorder : null,
   });
 }
 
@@ -204,14 +248,14 @@ async function renderFeedRoute() {
   trackSub(unsub);
 }
 
-async function renderProfileRoute(username, { openSlug = null } = {}) {
+async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
   hideAllViews();
   setPageTitle([username]);
 
-  const lower = username.toLowerCase();
+  const cacheKey = profileCacheKey(username, hex);
 
   // Paint cached view instantly if we have one
-  const cached = _profileCache.get(lower);
+  const cached = _profileCache.get(cacheKey);
   if (cached) {
     const isOwn = State.user && cached.user.uid === State.user.uid;
     showProfileBar(cached.user, cached.catalysts.length, isOwn);
@@ -231,7 +275,7 @@ async function renderProfileRoute(username, { openSlug = null } = {}) {
 
   // Resolve the user doc (always fresh — cheap enough, and we need the uid
   // for the subscription).
-  const user = await getUserByUsername(username);
+  const user = await getUserByUsernameHex(username, hex);
   if (!user) {
     if (!cached) show404();
     return;
@@ -241,7 +285,7 @@ async function renderProfileRoute(username, { openSlug = null } = {}) {
 
   // Live subscription for this user's catalysts. Replaces one-shot load.
   const unsub = subscribeUserCatalysts(user.uid, (catalysts) => {
-    _profileCache.set(lower, { user, catalysts });
+    _profileCache.set(cacheKey, { user, catalysts });
     showProfileBar(user, catalysts.length, isOwn);
     renderGrid(catalysts, {
       showAdd: isOwn,
@@ -289,9 +333,9 @@ async function renderRoute() {
     if (route.page === 'feed') {
       await renderFeedRoute();
     } else if (route.page === 'profile') {
-      await renderProfileRoute(route.username);
+      await renderProfileRoute(route.username, route.hex);
     } else if (route.page === 'catalyst') {
-      await renderProfileRoute(route.username, { openSlug: route.slug });
+      await renderProfileRoute(route.username, route.hex, { openSlug: route.slug });
     } else {
       show404();
     }
@@ -340,6 +384,15 @@ function updateAuthUI(user, profile) {
     return;
   }
 
+  // Sync the saved accent color across devices. If the signed-in
+  // user has a stored accentColor in their profile doc, adopt it
+  // (and update the local cache). Otherwise leave whatever the
+  // guest-mode picker left behind.
+  if (profile?.accentColor) {
+    const cached = localStorage.getItem(ACCENT_KEY);
+    if (cached !== profile.accentColor) setAccent(profile.accentColor);
+  }
+
   const acctBtn = document.getElementById('acct-btn');
   acctBtn.style.display = 'flex';
 
@@ -385,11 +438,14 @@ function updateAuthUI(user, profile) {
   if (viewProfileLink) {
     viewProfileLink.style.display = 'inline-block';
     viewProfileLink.dataset.username = name.toLowerCase();
+    viewProfileLink.dataset.hex = hex;
   }
 
   // Invalidate my own profile cache so "+" tile visibility updates correctly
   if (profile?.displayName) {
-    _profileCache.delete(profile.displayName.toLowerCase());
+    const lower = profile.displayName.toLowerCase();
+    _profileCache.delete(lower);
+    if (profile.hexCode) _profileCache.delete(lower + '#' + profile.hexCode.toLowerCase());
   }
   renderRoute();
 }
@@ -399,56 +455,80 @@ function updateAuthUI(user, profile) {
 ══════════════════════════════════════ */
 
 // ══════════════════════════════════════════════════════════════
-//  Logo color easter egg
+//  Logo accent picker
 // ──────────────────────────────────────────────────────────────
-//  TOP color (left column) paints: #nodeblast_logo_top,
-//    #nodeblast_circle_bottom, #brand-blast
-//  BOT color (right column) paints: #nodeblast_logo_bottom,
-//    #nodeblast_circle_top, #brand-node
-//  Both colors persist in localStorage.
+//  Hovering the logo reveals a single column of 10 accent swatches
+//  (see ACCENTS in theme.js). Picking one sets the site-wide accent
+//  via applyAccent() — driving --clr and friends — and paints one
+//  half of the logo / the "node" wordmark with the chosen color.
+//  The other half of the logo and the "blast" wordmark always use
+//  ACCENT_GRAY. Default is DexNote blue; guest choices persist in
+//  localStorage, signed-in choices sync to Firestore.
 // ══════════════════════════════════════════════════════════════
 
-const LOGO_TOP_KEY = 'nb-logo-top-color';
-const LOGO_BOT_KEY = 'nb-logo-bot-color';
-const LOGO_TOP_DEFAULT = '#ffffff';
-const LOGO_BOT_DEFAULT = '#ed2355';
+const ACCENT_KEY = 'nb-accent-color';
 
-function applyLogoColors(top, bot) {
-  const topEl1 = document.getElementById('nodeblast_logo_top');
-  const topEl2 = document.getElementById('nodeblast_circle_bottom');
-  if (topEl1) topEl1.setAttribute('fill', top);
-  if (topEl2) topEl2.setAttribute('fill', top);
+function paintLogo(accent) {
+  const gray = ACCENT_GRAY;
+  // Accent half: #nodeblast_logo_top path + #nodeblast_circle_bottom
+  // dot + the word "node" in the wordmark.
+  const accentPath = document.getElementById('nodeblast_logo_top');
+  const accentDot  = document.getElementById('nodeblast_circle_bottom');
+  const nodeEl     = document.getElementById('brand-node');
+  if (accentPath) accentPath.setAttribute('fill', accent);
+  if (accentDot)  accentDot.setAttribute('fill', accent);
+  if (nodeEl)     nodeEl.style.color = accent;
 
-  const botG = document.getElementById('nodeblast_logo_bottom');
-  const botEl2 = document.getElementById('nodeblast_circle_top');
-  if (botG) botG.setAttribute('fill', bot);
-  if (botEl2) botEl2.setAttribute('fill', bot);
-
+  // Gray half: the other yin-yang shape + the other dot + "blast".
+  const grayG   = document.getElementById('nodeblast_logo_bottom');
+  const grayDot = document.getElementById('nodeblast_circle_top');
   const blastEl = document.getElementById('brand-blast');
-  const nodeEl = document.getElementById('brand-node');
-  if (blastEl) blastEl.style.color = top;
-  if (nodeEl) nodeEl.style.color = bot;
+  if (grayG)   grayG.setAttribute('fill', gray);
+  if (grayDot) grayDot.setAttribute('fill', gray);
+  if (blastEl) blastEl.style.color = gray;
+}
 
-  try {
-    localStorage.setItem(LOGO_TOP_KEY, top);
-    localStorage.setItem(LOGO_BOT_KEY, bot);
-  } catch {}
+function markSelectedSwatch(accent) {
+  const lc = (accent || '').toLowerCase();
+  document.querySelectorAll('#logo-picker .logo-swatch').forEach((b) => {
+    b.classList.toggle('selected', b.dataset.color.toLowerCase() === lc);
+  });
+}
 
-  // Mark selected swatches
-  document.querySelectorAll('#logo-picker .logo-picker-col[data-col="top"] .logo-swatch')
-    .forEach((b) => b.classList.toggle('selected', b.dataset.color.toLowerCase() === top.toLowerCase()));
-  document.querySelectorAll('#logo-picker .logo-picker-col[data-col="bot"] .logo-swatch')
-    .forEach((b) => b.classList.toggle('selected', b.dataset.color.toLowerCase() === bot.toLowerCase()));
+// Apply the accent end-to-end: site variables (--clr + friends),
+// the logo paint, the selected swatch ring, and the cached local
+// value. Firestore persistence is layered on top by the picker
+// click handler once the user is signed in.
+function setAccent(hex) {
+  const color = hex || DEFAULT_ACCENT;
+  applyAccent(color);
+  paintLogo(color);
+  markSelectedSwatch(color);
+  try { localStorage.setItem(ACCENT_KEY, color); } catch {}
 }
 
 function initLogoPicker() {
-  const topColor = localStorage.getItem(LOGO_TOP_KEY) || LOGO_TOP_DEFAULT;
-  const botColor = localStorage.getItem(LOGO_BOT_KEY) || LOGO_BOT_DEFAULT;
-  applyLogoColors(topColor, botColor);
-
   const picker = document.getElementById('logo-picker');
   const logoEl = document.getElementById('hdr-logo');
   if (!picker || !logoEl) return;
+
+  // Populate the 10 swatches from the ACCENTS list. Keeping the
+  // palette in theme.js means there's one source of truth.
+  picker.innerHTML = '';
+  ACCENTS.forEach((a) => {
+    const btn = document.createElement('button');
+    btn.className = 'logo-swatch';
+    btn.type = 'button';
+    btn.dataset.color = a.hex;
+    btn.style.background = a.hex;
+    btn.title = a.name;
+    picker.appendChild(btn);
+  });
+
+  // Initial paint — respect any cached value the user picked on a
+  // previous visit, else fall back to the DexNote-blue default.
+  const initial = localStorage.getItem(ACCENT_KEY) || DEFAULT_ACCENT;
+  setAccent(initial);
 
   let hideTimer = null;
   const show = () => {
@@ -464,25 +544,26 @@ function initLogoPicker() {
   picker.addEventListener('mouseenter', show);
   picker.addEventListener('mouseleave', hide);
 
-  picker.querySelectorAll('.logo-swatch').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const col = btn.closest('.logo-picker-col')?.dataset.col;
-      const newColor = btn.dataset.color;
-      if (!col || !newColor) return;
-      const currentTop = localStorage.getItem(LOGO_TOP_KEY) || LOGO_TOP_DEFAULT;
-      const currentBot = localStorage.getItem(LOGO_BOT_KEY) || LOGO_BOT_DEFAULT;
-      if (col === 'top') applyLogoColors(newColor, currentBot);
-      else applyLogoColors(currentTop, newColor);
-    });
+  picker.addEventListener('click', (e) => {
+    const btn = e.target.closest('.logo-swatch');
+    if (!btn) return;
+    e.stopPropagation();
+    const newColor = btn.dataset.color;
+    if (!newColor) return;
+    setAccent(newColor);
+    // Signed-in: mirror the choice to Firestore so it follows the
+    // user across devices. Guests only get localStorage.
+    if (State.user) saveAccentColor(newColor);
   });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initLogoPicker();
-
+  // Palette first, accent second — applyPalette writes --clr, so the
+  // logo accent must be applied *after* it to end up as the effective
+  // site color.
   applyTheme(State.theme, true);
   applyPalette(State.palette);
+  initLogoPicker();
 
   initTooltips();
   initThemeToggle();
@@ -501,6 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     onSaveProfile: async (updates) => {
       const oldName = State.profile?.displayName;
+      const oldHex = State.profile?.hexCode;
       // When the username is changing, paint the skeleton grid before
       // the async save so the user sees a loading state instead of a
       // brief 404 flash while Firestore catches up to the new
@@ -517,17 +599,18 @@ document.addEventListener('DOMContentLoaded', () => {
         await refreshOwnerOnAllCatalysts();
       }
 
-      // If we're on our own profile route and the display name changed,
-      // replace the URL with the new one before renderRoute runs so
-      // getUserByUsername doesn't 404 against the old usernameLower.
-      if (updates.displayName && updates.displayName !== oldName) {
+      // If we're on our own profile route and the name or hex changed,
+      // replace the URL with the new username.hex combo before
+      // renderRoute runs so the lookup resolves against the new values.
+      const nameChanged = updates.displayName && updates.displayName !== oldName;
+      const hexChanged = updates.hexCode && updates.hexCode !== oldHex;
+      if (nameChanged || hexChanged) {
         const route = getRoute();
         const oldLower = (oldName || '').toLowerCase();
         if (route.page === 'profile' && route.username.toLowerCase() === oldLower) {
-          navigate(
-            '/' + encodeURIComponent((State.profile.displayName || '').toLowerCase()),
-            { replace: true },
-          );
+          const nextLower = (State.profile.displayName || '').toLowerCase();
+          const nextHex = State.profile.hexCode || '';
+          navigate('/' + buildUserSlug(nextLower, nextHex), { replace: true });
           // navigate() already fired renderRoute(); just refresh the
           // pill/menu/profile-bar and bail.
           updateAuthUI(State.user, State.profile);
@@ -557,8 +640,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('acct-view-profile')?.addEventListener('click', (e) => {
     e.preventDefault();
     const username = e.currentTarget.dataset.username;
+    const hex = e.currentTarget.dataset.hex || '';
     if (username) {
-      navigate('/' + encodeURIComponent(username));
+      navigate('/' + buildUserSlug(username, hex));
       closeAccountMenu();
     }
   });
@@ -625,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
       onTileClick: handleTileClick,
       onAddClick: () => openCatalystModal(null),
       onCreatorClick: handleCreatorClick,
+      onReorder: _currentShowAdd ? handleReorder : null,
     });
   });
 });

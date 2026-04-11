@@ -27,6 +27,7 @@ import State from './state.js';
 import { uploadCatalystThumb, deleteCatalystThumb } from './storage.js';
 import { openColorPopup, closeColorPopup } from './color.js';
 import { toast, showModal, renderUsername } from './ui-events.js';
+import { navigate, buildUserSlug } from './router.js';
 
 const db = getFirestore(app);
 
@@ -56,6 +57,27 @@ export function isValidUrl(raw) {
   } catch {
     return false;
   }
+}
+
+export // Client-side sort for a user's own catalyst grid.
+// Tiles with a sortOrder come first (ascending, as positioned by the
+// user). Tiles without — freshly created, or legacy docs that predate
+// drag-reordering — fall back to createdAt desc, just like before.
+// The two groups are interleaved such that unordered tiles appear
+// BEFORE ordered ones, so a newly created catalyst lands at the top
+// of the grid without disrupting the arrangement below. The first
+// reorder drag migrates every tile to have a sortOrder.
+function sortUserCatalysts(list) {
+  return [...list].sort((a, b) => {
+    const aHas = a.sortOrder != null;
+    const bHas = b.sortOrder != null;
+    if (aHas && bHas) return a.sortOrder - b.sortOrder;
+    if (aHas) return 1;
+    if (bHas) return -1;
+    const ta = a.createdAt?.toMillis?.() ?? 0;
+    const tb = b.createdAt?.toMillis?.() ?? 0;
+    return tb - ta;
+  });
 }
 
 export function slugify(title) {
@@ -133,7 +155,7 @@ export async function loadUserCatalysts(uid) {
   );
   try {
     const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return sortUserCatalysts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   } catch (err) {
     console.warn('[catalysts] loadUserCatalysts failed:', err);
     return [];
@@ -169,7 +191,7 @@ export function subscribeUserCatalysts(uid, callback) {
   );
   return onSnapshot(
     q,
-    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (snap) => callback(sortUserCatalysts(snap.docs.map((d) => ({ id: d.id, ...d.data() })))),
     (err) => {
       console.warn('[catalysts] user sub error:', err);
       // Fire the callback with an empty array so the UI escapes the
@@ -222,6 +244,37 @@ export async function searchCatalysts(term) {
   } catch (err) {
     console.warn('[catalysts] searchCatalysts failed:', err);
     return [];
+  }
+}
+
+// Persist a new tile order for the given user's catalysts. `orderedIds`
+// is the full list of catalyst document ids in their desired display
+// order (index 0 = first tile). Only documents whose sortOrder differs
+// from the new position are written, so a small rearrangement doesn't
+// rewrite the entire grid.
+export async function reorderCatalysts(ownerId, orderedIds) {
+  if (!ownerId || !Array.isArray(orderedIds) || orderedIds.length === 0) return;
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'catalysts'),
+      where('ownerId', '==', ownerId),
+    ));
+    const current = new Map();
+    snap.docs.forEach((d) => current.set(d.id, d.data().sortOrder));
+
+    const batch = writeBatch(db);
+    let writes = 0;
+    orderedIds.forEach((id, i) => {
+      if (!current.has(id)) return;
+      if (current.get(id) !== i) {
+        batch.update(doc(db, 'catalysts', id), { sortOrder: i });
+        writes++;
+      }
+    });
+    if (writes > 0) await batch.commit();
+  } catch (err) {
+    console.warn('[catalysts] reorderCatalysts failed:', err);
+    throw err;
   }
 }
 
@@ -659,6 +712,12 @@ export async function openCatalystDetail(catalyst) {
     </div>
     <span>${unameHtml}<span style="color:#${hex}">#${hex}</span></span>
   `;
+  creator.style.cursor = 'pointer';
+  creator.onclick = () => {
+    const ownerName = (catalyst.ownerName || 'anon').toLowerCase();
+    closeCatalystDetail();
+    navigate('/' + buildUserSlug(ownerName, catalyst.ownerHex || ''));
+  };
 
   document.getElementById('cat-detail-category').textContent = catalyst.category || 'sites';
   document.getElementById('cat-detail-platform').textContent = catalyst.platform || 'web';

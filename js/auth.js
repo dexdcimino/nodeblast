@@ -12,11 +12,12 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
   onSnapshot,
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 import State from './state.js';
-import { normalizeUsername } from './users.js';
+import { normalizeUsername, userLookupKey } from './users.js';
 import { setSigningIn, stripDevSuffix } from './ui-events.js';
 
 // Hardcoded admin emails. Firestore isAdmin field is the source of
@@ -86,6 +87,7 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     provider,
     usernameLower: normalizeUsername(displayName),
     isAdmin: !!topData?.isAdmin || emailIsAdmin,
+    accentColor: topData?.accentColor || null,
   };
 }
 
@@ -137,6 +139,10 @@ async function loadOrCreateProfile(user, providerId) {
     console.error('[auth] top-level profile write failed:', err);
   });
 
+  // Mirror the {name, hex} pair into the userLookup collection so that
+  // /name.hex URL lookups can resolve to this uid in O(1).
+  writeUserLookup(user.uid, merged.displayName, merged.hexCode);
+
   // If the stored DexNote subdoc username has a legacy ".dev" baked in,
   // rewrite it to the stripped form so both sites stay consistent.
   const prefsNeedsStrip = prefsData && prefsData.username && prefsData.username !== merged.displayName;
@@ -154,6 +160,52 @@ async function loadOrCreateProfile(user, providerId) {
   }
 
   return merged;
+}
+
+// Write (or refresh) the userLookup entry that binds "name#hex" →
+// { uid }. Fire-and-forget — failures are logged but never block the
+// caller. When called with a previous key, the stale entry is removed
+// iff it still belongs to this uid (avoids nuking an entry that
+// another user has since claimed).
+async function writeUserLookup(uid, username, hex, oldKey = null) {
+  const key = userLookupKey(username, hex);
+  if (!uid || !key) return;
+  try {
+    await setDoc(doc(db, 'userLookup', key), {
+      uid,
+      usernameLower: normalizeUsername(username),
+      hexCode: (hex || '').toLowerCase(),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    if (oldKey && oldKey !== key) {
+      try {
+        const prev = await getDoc(doc(db, 'userLookup', oldKey));
+        if (prev.exists() && prev.data().uid === uid) {
+          await deleteDoc(doc(db, 'userLookup', oldKey));
+        }
+      } catch (err) {
+        console.warn('[auth] stale userLookup cleanup failed:', err);
+      }
+    }
+  } catch (err) {
+    console.warn('[auth] userLookup write failed:', err);
+  }
+}
+
+// Persist the user's chosen accent color to the top-level users doc.
+// Fire-and-forget from the caller's perspective — callers already
+// update the UI synchronously. Safe to call while signed out (no-op).
+export async function saveAccentColor(hex) {
+  if (!State.user || !hex) return;
+  try {
+    await setDoc(doc(db, 'users', State.user.uid), {
+      accentColor: hex,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    State.profile = { ...State.profile, accentColor: hex };
+  } catch (err) {
+    console.warn('[auth] saveAccentColor failed:', err);
+  }
 }
 
 function teardownProfileSubs() {
@@ -231,10 +283,34 @@ export async function saveProfile(updates) {
     updates.displayName = stripDevSuffix(updates.displayName) || 'anon';
     updates.usernameLower = normalizeUsername(updates.displayName);
   }
+  if (updates.hexCode) {
+    updates.hexCode = stripHash(updates.hexCode);
+  }
   if (!State.user) {
     State.profile = { ...State.profile, ...updates };
     return;
   }
+
+  // Uniqueness check on {displayName, hexCode}. Two users can share a
+  // name OR a hex, but never both at once. We only need to enforce
+  // this when either field is actually changing.
+  const nextName = updates.displayName || State.profile?.displayName || '';
+  const nextHex = updates.hexCode || State.profile?.hexCode || '';
+  const prevName = State.profile?.displayName || '';
+  const prevHex = State.profile?.hexCode || '';
+  const comboChanged = (updates.displayName && nextName !== prevName) ||
+                       (updates.hexCode && nextHex !== prevHex);
+
+  if (comboChanged && nextName && nextHex) {
+    const newKey = userLookupKey(nextName, nextHex);
+    if (newKey) {
+      const lookupSnap = await getDoc(doc(db, 'userLookup', newKey));
+      if (lookupSnap.exists() && lookupSnap.data().uid !== State.user.uid) {
+        throw new Error('This username + hex combination is already taken');
+      }
+    }
+  }
+
   const topRef = doc(db, 'users', State.user.uid);
   const prefsRef = doc(db, 'users', State.user.uid, 'prefs', 'profile');
 
@@ -242,7 +318,7 @@ export async function saveProfile(updates) {
   const topUpdates = { ...updates, updatedAt: serverTimestamp() };
   const prefsUpdates = { updatedAt: serverTimestamp() };
   if (updates.displayName) prefsUpdates.username = updates.displayName;
-  if (updates.hexCode) prefsUpdates.hexColor = '#' + stripHash(updates.hexCode);
+  if (updates.hexCode) prefsUpdates.hexColor = '#' + updates.hexCode;
 
   await Promise.all([
     setDoc(topRef, topUpdates, { merge: true }),
@@ -251,6 +327,13 @@ export async function saveProfile(updates) {
       : Promise.resolve(),
   ]);
   State.profile = { ...State.profile, ...updates };
+
+  // Refresh the userLookup entry (and clean up the stale one) whenever
+  // the combo changed. Fire-and-forget — non-blocking.
+  if (comboChanged && nextName && nextHex) {
+    const oldKey = userLookupKey(prevName, prevHex);
+    writeUserLookup(State.user.uid, nextName, nextHex, oldKey || null);
+  }
 }
 
 export function onAuthReady(cb) {
