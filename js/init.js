@@ -22,6 +22,7 @@ import {
   getCatalystBySlug,
   subscribeUserCatalysts,
   subscribePublicFeed,
+  refreshOwnerOnAllCatalysts,
 } from './catalysts.js';
 import { getUserByUsername } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle } from './router.js';
@@ -418,8 +419,34 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     },
     onSaveProfile: async (updates) => {
+      const oldName = State.profile?.displayName;
       await saveProfile(updates);
       _profileCache.clear();
+
+      // Propagate profile changes to denormalized catalyst fields so
+      // existing tiles reflect the new username/hex/photo immediately.
+      if (updates.displayName || updates.hexCode || updates.photoURL) {
+        await refreshOwnerOnAllCatalysts();
+      }
+
+      // If we're on our own profile route and the display name changed,
+      // replace the URL with the new one before renderRoute runs so
+      // getUserByUsername doesn't 404 against the old usernameLower.
+      if (updates.displayName && updates.displayName !== oldName) {
+        const route = getRoute();
+        const oldLower = (oldName || '').toLowerCase();
+        if (route.page === 'profile' && route.username.toLowerCase() === oldLower) {
+          navigate(
+            '/' + encodeURIComponent((State.profile.displayName || '').toLowerCase()),
+            { replace: true },
+          );
+          // navigate() already fired renderRoute(); just refresh the
+          // pill/menu/profile-bar and bail.
+          updateAuthUI(State.user, State.profile);
+          return;
+        }
+      }
+
       updateAuthUI(State.user, State.profile);
     },
   });

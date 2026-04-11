@@ -21,6 +21,7 @@ import {
   runTransaction,
   onSnapshot,
   increment,
+  writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 import State from './state.js';
 import { uploadCatalystThumb, deleteCatalystThumb } from './storage.js';
@@ -219,6 +220,35 @@ export async function searchCatalysts(term) {
   } catch (err) {
     console.warn('[catalysts] searchCatalysts failed:', err);
     return [];
+  }
+}
+
+// Refresh owner-denormalized fields on every catalyst owned by the
+// current user. Called after saveProfile() when displayName or hexCode
+// changed, so existing tiles immediately reflect the new profile
+// without needing to edit each catalyst by hand.
+export async function refreshOwnerOnAllCatalysts() {
+  if (!State.user || !State.profile) return;
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'catalysts'),
+      where('ownerId', '==', State.user.uid),
+    ));
+    if (snap.empty) return;
+    const batch = writeBatch(db);
+    const name = State.profile.displayName || 'anon';
+    snap.docs.forEach((d) => {
+      batch.update(d.ref, {
+        ownerName: name,
+        ownerUsernameLower: name.toLowerCase(),
+        ownerHex: State.profile.hexCode || '5aaa72',
+        ownerPhoto: State.profile.photoURL || '',
+        ownerIsAdmin: !!State.profile.isAdmin,
+      });
+    });
+    await batch.commit();
+  } catch (err) {
+    console.warn('[catalysts] refreshOwnerOnAllCatalysts failed:', err);
   }
 }
 
