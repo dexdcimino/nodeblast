@@ -420,6 +420,13 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     onSaveProfile: async (updates) => {
       const oldName = State.profile?.displayName;
+      // When the username is changing, paint the skeleton grid before
+      // the async save so the user sees a loading state instead of a
+      // brief 404 flash while Firestore catches up to the new
+      // usernameLower and the URL swap happens.
+      if (updates.displayName && updates.displayName !== oldName) {
+        renderSkeleton();
+      }
       await saveProfile(updates);
       _profileCache.clear();
 
