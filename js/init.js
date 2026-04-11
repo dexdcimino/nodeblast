@@ -27,6 +27,7 @@ import {
 import { getUserByUsername } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle } from './router.js';
 import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js';
+import { initNotifications, initHelpPanel } from './notifications.js';
 
 let _currentCategory = 'all';
 let _currentRoute = null;
@@ -545,6 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initCatalystDetail();
   initRouter(renderRoute);
   initSearch();
+  initNotifications();
+  initHelpPanel();
 
   // Brand + logo → home
   document.getElementById('hdr-brand')?.addEventListener('click', () => navigate('/'));
