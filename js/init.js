@@ -550,21 +550,35 @@ let _logoTop = DEFAULT_LOGO_TOP;
 let _logoBot = DEFAULT_LOGO_BOT;
 
 function paintLogo(top, bot) {
-  // Top color: yin-yang "top" path + the bottom dot + "blast" word.
-  const topPath = document.getElementById('nodeblast_logo_top');
-  const topDot  = document.getElementById('nodeblast_circle_bottom');
-  const blastEl = document.getElementById('brand-blast');
-  if (topPath) topPath.setAttribute('fill', top);
-  if (topDot)  topDot.setAttribute('fill', top);
-  if (blastEl) blastEl.style.color = top;
+  // The SVG IDs in index.html are confusingly named — the path data
+  // doesn't match the names. Mapping by VISUAL intent:
+  //
+  //   Big top yin-yang half  → id="nodeblast_circle_bottom"
+  //   Big bottom yin-yang half → id="nodeblast_logo_bottom"
+  //   Small upper inner dot  → id="nodeblast_circle_top"
+  //   Small lower inner dot  → id="nodeblast_logo_top"
+  //
+  // Spec: top half pairs with "node" + left column color, bottom
+  // half pairs with "blast" + right column color, both small dots
+  // are transparent negative space.
 
-  // Bot color: yin-yang "bottom" group + the top dot + "node" word.
-  const botG   = document.getElementById('nodeblast_logo_bottom');
-  const botDot = document.getElementById('nodeblast_circle_top');
+  // Left column (top color) → big top half + "node" wordmark.
+  const bigTop = document.getElementById('nodeblast_circle_bottom');
   const nodeEl = document.getElementById('brand-node');
-  if (botG)   botG.setAttribute('fill', bot);
-  if (botDot) botDot.setAttribute('fill', bot);
-  if (nodeEl) nodeEl.style.color = bot;
+  if (bigTop) bigTop.setAttribute('fill', top);
+  if (nodeEl) nodeEl.style.color = top;
+
+  // Right column (bot color) → big bottom half + "blast" wordmark.
+  const bigBot  = document.getElementById('nodeblast_logo_bottom');
+  const blastEl = document.getElementById('brand-blast');
+  if (bigBot)  bigBot.setAttribute('fill', bot);
+  if (blastEl) blastEl.style.color = bot;
+
+  // Both small inner dots → transparent (header bg shows through).
+  const upperDot = document.getElementById('nodeblast_circle_top');
+  const lowerDot = document.getElementById('nodeblast_logo_top');
+  if (upperDot) upperDot.setAttribute('fill', 'transparent');
+  if (lowerDot) lowerDot.setAttribute('fill', 'transparent');
 }
 
 function markSelectedSwatches() {
