@@ -32,6 +32,8 @@ const db = getFirestore(app);
 
 export const CATEGORIES = ['games', 'tools', 'creative', 'ai', 'sites', 'wild'];
 export const PLATFORMS = ['web', 'mobile', 'both'];
+export const STATUSES = ['live', 'early', 'placeholder'];
+const DEFAULT_STATUS = 'live';
 
 function normalizeUrl(raw) {
   if (!raw) return '';
@@ -274,10 +276,11 @@ export async function createCatalyst(data, file) {
     ownerIsAdmin: !!State.profile?.isAdmin,
     title: data.title.slice(0, 40),
     slug,
-    url: normalizeUrl(data.url),
+    url: data.url ? normalizeUrl(data.url) : '',
     description: (data.description || '').slice(0, 500),
     category: CATEGORIES.includes(data.category) ? data.category : 'sites',
     platform: PLATFORMS.includes(data.platform) ? data.platform : 'web',
+    status: STATUSES.includes(data.status) ? data.status : DEFAULT_STATUS,
     thumbURL,
     logoURL: '',
     accentColor: data.accentColor || '#5AAA72',
@@ -299,10 +302,11 @@ export async function updateCatalyst(id, data, file) {
   const title = data.title.slice(0, 40);
   const updates = {
     title,
-    url: normalizeUrl(data.url),
+    url: data.url ? normalizeUrl(data.url) : '',
     description: (data.description || '').slice(0, 500),
     category: CATEGORIES.includes(data.category) ? data.category : 'sites',
     platform: PLATFORMS.includes(data.platform) ? data.platform : 'web',
+    status: STATUSES.includes(data.status) ? data.status : DEFAULT_STATUS,
     accentColor: data.accentColor || '#5AAA72',
     // Refresh the owner-denormalized fields in case the editor changed
     // their profile between catalyst creation and this edit.
@@ -400,6 +404,7 @@ export async function getMyVote(catalystId) {
 let _editingId = null;
 let _pendingFile = null;
 let _accentColor = '#5AAA72';
+let _status = DEFAULT_STATUS;
 
 function _setPills(containerId, value) {
   document.querySelectorAll(`#${containerId} .cat-pill`).forEach((b) => {
@@ -408,6 +413,20 @@ function _setPills(containerId, value) {
 }
 function _getPill(containerId) {
   return document.querySelector(`#${containerId} .cat-pill.selected`)?.dataset.val;
+}
+
+function _applyStatus(status) {
+  _status = STATUSES.includes(status) ? status : DEFAULT_STATUS;
+  document.querySelectorAll('#cat-status-pick .cat-status-btn').forEach((b) => {
+    b.classList.toggle('selected', b.dataset.status === _status);
+  });
+  // URL is optional when status is "placeholder"
+  const urlInput = document.getElementById('cat-url');
+  if (urlInput) {
+    urlInput.placeholder = _status === 'placeholder'
+      ? 'URL (optional for WIP)'
+      : 'https://...';
+  }
 }
 
 function _updateAccentBtn() {
@@ -437,6 +456,7 @@ export function openCatalystModal(existing = null) {
   _accentColor = existing?.accentColor || '#' + (State.profile?.hexCode || '5AAA72');
 
   document.getElementById('cat-modal-title').textContent = existing ? 'Edit Catalyst' : 'New Catalyst';
+  _applyStatus(existing?.status || DEFAULT_STATUS);
   document.getElementById('cat-title').value = existing?.title || '';
   document.getElementById('cat-url').value = existing?.url || '';
   document.getElementById('cat-desc').value = existing?.description || '';
@@ -472,6 +492,9 @@ export function initCatalystModal(onSaved) {
   });
   document.querySelectorAll('#cat-platform-pills .cat-pill').forEach((b) => {
     b.addEventListener('click', () => _setPills('cat-platform-pills', b.dataset.val));
+  });
+  document.querySelectorAll('#cat-status-pick .cat-status-btn').forEach((b) => {
+    b.addEventListener('click', () => _applyStatus(b.dataset.status));
   });
 
   const drop = document.getElementById('cat-thumb-drop');
@@ -520,14 +543,17 @@ export function initCatalystModal(onSaved) {
     const url = document.getElementById('cat-url').value.trim();
     _clearUrlError();
     if (!title) { toast('Title required'); return; }
-    if (!url) { _showUrlError('URL required'); return; }
-    if (!isValidUrl(url)) { _showUrlError('Enter a valid URL (e.g. example.com)'); return; }
+    // URL is optional for "placeholder" (WIP) catalysts, required otherwise.
+    const urlRequired = _status !== 'placeholder';
+    if (urlRequired && !url) { _showUrlError('URL required'); return; }
+    if (url && !isValidUrl(url)) { _showUrlError('Enter a valid URL (e.g. example.com)'); return; }
     const data = {
       title,
       url,
       description: document.getElementById('cat-desc').value.trim(),
       category: _getPill('cat-category-pills') || 'sites',
       platform: _getPill('cat-platform-pills') || 'web',
+      status: _status,
       accentColor: _accentColor,
     };
     const submitBtn = document.getElementById('cat-submit-btn');
@@ -612,6 +638,18 @@ export async function openCatalystDetail(catalyst) {
   document.getElementById('cat-detail-title').textContent = catalyst.title;
   document.getElementById('cat-detail-desc').textContent = catalyst.description || '';
 
+  // Status badge next to the title. Legacy catalysts without a status
+  // default to 'live' so they don't suddenly render as WIP.
+  const status = STATUSES.includes(catalyst.status) ? catalyst.status : DEFAULT_STATUS;
+  const statusEl = document.getElementById('cat-detail-status');
+  if (statusEl) {
+    const labelMap = { live: 'Live', early: 'Early', placeholder: 'WIP' };
+    const colorMap = { live: 'var(--clr)', early: '#E8853A', placeholder: 'var(--tx3)' };
+    statusEl.dataset.status = status;
+    statusEl.innerHTML = `<span class="cat-status-dot" style="background:${colorMap[status]}"></span>${labelMap[status]}`;
+    statusEl.classList.add('visible');
+  }
+
   const creator = document.getElementById('cat-detail-creator');
   const hex = catalyst.ownerHex || '5aaa72';
   const unameHtml = renderUsername(catalyst.ownerName || 'anon', '#' + hex, !!catalyst.ownerIsAdmin);
@@ -625,8 +663,28 @@ export async function openCatalystDetail(catalyst) {
   document.getElementById('cat-detail-category').textContent = catalyst.category || 'sites';
   document.getElementById('cat-detail-platform').textContent = catalyst.platform || 'web';
 
+  // Open button: hidden entirely for placeholder catalysts with no URL,
+  // "Open (Early — may have bugs)" for early-stage catalysts, standard
+  // text otherwise.
   const openBtn = document.getElementById('cat-detail-open');
-  openBtn.onclick = () => window.open(catalyst.url, '_blank', 'noopener');
+  if (!catalyst.url) {
+    openBtn.style.display = 'none';
+    openBtn.onclick = null;
+  } else {
+    openBtn.style.display = '';
+    if (status === 'early') {
+      openBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Open (Early — may have bugs)
+      `;
+    } else {
+      openBtn.innerHTML = `
+        Open Project
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      `;
+    }
+    openBtn.onclick = () => window.open(catalyst.url, '_blank', 'noopener');
+  }
 
   _myVote = await getMyVote(catalyst.id);
   _renderVoteButtons();

@@ -410,6 +410,21 @@
       </button>
       <div id="cat-modal-title">New Catalyst</div>
 
+      <div id="cat-status-pick">
+        <button class="cat-status-btn selected" data-status="live" data-tip="Live — ready to check out">
+          <span class="cat-status-dot" style="background:var(--clr)"></span>
+          Live
+        </button>
+        <button class="cat-status-btn" data-status="early" data-tip="Early stage — expect bugs and changes">
+          <span class="cat-status-dot" style="background:#E8853A"></span>
+          Early
+        </button>
+        <button class="cat-status-btn" data-status="placeholder" data-tip="Work in progress placeholder — nothing to see yet">
+          <span class="cat-status-dot" style="background:var(--tx3)"></span>
+          WIP
+        </button>
+      </div>
+
       <div class="cat-field">
         <label class="cat-label">Title</label>
         <input id="cat-title" type="text" maxlength="40" placeholder="Project name" spellcheck="false" autocomplete="off" />
@@ -482,7 +497,10 @@
       </button>
       <div id="cat-detail-thumb"></div>
       <div id="cat-detail-body">
-        <div id="cat-detail-title"></div>
+        <div id="cat-detail-title-row">
+          <div id="cat-detail-title"></div>
+          <span id="cat-detail-status" class="cat-detail-status"></span>
+        </div>
         <div id="cat-detail-creator"></div>
         <div id="cat-detail-badges">
           <span class="cat-detail-badge" id="cat-detail-category"></span>

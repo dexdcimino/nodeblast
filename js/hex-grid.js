@@ -77,6 +77,13 @@ function layoutRows(count, COLS) {
   return rows;
 }
 
+function statusBadgeHTML(status) {
+  if (status === 'early') return '<div class="hex-status" data-status="early">Early</div>';
+  if (status === 'placeholder') return '<div class="hex-status" data-status="placeholder">WIP</div>';
+  // Live is the default/expected state — render a small green dot, no text.
+  return '<div class="hex-status" data-status="live"></div>';
+}
+
 function catalystTileHTML(cat) {
   const domain = safeDomain(cat.url);
   const title = escapeHtml(cat.title || '');
@@ -86,8 +93,10 @@ function catalystTileHTML(cat) {
   const faviconHtml = domain
     ? `<img class="hex-favicon" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" alt="" onerror="this.style.display='none'">`
     : '';
+  const status = cat.status || 'live';
   return `
     ${faviconHtml}
+    ${statusBadgeHTML(status)}
     <div class="hex-fade"></div>
     <div class="hex-info">
       <div class="hex-title">${title}</div>
@@ -166,6 +175,7 @@ export function renderHexGrid(state) {
       const accent = tile.accentColor || '#5AAA72';
       el.style.setProperty('--accent', accent);
       if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
+      if (tile.status === 'placeholder') el.classList.add('wip');
       el.innerHTML = catalystTileHTML(tile);
       el.addEventListener('click', (e) => {
         if (e.target.closest('[data-creator-link]')) {
