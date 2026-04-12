@@ -429,71 +429,75 @@
         </button>
       </div>
 
-      <div class="cat-field">
-        <label class="cat-label">Title</label>
-        <input id="cat-title" type="text" maxlength="40" placeholder="Project name" spellcheck="false" autocomplete="off" />
-      </div>
-
-      <div class="cat-field">
-        <label class="cat-label">URL</label>
-        <div class="cat-url-row">
-          <input id="cat-url" type="text" placeholder="https://..." spellcheck="false" autocomplete="off" />
-          <button type="button" id="cat-url-copy-btn" class="cat-url-copy-btn" data-tip="Copy link">
-            <svg class="icon-copy" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            <svg class="icon-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          </button>
-        </div>
-        <div id="cat-url-error" class="cat-field-error"></div>
-      </div>
-
-      <div class="cat-field">
-        <label class="cat-label">Description</label>
-        <textarea id="cat-desc" maxlength="500" rows="3" placeholder="What does it do?"></textarea>
-      </div>
-
-      <div class="cat-field">
-        <label class="cat-label">Category</label>
-        <div class="cat-pills" id="cat-category-pills">
-          <button class="cat-pill" data-val="games">Games</button>
-          <button class="cat-pill" data-val="tools">Tools</button>
-          <button class="cat-pill" data-val="creative">Creative</button>
-          <button class="cat-pill" data-val="ai">AI</button>
-          <button class="cat-pill selected" data-val="sites">Sites</button>
-          <button class="cat-pill" data-val="wild">Wild</button>
-        </div>
-      </div>
-
-      <div class="cat-field">
-        <label class="cat-label">Platform</label>
-        <div class="cat-pills" id="cat-platform-pills">
-          <button class="cat-pill selected" data-val="web">Web</button>
-          <button class="cat-pill" data-val="mobile">Mobile</button>
-          <button class="cat-pill" data-val="both">Both</button>
-        </div>
-      </div>
-
-      <div class="cat-field">
-        <label class="cat-label">Collaborators</label>
-        <div id="cat-collab-list"><!-- chips populated by initCatalystModal --></div>
-        <div id="cat-collab-add-row">
-          <input id="cat-collab-input" type="text" placeholder="Add by username" spellcheck="false" autocomplete="off" />
-          <div id="cat-collab-results"><!-- search results dropdown --></div>
-        </div>
-      </div>
-
-      <div class="cat-field cat-field-row">
-        <div class="cat-field-col" style="flex:1">
-          <label class="cat-label">Thumbnail</label>
-          <div id="cat-thumb-drop">
+      <div class="cat-modal-split">
+        <!-- LEFT: hexagonal thumbnail preview + accent picker. Stacks
+             vertically on narrow screens. -->
+        <div class="cat-modal-left">
+          <div id="cat-thumb-drop" class="cat-thumb-hex">
             <div class="cat-thumb-hint">Drop image or click to upload</div>
           </div>
           <input type="file" id="cat-thumb-file" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" />
+          <div class="cat-modal-accent-row">
+            <label class="cat-label">Accent</label>
+            <button id="cat-accent-btn" data-tip="Pick accent color">
+              <span id="cat-accent-preview"></span>
+            </button>
+          </div>
         </div>
-        <div class="cat-field-col" style="flex:0 0 auto">
-          <label class="cat-label">Accent</label>
-          <button id="cat-accent-btn" data-tip="Pick accent color">
-            <span id="cat-accent-preview"></span>
-          </button>
+
+        <!-- RIGHT: form fields stacked vertically. -->
+        <div class="cat-modal-right">
+          <div class="cat-field">
+            <label class="cat-label">Title</label>
+            <input id="cat-title" type="text" maxlength="40" placeholder="Project name" spellcheck="false" autocomplete="off" />
+          </div>
+
+          <div class="cat-field">
+            <label class="cat-label">URL</label>
+            <div class="cat-url-row">
+              <input id="cat-url" type="text" placeholder="https://..." spellcheck="false" autocomplete="off" />
+              <button type="button" id="cat-url-copy-btn" class="cat-url-copy-btn" data-tip="Copy link">
+                <svg class="icon-copy" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <svg class="icon-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+            </div>
+            <div id="cat-url-error" class="cat-field-error"></div>
+          </div>
+
+          <div class="cat-field">
+            <label class="cat-label">Description</label>
+            <textarea id="cat-desc" maxlength="500" rows="3" placeholder="What does it do?"></textarea>
+          </div>
+
+          <div class="cat-field">
+            <label class="cat-label">Category</label>
+            <div class="cat-pills" id="cat-category-pills">
+              <button class="cat-pill" data-val="games">Games</button>
+              <button class="cat-pill" data-val="tools">Tools</button>
+              <button class="cat-pill" data-val="creative">Creative</button>
+              <button class="cat-pill" data-val="ai">AI</button>
+              <button class="cat-pill selected" data-val="sites">Sites</button>
+              <button class="cat-pill" data-val="wild">Wild</button>
+            </div>
+          </div>
+
+          <div class="cat-field">
+            <label class="cat-label">Platform</label>
+            <div class="cat-pills" id="cat-platform-pills">
+              <button class="cat-pill selected" data-val="web">Web</button>
+              <button class="cat-pill" data-val="mobile">Mobile</button>
+              <button class="cat-pill" data-val="both">Both</button>
+            </div>
+          </div>
+
+          <div class="cat-field">
+            <label class="cat-label">Collaborators</label>
+            <div id="cat-collab-list"><!-- chips populated by initCatalystModal --></div>
+            <div id="cat-collab-add-row">
+              <input id="cat-collab-input" type="text" placeholder="Add by username" spellcheck="false" autocomplete="off" />
+              <div id="cat-collab-results"><!-- search results dropdown --></div>
+            </div>
+          </div>
         </div>
       </div>
 

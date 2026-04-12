@@ -363,7 +363,9 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* ══════════════════════════════════════
    COLOR PICKER POPUP (verbatim from DexNote editor.css)
 ══════════════════════════════════════ */
-#clr-popup{display:none;position:fixed;z-index:9999;background:#18191f;border:1px solid #2e2f38;border-radius:12px;padding:14px;box-shadow:0 10px 40px rgba(0,0,0,.75);flex-direction:column;gap:10px;width:250px;font-family:'Outfit',sans-serif;}
+/* z-index 26000 sits above #cat-modal (25000) so the accent color
+   picker is interactable while the catalyst edit modal is open. */
+#clr-popup{display:none;position:fixed;z-index:26000;background:#18191f;border:1px solid #2e2f38;border-radius:12px;padding:14px;box-shadow:0 10px 40px rgba(0,0,0,.75);flex-direction:column;gap:10px;width:250px;font-family:'Outfit',sans-serif;}
 #clr-popup.open{display:flex;}
 #clr-popup-hdr{display:flex;justify-content:space-between;align-items:center;}
 #clr-popup-title{font-size:11px;color:#aaa;letter-spacing:.06em;text-transform:uppercase;font-weight:600;}
@@ -657,7 +659,7 @@ body.dragging-active{touch-action:none;}
 ══════════════════════════════════════ */
 #cat-modal{display:none;position:fixed;inset:0;z-index:25000;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
 #cat-modal.open{display:flex;}
-#cat-modal-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:28px 32px 22px;width:90%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,.55);position:relative;animation:fadeup .22s ease both;}
+#cat-modal-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:28px 32px 22px;width:90%;max-width:720px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,.55);position:relative;animation:fadeup .22s ease both;}
 #cat-modal-close{position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;display:flex;align-items:center;transition:color var(--ease);z-index:1;}
 #cat-modal-close:hover{color:var(--tx);}
 #cat-modal-title{font-size:20px;font-weight:700;color:var(--tx);margin-bottom:14px;}
@@ -728,11 +730,27 @@ body.dragging-active{touch-action:none;}
 .cat-collab-result-hex{font-size:11px;color:var(--tx3);font-family:var(--fn);}
 .cat-collab-result-empty{padding:10px 12px;font-size:12px;color:var(--tx3);text-align:center;}
 
-#cat-thumb-drop{width:100%;height:140px;border:2px dashed var(--bdr);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color var(--ease),background var(--ease);background-size:cover;background-position:center;background-color:var(--bg3);position:relative;overflow:hidden;}
-#cat-thumb-drop:hover,#cat-thumb-drop.drag{border-color:var(--clr-adj);}
-#cat-thumb-drop.has-img{border-style:solid;}
-.cat-thumb-hint{font-size:12px;color:var(--tx3);text-align:center;padding:6px 10px;border-radius:6px;background:rgba(0,0,0,.4);pointer-events:none;}
-#cat-thumb-drop:not(.has-img) .cat-thumb-hint{background:none;}
+/* Two-column layout inside #cat-modal-card: hexagonal thumb on the
+   left, form fields stacked on the right. Collapses to a single
+   column on narrow screens via the responsive override below. */
+.cat-modal-split{display:flex;gap:28px;align-items:flex-start;margin-top:6px;}
+.cat-modal-left{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:14px;width:160px;}
+.cat-modal-right{flex:1;min-width:0;display:flex;flex-direction:column;}
+.cat-modal-right .cat-field{margin-bottom:14px;}
+.cat-modal-accent-row{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.cat-modal-accent-row .cat-label{font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--tx3);}
+
+/* Hexagonal thumbnail preview. Uses the same #hex-clip path as the
+   live tiles. The 1.1547 height ratio matches the hexagon's natural
+   point-to-point height. The dashed-border affordance is a separate
+   absolute layer because clip-path can't render a border. */
+#cat-thumb-drop.cat-thumb-hex{width:160px;height:185px;clip-path:url(#hex-clip);background-color:var(--bg3);background-size:cover;background-position:center;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transition:transform var(--ease),filter var(--ease);}
+#cat-thumb-drop.cat-thumb-hex::after{content:'';position:absolute;inset:0;clip-path:url(#hex-clip);border:none;background:transparent;pointer-events:none;}
+#cat-thumb-drop.cat-thumb-hex:hover,#cat-thumb-drop.cat-thumb-hex.drag{transform:scale(1.02);filter:brightness(1.08);}
+#cat-thumb-drop.cat-thumb-hex.drag{filter:brightness(1.15) saturate(1.1);}
+.cat-thumb-hint{font-size:12px;color:var(--tx2);text-align:center;padding:8px 12px;border-radius:6px;background:rgba(0,0,0,.55);pointer-events:none;font-weight:500;max-width:80%;}
+#cat-thumb-drop.cat-thumb-hex.has-img .cat-thumb-hint{opacity:0;transition:opacity var(--ease);}
+#cat-thumb-drop.cat-thumb-hex.has-img:hover .cat-thumb-hint{opacity:1;}
 
 #cat-accent-btn{width:42px;height:42px;border-radius:10px;border:1.5px solid var(--bdr);background:var(--bg3);cursor:pointer;padding:4px;transition:border-color var(--ease);}
 #cat-accent-btn:hover{border-color:var(--clr-adj);}
@@ -836,4 +854,9 @@ body.dragging-active{touch-action:none;}
   #cat-detail-card{max-width:100%;width:92%;}
   #cat-modal-card{max-width:100%;width:94%;padding:20px 18px 16px;}
   .cat-field-row{flex-direction:column;}
+  /* Stack the hex preview above the form on narrow screens. */
+  .cat-modal-split{flex-direction:column;align-items:center;gap:18px;}
+  .cat-modal-left{width:auto;}
+  .cat-modal-right{width:100%;}
+  #cat-thumb-drop.cat-thumb-hex{width:140px;height:162px;}
 }
