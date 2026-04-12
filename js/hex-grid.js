@@ -568,7 +568,7 @@ function _teardownListeners(ctx) {
 // position:absolute → relative so flex wrap works. The click handlers
 // mirror the honeycomb path exactly: url/creator link delegation, then
 // tile click. No drag wiring (community tiles are never reorderable).
-export function createCatalystTileElement(cat, { width, height, showCreatorAvatar = false } = {}, handlers = {}) {
+export function createCatalystTileElement(cat, { width, height, showCreatorAvatar = false, showPinButton = false, isPinned = false } = {}, handlers = {}) {
   const el = document.createElement('div');
   el.className = 'hex-tile hex-tile-flow';
   if (width)  el.style.width  = typeof width  === 'number' ? width  + 'px' : width;
@@ -580,8 +580,34 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
   if (cat.status === 'placeholder') el.classList.add('wip');
   el.innerHTML = catalystTileHTML(cat, { showCreatorAvatar });
 
+  // MD18: pin/unpin button for community-view tiles. Rendered as an
+  // extra overlay child rather than baked into catalystTileHTML so
+  // honeycomb tiles on profile pages stay untouched.
+  if (showPinButton) {
+    const pinBtn = document.createElement('button');
+    pinBtn.type = 'button';
+    pinBtn.className = 'hex-pin-btn' + (isPinned ? ' pinned' : '');
+    pinBtn.setAttribute('data-pin-btn', '');
+    pinBtn.setAttribute('data-tip', isPinned ? 'Unpin from profile' : 'Pin to profile');
+    pinBtn.setAttribute('aria-label', isPinned ? 'Unpin' : 'Pin');
+    pinBtn.textContent = isPinned ? '−' : '+';
+    pinBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Optimistic UI flip so the button responds instantly. The
+      // caller's handler performs the write and the next tracked
+      // snapshot tick will re-render the tile definitively.
+      const nowPinned = !pinBtn.classList.contains('pinned');
+      pinBtn.classList.toggle('pinned', nowPinned);
+      pinBtn.textContent = nowPinned ? '−' : '+';
+      pinBtn.setAttribute('data-tip', nowPinned ? 'Unpin from profile' : 'Pin to profile');
+      handlers.onPinClick?.(cat, nowPinned);
+    });
+    el.appendChild(pinBtn);
+  }
+
   el.addEventListener('click', (e) => {
     if (_suppressNextClick) { _suppressNextClick = false; return; }
+    if (e.target.closest('[data-pin-btn]')) return;
     if (e.target.closest('[data-creator-link]')) {
       e.stopPropagation();
       handlers.onCreatorClick?.(cat);

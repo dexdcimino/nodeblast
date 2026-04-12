@@ -633,6 +633,56 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #profile-bio.visible{display:block;}
 
 /* ══════════════════════════════════════
+   MD18: PROFILE TRACKED FOOTER
+   ──────────────────────────────────────
+   Pinned catalysts + followed alchemists section at the bottom of
+   a profile page. Inline child of #grid so it scrolls with the hex
+   grid and inherits the same horizontal padding.
+══════════════════════════════════════ */
+#profile-tracked-footer{display:none;margin:48px 0 64px;padding:0 8px;}
+#profile-tracked-footer.visible{display:block;}
+.tracked-section{margin-bottom:36px;}
+.tracked-section:last-child{margin-bottom:0;}
+.tracked-hdr{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
+.tracked-hdr-line{flex:1;height:1px;background:var(--bdr);}
+.tracked-hdr-title{font-size:13px;font-weight:700;color:var(--tx2);letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;}
+.tracked-privacy{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bdr);border-radius:14px;padding:5px 12px;color:var(--tx2);font-family:var(--fn);font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;transition:color var(--ease),border-color var(--ease),background var(--ease);}
+.tracked-privacy:hover{color:var(--tx);border-color:var(--clr-adj);}
+.tracked-privacy .tracked-lock-open{display:none;}
+.tracked-privacy.public .tracked-lock-closed{display:none;}
+.tracked-privacy.public .tracked-lock-open{display:inline;}
+.tracked-privacy.public{color:var(--clr-adj);border-color:var(--clr-adj);}
+.tracked-body{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;padding:0 2px;}
+.tracked-empty-hint{color:var(--tx3);font-size:13px;font-style:italic;padding:8px 4px;}
+
+/* Remove "×" button overlay used by both pinned tiles and followed
+   avatars. Hidden by default, fades in on hover of the parent, and
+   only rendered on the owner's own profile (the JS opts in). On hex
+   tiles we use percentage offsets so the button lands inside the
+   clipped hex shape rather than in the invisible top-right corner. */
+.tracked-remove-btn{position:absolute;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,0.75);color:#fff;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity var(--ease),background var(--ease),transform var(--ease);z-index:6;}
+.hex-tile .tracked-remove-btn{top:12%;right:22%;}
+.tracked-alch-chip .tracked-remove-btn{top:6px;right:6px;}
+.tracked-alch-chip:hover .tracked-remove-btn,
+.hex-tile:hover .tracked-remove-btn{opacity:1;}
+.tracked-remove-btn:hover{background:#c33;transform:scale(1.08);}
+
+/* Followed alchemist chip — avatar + name, horizontally laid out
+   inside the tracked body's flex-wrap row. */
+.tracked-alch-chip{position:relative;display:flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;background:var(--bg2);border:1px solid var(--bdr);border-radius:28px;cursor:pointer;transition:border-color var(--ease),background var(--ease);}
+.tracked-alch-chip:hover{border-color:var(--chip-hex,var(--clr-adj));background:var(--bg3);}
+.tracked-alch-avatar{width:34px;height:34px;border-radius:50%;background:var(--bg3);border:2px solid var(--chip-hex,var(--clr-adj));overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--tx);}
+.tracked-alch-avatar img{width:100%;height:100%;object-fit:cover;}
+.tracked-alch-name{font-size:14px;font-weight:600;color:var(--tx);white-space:nowrap;}
+
+/* Dropdown "Pinned" mini-row — a compact row label + mini-hex grid
+   directly below the catalysts row in the account menu. */
+#acct-pinned-row{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--bdr);}
+#acct-pinned-label{font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+#acct-pinned-label #acct-pinned-count{background:var(--bg3);color:var(--tx2);padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:0;text-transform:none;}
+#acct-pinned-list{min-height:20px;}
+
+/* ══════════════════════════════════════
    COMMUNITY HUB — per-creator cards on the feed route
 ══════════════════════════════════════ */
 /* Toggled by init.js: .feed-mode on #grid means show the community
@@ -656,8 +706,27 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-count{margin-left:auto;font-size:12px;color:var(--tx3);font-weight:500;flex-shrink:0;}
 .community-card-share{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx2);cursor:pointer;padding:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease),background var(--ease);}
 .community-card-share:hover{color:var(--tx);border-color:var(--clr-adj);background:var(--bg3);}
+
+/* MD18: follow button on community creator cards. Lives alongside
+   the share button in the card header. Pill-shaped so it reads as
+   an action, not a chip. The `.following` state flips to a filled
+   green pill (the accent color) so the on/off state is obvious. */
+.community-card-follow{flex-shrink:0;background:none;border:1.5px solid var(--clr-adj);border-radius:20px;color:var(--clr-adj);font-family:var(--fn);font-size:12px;font-weight:700;cursor:pointer;padding:6px 14px;transition:background var(--ease),color var(--ease),border-color var(--ease);}
+.community-card-follow:hover{background:color-mix(in srgb,var(--clr-adj) 15%,transparent);}
+.community-card-follow.following{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
+.community-card-follow.following:hover{background:color-mix(in srgb,var(--clr-adj) 80%,#000);}
+
 .community-tiles{display:flex;flex-wrap:wrap;gap:22px;justify-content:flex-start;align-items:flex-start;}
 .community-empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px;}
+
+/* MD18: pin button on community-view hex tiles. Positioned in the
+   bottom-right corner inside the clipped hex, so it's visible over
+   the fade layer but never overlaps the title. `.pinned` state swaps
+   to the accent color so the toggle reads at a glance. */
+.hex-pin-btn{position:absolute;bottom:10px;right:10px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:18px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease);}
+.hex-pin-btn:hover{background:rgba(0,0,0,0.8);transform:scale(1.08);}
+.hex-pin-btn.pinned{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
+.hex-pin-btn.pinned:hover{background:color-mix(in srgb,var(--clr-adj) 80%,#000);}
 
 /* Catalysts view: a flat flex-wrap of standalone hex tiles, no
    per-creator card frame. Same gap as the alchemist card body so

@@ -43,6 +43,15 @@ import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js'
 import { initNotifications, initHelpPanel } from './notifications.js';
 import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest } from './friends.js';
 import { renderSocialIconsHTML } from './social.js';
+import {
+  pinCatalyst,
+  unpinCatalyst,
+  followAlchemist,
+  unfollowAlchemist,
+  setTrackedPublic,
+  subscribeMyTracked,
+  loadUserTracked,
+} from './tracked.js';
 
 let _currentCategory = 'all';
 // Feed view mode — 'catalysts' (flat hex flow) or 'alchemists' (grouped
@@ -73,6 +82,17 @@ let _viewingOther = null;       // { uid, displayName, hexCode } for the profile
 // always fresh, independent of which route they're viewing.
 let _myCatalysts = [];
 let _myCatalystsUnsub = null;
+
+// MD18: tracked catalysts + alchemists cache. Live-synced for the
+// signed-in user so the pin button on community tiles and the pinned
+// mini-row in the account dropdown reflect the latest state without
+// a reload. _myTrackedCatIds / _myTrackedAlchUids are O(1) lookup sets
+// rebuilt from the snapshot arrays on every tick.
+let _myTrackedCatalysts = [];
+let _myTrackedAlchemists = [];
+let _myTrackedCatIds = new Set();
+let _myTrackedAlchUids = new Set();
+let _myTrackedUnsub = null;
 
 function profileCacheKey(username, hex) {
   const lower = (username || '').toLowerCase();
@@ -115,6 +135,8 @@ function hideAllViews() {
   document.getElementById('not-found').classList.remove('visible');
   // MD12: internal catalyst view hidden by default on every route.
   document.getElementById('internal-catalyst-view')?.classList.remove('visible');
+  // MD18: tracked footer is a profile-route-only feature.
+  _hideTrackedFooter();
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
   grid.classList.remove('with-filter', 'feed-mode');
@@ -449,6 +471,85 @@ function _stopMyCatalystsSub() {
   _myCatalysts = [];
 }
 
+/* ══════════════════════════════════════
+   MD18: tracked lists — pin/follow lifecycle
+══════════════════════════════════════ */
+
+function _startMyTrackedSub() {
+  _stopMyTrackedSub();
+  if (!State.user) return;
+  _myTrackedUnsub = subscribeMyTracked(({ catalysts, alchemists }) => {
+    _myTrackedCatalysts = catalysts || [];
+    _myTrackedAlchemists = alchemists || [];
+    _myTrackedCatIds = new Set(_myTrackedCatalysts.map((c) => c.catId));
+    _myTrackedAlchUids = new Set(_myTrackedAlchemists.map((a) => a.uid));
+    // Update counts in the dropdown header.
+    const countEl = document.getElementById('acct-pinned-count');
+    if (countEl) {
+      countEl.textContent = String(_myTrackedCatalysts.length + _myTrackedAlchemists.length);
+    }
+    // Re-paint anything that shows live pin state. Community tiles
+    // repaint on the next feed tick anyway, but doing it here keeps
+    // the UI in sync after a pin/unpin click without waiting for the
+    // feed snapshot to bounce.
+    if (_currentRoute?.page === 'feed') _repaintFeed();
+    // Mini pinned grid in the profile dropdown.
+    _renderMyPinnedMini();
+    // If the current profile route is the signed-in user's own
+    // profile, re-render the tracked footer so removals/additions
+    // reflect instantly. _viewingOther is null on your own profile
+    // (by design in showProfileBar) so we match against the route
+    // + our own profile slug instead.
+    if (_currentRoute && (_currentRoute.page === 'profile' || _currentRoute.page === 'catalyst')) {
+      const routeLower = (_currentRoute.username || '').toLowerCase();
+      const myLower = (State.profile?.usernameLower || State.profile?.displayName || '').toLowerCase();
+      const routeHex = (_currentRoute.hex || '').toLowerCase();
+      const myHex = (State.profile?.hexCode || '').toLowerCase();
+      if (routeLower && routeLower === myLower && routeHex === myHex) {
+        _renderTrackedFooter({
+          catalysts: _myTrackedCatalysts,
+          alchemists: _myTrackedAlchemists,
+          trackedPublic: !!State.profile?.trackedPublic,
+          isOwn: true,
+        });
+      }
+    }
+  });
+}
+
+function _stopMyTrackedSub() {
+  if (_myTrackedUnsub) {
+    try { _myTrackedUnsub(); } catch {}
+    _myTrackedUnsub = null;
+  }
+  _myTrackedCatalysts = [];
+  _myTrackedAlchemists = [];
+  _myTrackedCatIds = new Set();
+  _myTrackedAlchUids = new Set();
+}
+
+// Handler passed to community tiles so the pin button toggles the
+// correct Firestore entry. `nowPinned` is the optimistic state the
+// button just flipped to — we translate that into a pin or unpin.
+function handlePinToggle(cat, nowPinned) {
+  if (!State.user) {
+    toast('Sign in to pin');
+    return;
+  }
+  if (nowPinned) pinCatalyst(cat);
+  else unpinCatalyst(cat.id);
+}
+
+// Handler for the follow/unfollow button on community-hub creator cards.
+function handleFollowToggle(group, nowFollowing) {
+  if (!State.user) {
+    toast('Sign in to follow');
+    return;
+  }
+  if (nowFollowing) followAlchemist(group);
+  else unfollowAlchemist(group.uid);
+}
+
 // Paints the mini grid into #acct-catalysts-list. Guest state is
 // handled at the dropdown level (MD13 grays the whole section), so
 // this function assumes we're signed in when called.
@@ -483,6 +584,234 @@ function _renderMyCatalystsMini() {
 
 function renderSkeleton() {
   renderHexGrid({ loading: true });
+}
+
+/* ══════════════════════════════════════
+   MD18: tracked rendering — pinned mini-row + profile footer
+══════════════════════════════════════ */
+
+// Mirror of _renderMyCatalystsMini for the dropdown's pinned row.
+// Reuses the same renderMiniHexGrid helper; each tile is wired to
+// navigate to the source catalyst's profile/detail view when clicked.
+function _renderMyPinnedMini() {
+  const container = document.getElementById('acct-pinned-list');
+  const row = document.getElementById('acct-pinned-row');
+  if (!container || !row) return;
+  if (!State.user || _myTrackedCatalysts.length === 0) {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = '';
+  // Pinned snapshots use the same field names as full catalyst docs
+  // where it matters for mini rendering (thumbURL, accentColor, title,
+  // status, id). Fake an `id` from catId so the mini helper's tile
+  // identity key is set.
+  const tiles = _myTrackedCatalysts.map((p) => ({
+    id: p.catId,
+    title: p.title,
+    thumbURL: p.thumbURL,
+    accentColor: p.accentColor,
+    status: p.status,
+    type: p.type,
+    slug: p.slug,
+    ownerId: p.ownerId,
+    ownerName: p.ownerName,
+    ownerHex: p.ownerHex,
+    ownerPhoto: p.ownerPhoto,
+  }));
+  renderMiniHexGrid({
+    container,
+    tiles,
+    showAdd: false,
+    onTileClick: (cat) => {
+      closeAccountMenu();
+      setTimeout(() => {
+        const lower = (cat.ownerName || '').toLowerCase();
+        const hex = (cat.ownerHex || '').toLowerCase();
+        const slug = cat.slug || '';
+        if (lower && hex && slug) {
+          navigate('/' + buildUserSlug(lower, hex) + '/' + slug);
+        } else if (lower && hex) {
+          navigate('/' + buildUserSlug(lower, hex));
+        }
+      }, 80);
+    },
+  });
+}
+
+// Builds a single small pinned-catalyst tile for the profile footer.
+// Clicks navigate to the source catalyst's slug route (which opens the
+// detail view on the owner's profile). Own-profile viewers also get a
+// remove "×" button in the top-right corner.
+function _buildPinnedFooterTile(pinned, { canRemove }) {
+  const FOOTER_TILE_W = 120;
+  const FOOTER_TILE_H = Math.round(FOOTER_TILE_W * 1.1547);
+  const fakeCat = {
+    id: pinned.catId,
+    title: pinned.title,
+    thumbURL: pinned.thumbURL,
+    accentColor: pinned.accentColor,
+    status: pinned.status,
+    ownerName: pinned.ownerName,
+    ownerHex: pinned.ownerHex,
+    ownerPhoto: pinned.ownerPhoto,
+  };
+  const tile = createCatalystTileElement(
+    fakeCat,
+    { width: FOOTER_TILE_W, height: FOOTER_TILE_H, showCreatorAvatar: true },
+    {
+      onTileClick: () => {
+        const lower = (pinned.ownerName || '').toLowerCase();
+        const hex = (pinned.ownerHex || '').toLowerCase();
+        if (lower && hex && pinned.slug) {
+          navigate('/' + buildUserSlug(lower, hex) + '/' + pinned.slug);
+        } else if (lower && hex) {
+          navigate('/' + buildUserSlug(lower, hex));
+        }
+      },
+      onCreatorClick: () => {
+        const lower = (pinned.ownerName || '').toLowerCase();
+        const hex = (pinned.ownerHex || '').toLowerCase();
+        if (lower && hex) navigate('/' + buildUserSlug(lower, hex));
+      },
+    },
+  );
+  if (canRemove) {
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'tracked-remove-btn';
+    rm.setAttribute('data-tip', 'Unpin');
+    rm.setAttribute('aria-label', 'Unpin');
+    rm.textContent = '×';
+    rm.addEventListener('click', (e) => {
+      e.stopPropagation();
+      unpinCatalyst(pinned.catId);
+    });
+    tile.appendChild(rm);
+  }
+  return tile;
+}
+
+// Small circular avatar chip used in the profile footer's "Following"
+// row. Clicking navigates to that alchemist's profile. Own-profile
+// viewers get a remove "×" in the corner.
+function _buildFollowedChip(alch, { canRemove }) {
+  const chip = document.createElement('div');
+  chip.className = 'tracked-alch-chip';
+  chip.style.setProperty('--chip-hex', '#' + (alch.hex || '5aaa72'));
+  const avatar = document.createElement('div');
+  avatar.className = 'tracked-alch-avatar';
+  if (alch.photoURL) {
+    const img = document.createElement('img');
+    img.src = alch.photoURL;
+    img.alt = '';
+    avatar.appendChild(img);
+  } else {
+    avatar.textContent = (alch.username || 'A').charAt(0).toUpperCase();
+  }
+  chip.appendChild(avatar);
+  const nameEl = document.createElement('span');
+  nameEl.className = 'tracked-alch-name';
+  nameEl.innerHTML = renderUsername(alch.username || 'anon', null, !!alch.isAdmin);
+  chip.appendChild(nameEl);
+  chip.addEventListener('click', () => {
+    const lower = (alch.username || '').toLowerCase();
+    if (lower && alch.hex) navigate('/' + buildUserSlug(lower, alch.hex));
+  });
+  if (canRemove) {
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'tracked-remove-btn';
+    rm.setAttribute('data-tip', 'Unfollow');
+    rm.setAttribute('aria-label', 'Unfollow');
+    rm.textContent = '×';
+    rm.addEventListener('click', (e) => {
+      e.stopPropagation();
+      unfollowAlchemist(alch.uid);
+    });
+    chip.appendChild(rm);
+  }
+  return chip;
+}
+
+// Paints the profile footer tracked section. `trackedPublic` controls
+// the padlock icon + tooltip label; `isOwn` controls whether the
+// padlock is interactive and whether remove buttons appear. When the
+// viewer is a guest or the profile's tracked lists are private, the
+// whole footer is hidden.
+function _renderTrackedFooter({ catalysts, alchemists, trackedPublic, isOwn }) {
+  const footer = document.getElementById('profile-tracked-footer');
+  if (!footer) return;
+  const catBody = document.getElementById('tracked-catalysts-body');
+  const alchBody = document.getElementById('tracked-alchemists-body');
+  const catSection = document.getElementById('tracked-catalysts-section');
+  const alchSection = document.getElementById('tracked-alchemists-section');
+  const privBtn = document.getElementById('tracked-privacy-btn');
+  if (!catBody || !alchBody) return;
+
+  // Hide entirely if there's nothing to show — empty lists on someone
+  // else's profile shouldn't leave a ghost footer hanging.
+  const nothing = (catalysts.length === 0 && alchemists.length === 0);
+  if (nothing && !isOwn) {
+    footer.classList.remove('visible');
+    return;
+  }
+  footer.classList.add('visible');
+
+  // Catalysts row.
+  catBody.innerHTML = '';
+  if (catalysts.length === 0) {
+    catSection.classList.toggle('empty', isOwn);
+    if (isOwn) {
+      const hint = document.createElement('div');
+      hint.className = 'tracked-empty-hint';
+      hint.textContent = 'Pin catalysts from the community hub to show them here.';
+      catBody.appendChild(hint);
+    } else {
+      catSection.style.display = 'none';
+    }
+  } else {
+    catSection.style.display = '';
+    catSection.classList.remove('empty');
+    // Sort newest pin first so recent activity surfaces at the top.
+    const sorted = catalysts.slice().sort((a, b) => (b.pinnedAt || 0) - (a.pinnedAt || 0));
+    sorted.forEach((p) => catBody.appendChild(_buildPinnedFooterTile(p, { canRemove: isOwn })));
+  }
+
+  // Alchemists row.
+  alchBody.innerHTML = '';
+  if (alchemists.length === 0) {
+    if (isOwn) {
+      alchSection.style.display = '';
+      const hint = document.createElement('div');
+      hint.className = 'tracked-empty-hint';
+      hint.textContent = 'Follow alchemists from the community hub to show them here.';
+      alchBody.appendChild(hint);
+    } else {
+      alchSection.style.display = 'none';
+    }
+  } else {
+    alchSection.style.display = '';
+    const sorted = alchemists.slice().sort((a, b) => (b.pinnedAt || 0) - (a.pinnedAt || 0));
+    sorted.forEach((a) => alchBody.appendChild(_buildFollowedChip(a, { canRemove: isOwn })));
+  }
+
+  // Privacy padlock — only visible on the owner's view.
+  if (privBtn) {
+    if (isOwn) {
+      privBtn.style.display = '';
+      privBtn.classList.toggle('public', !!trackedPublic);
+      const label = privBtn.querySelector('.tracked-privacy-label');
+      if (label) label.textContent = trackedPublic ? 'Public' : 'Private';
+    } else {
+      privBtn.style.display = 'none';
+    }
+  }
+}
+
+function _hideTrackedFooter() {
+  const footer = document.getElementById('profile-tracked-footer');
+  if (footer) footer.classList.remove('visible');
 }
 
 /* ══════════════════════════════════════
@@ -662,7 +991,34 @@ function _buildCommunityCard(group) {
   });
   hdr.appendChild(shareBtn);
 
-  hdr.addEventListener('click', () => {
+  // MD18: follow / unfollow button. Hidden on your own creator card
+  // (you can't follow yourself). The button is optimistic: the class
+  // flips instantly on click, and the tracked snapshot authoritatively
+  // re-renders the card on the next tick if the write fails.
+  const isOwnCard = State.user && group.uid === State.user.uid;
+  if (!isOwnCard) {
+    const followBtn = document.createElement('button');
+    followBtn.type = 'button';
+    const isFollowing = _myTrackedAlchUids.has(group.uid);
+    followBtn.className = 'community-card-follow' + (isFollowing ? ' following' : '');
+    followBtn.setAttribute('data-tip', isFollowing ? 'Unfollow' : 'Follow');
+    followBtn.setAttribute('aria-label', isFollowing ? 'Unfollow' : 'Follow');
+    followBtn.textContent = isFollowing ? 'Following' : '+ Follow';
+    followBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const nowFollowing = !followBtn.classList.contains('following');
+      followBtn.classList.toggle('following', nowFollowing);
+      followBtn.textContent = nowFollowing ? 'Following' : '+ Follow';
+      followBtn.setAttribute('data-tip', nowFollowing ? 'Unfollow' : 'Follow');
+      handleFollowToggle(group, nowFollowing);
+    });
+    hdr.appendChild(followBtn);
+  }
+
+  hdr.addEventListener('click', (e) => {
+    // Clicks on the follow/share buttons already stop propagation,
+    // but guard again in case a future button is added without one.
+    if (e.target.closest('.community-card-follow')) return;
     const lower = (group.displayName || '').toLowerCase();
     navigate('/' + buildUserSlug(lower, hex));
   });
@@ -672,11 +1028,20 @@ function _buildCommunityCard(group) {
   // Body — flex-wrap row of standalone hex tiles.
   const body = document.createElement('div');
   body.className = 'community-tiles';
+  // Pin button hidden on own tiles (you can't pin yourself), shown
+  // everywhere else in the community hub.
+  const hideOwnPin = State.user && group.uid === State.user.uid;
   _sortCardTiles(group.catalysts).forEach((cat) => {
     const tile = createCatalystTileElement(
       cat,
-      { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, showCreatorAvatar: true },
-      { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick },
+      {
+        width: COMMUNITY_TILE_W,
+        height: COMMUNITY_TILE_H,
+        showCreatorAvatar: true,
+        showPinButton: !hideOwnPin,
+        isPinned: _myTrackedCatIds.has(cat.id),
+      },
+      { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick, onPinClick: handlePinToggle },
     );
     body.appendChild(tile);
   });
@@ -738,10 +1103,17 @@ function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
   // Popular / Latest / Oldest reorders the tile flow live.
   const sorted = _sortCatalysts(catalysts, _feedSortMode);
   sorted.forEach((cat) => {
+    const isOwn = State.user && cat.ownerId === State.user.uid;
     const tile = createCatalystTileElement(
       cat,
-      { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, showCreatorAvatar: true },
-      { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick },
+      {
+        width: COMMUNITY_TILE_W,
+        height: COMMUNITY_TILE_H,
+        showCreatorAvatar: true,
+        showPinButton: !isOwn,
+        isPinned: _myTrackedCatIds.has(cat.id),
+      },
+      { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick, onPinClick: handlePinToggle },
     );
     wrap.appendChild(tile);
   });
@@ -930,6 +1302,35 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
   });
   trackSub(unsub);
 
+  // MD18: load + render the tracked footer for this profile. Own
+  // profile uses the live cache so edits reflect instantly; visiting
+  // someone else's profile falls back to a one-shot read, gated by
+  // their trackedPublic flag.
+  if (isOwn) {
+    _renderTrackedFooter({
+      catalysts: _myTrackedCatalysts,
+      alchemists: _myTrackedAlchemists,
+      trackedPublic: !!State.profile?.trackedPublic,
+      isOwn: true,
+    });
+  } else {
+    const targetUid = user.uid;
+    loadUserTracked(targetUid).then(({ catalysts, alchemists, trackedPublic }) => {
+      // Check route is still pointing at the same profile before
+      // painting — the user may have navigated away during the async
+      // read. Compare against _currentRoute rather than _viewingOther
+      // because the latter is only set once the profile subscription
+      // callback fires, which races against this promise.
+      const route = _currentRoute;
+      if (!route || (route.page !== 'profile' && route.page !== 'catalyst')) return;
+      const routeLower = (route.username || '').toLowerCase();
+      const userLower = (user.usernameLower || user.displayName || '').toLowerCase();
+      const hexMatch = (route.hex || '').toLowerCase() === (user.hexCode || '').toLowerCase();
+      if (routeLower !== userLower || !hexMatch) return;
+      _renderTrackedFooter({ catalysts, alchemists, trackedPublic, isOwn: false });
+    });
+  }
+
   // If the subscription can't find the slug (possibly an old link to a
   // deleted catalyst or a fresh fetch race), fall back to a direct lookup.
   if (openSlug) {
@@ -1048,6 +1449,11 @@ function updateAuthUI(user, profile) {
     const countEl = document.getElementById('acct-catalysts-count');
     if (countEl) countEl.textContent = '0';
     _renderMyCatalystsMini();
+    // MD18: tear down tracked lists on sign-out too.
+    _stopMyTrackedSub();
+    const pinnedCountEl = document.getElementById('acct-pinned-count');
+    if (pinnedCountEl) pinnedCountEl.textContent = '0';
+    _renderMyPinnedMini();
     // MD17: guests always land on Alchemists. Force-reset so a
     // previously signed-in session's choice doesn't leak across.
     _feedViewMode = 'alchemists';
@@ -1078,6 +1484,11 @@ function updateAuthUI(user, profile) {
   // MD14: persistent subscription to the signed-in user's catalysts
   // so the dropdown mini grid + count stay fresh across routes.
   _startMyCatalystsSub(user.uid);
+
+  // MD18: live subscription to this user's tracked (pinned + followed)
+  // lists so the pin button state on community tiles + the dropdown
+  // pinned mini-row stay current without a route refresh.
+  _startMyTrackedSub();
 
   // Sync the saved logo colors across devices. If the signed-in
   // user has stored values in their profile doc, adopt them.
@@ -1582,6 +1993,26 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (_currentRoute?.page === 'feed') _repaintFeed();
     });
+  });
+
+  // MD18: privacy padlock on the profile tracked footer. Toggles
+  // trackedPublic on the signed-in user's doc. The button is only
+  // visible on the owner's profile, so we don't need to guard against
+  // viewer-vs-owner here — _renderTrackedFooter controls visibility.
+  document.getElementById('tracked-privacy-btn')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!State.user) return;
+    const next = !State.profile?.trackedPublic;
+    const ok = await setTrackedPublic(next);
+    if (ok) {
+      _renderTrackedFooter({
+        catalysts: _myTrackedCatalysts,
+        alchemists: _myTrackedAlchemists,
+        trackedPublic: next,
+        isOwn: true,
+      });
+      toast(next ? 'Pinned list is now public' : 'Pinned list is now private');
+    }
   });
 
   // When the catalyst detail popup closes via back button, strip the slug

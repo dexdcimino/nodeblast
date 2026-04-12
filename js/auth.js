@@ -101,6 +101,9 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     logoBotColor: topData?.logoBotColor || null,
     bio,
     socialLinks,
+    // MD18: tracked (pinned/followed) privacy flag. Default false
+    // so newly created accounts are private until the user opts in.
+    trackedPublic: !!topData?.trackedPublic,
   };
 }
 
