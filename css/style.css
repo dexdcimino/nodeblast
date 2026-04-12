@@ -1093,20 +1093,39 @@ body.cat-modal-open{overflow:hidden;}
    a non-removable chip first, then any added collaborators each get
    their own chip with a small × remove button. The search input + a
    floating dropdown of matching users sit underneath. */
-#cat-collab-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:24px;}
+/* MD29: reworked collaborator pills — rich (registered) + basic
+   (unregistered). The list scrolls internally after 5 rows and has
+   a subtle themed scrollbar. Owner pill is always first; collabs
+   follow in add-order. Hover toolbar reveals ✕/DM/copy buttons. */
+#cat-collab-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:24px;max-height:180px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;}
+#cat-collab-list::-webkit-scrollbar{width:5px;}
+#cat-collab-list::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px;}
 #cat-collab-list:empty{display:none;}
-.cat-collab-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;background:var(--bg3);border:1px solid var(--bdr);border-radius:18px;font-size:12px;color:var(--tx);}
-.cat-collab-chip-avatar{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--chip-hex,var(--clr-adj));background:var(--bg2);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:10px;font-weight:700;flex-shrink:0;}
-.cat-collab-chip-avatar img{width:100%;height:100%;object-fit:cover;}
+.cat-collab-chip{position:relative;display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;background:var(--bg3);border:1px solid var(--bdr);border-radius:18px;font-size:12px;color:var(--tx);transition:border-color var(--ease);}
+.cat-collab-chip.rich{border-color:color-mix(in srgb,var(--chip-hex,var(--bdr)) 55%,var(--bdr));}
 .cat-collab-chip.owner{background:color-mix(in srgb,var(--clr) 12%,var(--bg3));}
-.cat-collab-chip-name{font-weight:600;}
+.cat-collab-chip.basic{border-style:dashed;}
+.cat-collab-chip-avatar{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--chip-hex,var(--clr-adj));background:var(--bg2);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:10px;font-weight:700;flex-shrink:0;}
+.cat-collab-chip-avatar.basic-avatar{border-color:var(--bdr);color:var(--tx3);}
+.cat-collab-chip-avatar img{width:100%;height:100%;object-fit:cover;}
+.cat-collab-chip-name{font-weight:600;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cat-collab-hex-dot{width:8px;height:8px;border-radius:50%;background:var(--chip-hex,var(--clr-adj));flex-shrink:0;cursor:pointer;transition:transform var(--ease);}
+.cat-collab-hex-dot:hover{transform:scale(1.15);}
 .cat-collab-chip-hex{color:var(--chip-hex,var(--tx3));font-family:var(--fn);font-size:11px;}
-.cat-collab-remove{background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;display:flex;align-items:center;border-radius:4px;transition:color var(--ease),background var(--ease);}
-.cat-collab-remove:hover{color:#ff6b6b;background:var(--bg4);}
-#cat-collab-add-row{position:relative;}
-#cat-collab-input{width:100%;box-sizing:border-box;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:13px;padding:8px 12px;outline:none;transition:border-color var(--ease);}
+/* Hover toolbar — floats over the right edge of the pill. */
+.cat-collab-toolbar{display:none;align-items:center;gap:2px;margin-left:4px;}
+.cat-collab-chip:hover .cat-collab-toolbar{display:inline-flex;}
+.cat-collab-tool{background:none;border:none;cursor:pointer;color:var(--tx3);padding:3px;display:flex;align-items:center;border-radius:4px;transition:color var(--ease),background var(--ease);}
+.cat-collab-tool:hover{color:var(--tx);background:var(--bg4);}
+.cat-collab-remove:hover{color:#ff6b6b !important;background:var(--bg4);}
+/* Add-row: input + "+" button side by side. */
+#cat-collab-add-row{position:relative;display:flex;gap:6px;align-items:stretch;}
+#cat-collab-input{flex:1;min-width:0;box-sizing:border-box;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:13px;padding:8px 12px;outline:none;transition:border-color var(--ease);}
 #cat-collab-input:focus{border-color:var(--clr-adj);}
 #cat-collab-input::placeholder{color:var(--tx3);}
+.cat-collab-add-btn{flex-shrink:0;width:36px;display:flex;align-items:center;justify-content:center;background:var(--clr-adj);color:var(--clr-adj-on,#000);border:none;border-radius:8px;cursor:pointer;transition:opacity var(--ease);}
+.cat-collab-add-btn:hover{opacity:.85;}
+/* Search dropdown (unchanged from MD7 scaffold). */
 #cat-collab-results{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:180px;overflow-y:auto;background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.45);z-index:30;}
 #cat-collab-results.visible{display:block;}
 .cat-collab-result{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;transition:background var(--ease);}

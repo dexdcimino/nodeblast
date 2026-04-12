@@ -29,6 +29,7 @@ import { openColorPopup, closeColorPopup } from './color.js';
 import { toast, showModal, renderUsername, escapeHtml } from './ui-events.js';
 import { navigate, buildUserSlug } from './router.js';
 import { searchUsers } from './users.js';
+import { openDM } from './friends.js';
 
 const db = getFirestore(app);
 
@@ -808,48 +809,118 @@ function _setThumbPreview(src) {
 // Render the working collaborators list as a chip stack. The owner
 // gets a non-removable chip first; each working collaborator gets a
 // removable chip after.
+// Generic person-silhouette SVG used for basic (unregistered) collab
+// pills. currentColor fill so it adapts to the theme.
+const _PERSON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21c0-3.87-3.58-7-8-7s-8 3.13-8 7z"/></svg>';
+
 function _renderCollabChips() {
   const list = document.getElementById('cat-collab-list');
   if (!list) return;
   list.innerHTML = '';
 
-  // Owner chip — pulled from State.profile, since the owner is always
-  // the editing user (only owners can open this modal in edit mode).
+  // Owner chip — always first, cannot be removed. Has a "copy
+  // username" button in its toolbar instead of the ✕.
   const ownerName = State.profile?.displayName || 'anon';
   const ownerHex = State.profile?.hexCode || '5aaa72';
   const ownerPhoto = State.profile?.photoURL || '';
-  const ownerInitial = escapeHtml((ownerName || 'A').charAt(0).toUpperCase());
-  const ownerAvatarInner = ownerPhoto
-    ? `<img src="${escapeHtml(ownerPhoto)}" alt="">`
-    : ownerInitial;
-  const ownerChip = document.createElement('span');
-  ownerChip.className = 'cat-collab-chip owner';
-  ownerChip.style.setProperty('--chip-hex', '#' + ownerHex);
-  ownerChip.innerHTML = `
-    <span class="cat-collab-chip-avatar">${ownerAvatarInner}</span>
-    <span class="cat-collab-chip-name">${escapeHtml(ownerName)}</span>
-    <span class="cat-collab-chip-hex">#${escapeHtml(ownerHex)}</span>
-  `;
-  list.appendChild(ownerChip);
+  list.appendChild(_buildRichPill({
+    displayName: ownerName,
+    hexCode: ownerHex,
+    photoURL: ownerPhoto,
+    isAdmin: !!State.profile?.isAdmin,
+  }, -1, true));
 
   _editingCollabs.forEach((c, i) => {
-    const initial = escapeHtml((c.displayName || 'A').charAt(0).toUpperCase());
-    const avatarInner = c.photoURL
-      ? `<img src="${escapeHtml(c.photoURL)}" alt="">`
-      : initial;
-    const chip = document.createElement('span');
-    chip.className = 'cat-collab-chip';
-    chip.style.setProperty('--chip-hex', '#' + (c.hexCode || '5aaa72'));
-    chip.innerHTML = `
-      <span class="cat-collab-chip-avatar">${avatarInner}</span>
-      <span class="cat-collab-chip-name">${escapeHtml(c.displayName || 'anon')}</span>
-      <span class="cat-collab-chip-hex">#${escapeHtml(c.hexCode || '5aaa72')}</span>
-      <button type="button" class="cat-collab-remove" data-idx="${i}" aria-label="Remove collaborator">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    `;
-    list.appendChild(chip);
+    if (c.type === 'unregistered') {
+      list.appendChild(_buildBasicPill(c, i));
+    } else {
+      list.appendChild(_buildRichPill(c, i, false));
+    }
   });
+}
+
+function _buildRichPill(c, idx, isOwner) {
+  const chip = document.createElement('span');
+  chip.className = 'cat-collab-chip rich' + (isOwner ? ' owner' : '');
+  const hex = c.hexCode || '5aaa72';
+  chip.style.setProperty('--chip-hex', '#' + hex);
+  const initial = escapeHtml((c.displayName || 'A').charAt(0).toUpperCase());
+  const avatarInner = c.photoURL
+    ? `<img src="${escapeHtml(c.photoURL)}" alt="">`
+    : initial;
+  const hexDot = `<span class="cat-collab-hex-dot" data-tip="#${escapeHtml(hex)}"></span>`;
+  chip.innerHTML = `
+    <span class="cat-collab-chip-avatar">${avatarInner}</span>
+    <span class="cat-collab-chip-name">${escapeHtml(c.displayName || 'anon')}</span>
+    ${hexDot}
+    <span class="cat-collab-chip-hex" style="display:none">#${escapeHtml(hex)}</span>
+  `;
+  // Click hex dot to toggle hex code visibility
+  chip.querySelector('.cat-collab-hex-dot')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const hexEl = chip.querySelector('.cat-collab-chip-hex');
+    if (hexEl) hexEl.style.display = hexEl.style.display === 'none' ? '' : 'none';
+  });
+  // Toolbar
+  const toolbar = document.createElement('span');
+  toolbar.className = 'cat-collab-toolbar';
+  if (isOwner) {
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'cat-collab-tool';
+    copyBtn.setAttribute('data-tip', 'Copy username');
+    copyBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigator.clipboard?.writeText(c.displayName || '');
+      toast('Copied');
+    });
+    toolbar.appendChild(copyBtn);
+  } else {
+    // Message button (registered only, not owner)
+    if (c.uid) {
+      const dmBtn = document.createElement('button');
+      dmBtn.type = 'button';
+      dmBtn.className = 'cat-collab-tool';
+      dmBtn.setAttribute('data-tip', 'Message');
+      dmBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+      dmBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDM({ uid: c.uid, username: c.displayName, hexColor: '#' + hex });
+      });
+      toolbar.appendChild(dmBtn);
+    }
+    // Remove button
+    const rmBtn = document.createElement('button');
+    rmBtn.type = 'button';
+    rmBtn.className = 'cat-collab-tool cat-collab-remove';
+    rmBtn.setAttribute('data-tip', 'Remove');
+    rmBtn.dataset.idx = idx;
+    rmBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    toolbar.appendChild(rmBtn);
+  }
+  chip.appendChild(toolbar);
+  return chip;
+}
+
+function _buildBasicPill(c, idx) {
+  const chip = document.createElement('span');
+  chip.className = 'cat-collab-chip basic';
+  chip.innerHTML = `
+    <span class="cat-collab-chip-avatar basic-avatar">${_PERSON_SVG}</span>
+    <span class="cat-collab-chip-name">${escapeHtml(c.name || c.displayName || 'anon')}</span>
+  `;
+  const toolbar = document.createElement('span');
+  toolbar.className = 'cat-collab-toolbar';
+  const rmBtn = document.createElement('button');
+  rmBtn.type = 'button';
+  rmBtn.className = 'cat-collab-tool cat-collab-remove';
+  rmBtn.setAttribute('data-tip', 'Remove');
+  rmBtn.dataset.idx = idx;
+  rmBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  toolbar.appendChild(rmBtn);
+  chip.appendChild(toolbar);
+  return chip;
 }
 
 function _hideCollabResults() {
@@ -858,6 +929,53 @@ function _hideCollabResults() {
     results.classList.remove('visible');
     results.innerHTML = '';
   }
+}
+
+// MD29: add a collaborator by the typed name. Tries a registered
+// lookup first; if nothing matches, falls back to an unregistered
+// basic pill. Deduplicates against existing entries.
+async function _addCollabByName() {
+  const input = document.getElementById('cat-collab-input');
+  if (!input) return;
+  const raw = input.value.replace(/ /g, '_').trim().slice(0, 16);
+  if (!raw) return;
+
+  // Check for duplicate
+  const lower = raw.toLowerCase();
+  const ownerName = (State.profile?.displayName || '').toLowerCase();
+  if (lower === ownerName) { toast("That's you — you're the owner"); return; }
+  const already = _editingCollabs.some((c) => {
+    if (c.type === 'unregistered') return (c.name || '').toLowerCase() === lower;
+    return (c.displayName || '').toLowerCase() === lower;
+  });
+  if (already) { toast('Already added'); return; }
+
+  // Try registered lookup
+  const users = await searchUsers(raw);
+  const match = users.find((u) =>
+    (u.displayName || '').toLowerCase() === lower
+    || (u.usernameLower || '') === lower
+  );
+  if (match && match.uid !== State.user?.uid) {
+    _editingCollabs.push({
+      uid: match.uid,
+      displayName: match.displayName || raw,
+      hexCode: match.hexCode || '5aaa72',
+      photoURL: match.photoURL || '',
+      isAdmin: !!match.isAdmin,
+      type: 'registered',
+    });
+  } else if (!match || match.uid === State.user?.uid) {
+    // Unregistered basic pill
+    _editingCollabs.push({
+      name: raw,
+      type: 'unregistered',
+    });
+  }
+  input.value = '';
+  _hideCollabResults();
+  _renderCollabChips();
+  _syncDevModeWithCollabs();
 }
 
 async function _runCollabSearch(prefix) {
@@ -906,6 +1024,7 @@ async function _runCollabSearch(prefix) {
         hexCode: hex,
         photoURL: photo,
         isAdmin: !!u.isAdmin,
+        type: 'registered',
       });
       _renderCollabChips();
       _syncDevModeWithCollabs();
@@ -1181,8 +1300,14 @@ export function initCatalystModal(onSaved) {
 
   // Collaborator search input — debounced username prefix search.
   // Results dropdown is populated by _runCollabSearch.
+  // MD29: spaces → underscores live, 16 char max (enforced by
+  // maxlength in HTML too).
   const collabInput = document.getElementById('cat-collab-input');
   collabInput?.addEventListener('input', () => {
+    // Live space→underscore transform
+    const cursor = collabInput.selectionStart;
+    collabInput.value = collabInput.value.replace(/ /g, '_');
+    collabInput.selectionStart = collabInput.selectionEnd = cursor;
     clearTimeout(_collabSearchT);
     const q = (collabInput.value || '').trim();
     if (!q) { _hideCollabResults(); return; }
@@ -1196,6 +1321,22 @@ export function initCatalystModal(onSaved) {
   collabInput?.addEventListener('focus', () => {
     const q = (collabInput.value || '').trim();
     if (q) _runCollabSearch(q);
+  });
+  // MD29: Enter key adds the typed name as an unregistered collab
+  // if no search-result row was clicked. If the dropdown has results
+  // visible, Enter selects the first one instead (like autocomplete).
+  collabInput?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const firstResult = document.querySelector('#cat-collab-results.visible .cat-collab-result');
+    if (firstResult) { firstResult.click(); return; }
+    _addCollabByName();
+  });
+  // MD29: "+" button adds by the typed name (unregistered fallback
+  // or registered lookup).
+  document.getElementById('cat-collab-add-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    _addCollabByName();
   });
 
   // Chip remove buttons (event delegation on the list).
