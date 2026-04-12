@@ -41,6 +41,7 @@ const DEFAULT_STATUS = 'live';
 // internal = opens a dedicated on-site workspace at /name.hex/slug.
 // Default is external so legacy catalysts keep working unchanged.
 export const CATALYST_TYPES = ['external', 'internal'];
+export const INTERNAL_SUBTYPES = ['scene', 'game', 'sim'];
 const DEFAULT_TYPE = 'external';
 
 function normalizeUrl(raw) {
@@ -550,6 +551,7 @@ export async function createCatalyst(data, file) {
     platform: PLATFORMS.includes(data.platform) ? data.platform : 'web',
     status: STATUSES.includes(data.status) ? data.status : DEFAULT_STATUS,
     type: CATALYST_TYPES.includes(data.type) ? data.type : DEFAULT_TYPE,
+    internalSubtype: INTERNAL_SUBTYPES.includes(data.internalSubtype) ? data.internalSubtype : 'scene',
     thumbURL,
     logoURL: '',
     accentColor: data.accentColor || '#5AAA72',
@@ -592,6 +594,7 @@ export async function updateCatalyst(id, data, file) {
     platform: PLATFORMS.includes(data.platform) ? data.platform : 'web',
     status: STATUSES.includes(data.status) ? data.status : DEFAULT_STATUS,
     type: CATALYST_TYPES.includes(data.type) ? data.type : DEFAULT_TYPE,
+    internalSubtype: INTERNAL_SUBTYPES.includes(data.internalSubtype) ? data.internalSubtype : 'scene',
     accentColor: data.accentColor || '#5AAA72',
     // Refresh the owner-denormalized fields in case the editor changed
     // their profile between catalyst creation and this edit.
@@ -761,6 +764,8 @@ function _applyStatus(status) {
 // MD12: toggle the modal between external (URL-backed) and internal
 // (on-site workspace). When internal, we hide the URL field because
 // there's nothing to link — the catalyst's own page is its content.
+let _internalSubtype = 'scene';
+
 function _applyType(type) {
   _type = CATALYST_TYPES.includes(type) ? type : DEFAULT_TYPE;
   document.querySelectorAll('#cat-type-pick .cat-type-btn').forEach((b) => {
@@ -768,8 +773,17 @@ function _applyType(type) {
   });
   const urlField = document.getElementById('cat-url-field');
   const internalMsg = document.getElementById('cat-internal-msg');
+  const subtypePick = document.getElementById('cat-internal-subtype-pick');
   if (urlField)    urlField.style.display    = _type === 'internal' ? 'none' : '';
   if (internalMsg) internalMsg.style.display = _type === 'internal' ? 'block' : 'none';
+  if (subtypePick) subtypePick.style.display = _type === 'internal' ? '' : 'none';
+}
+
+function _applyInternalSubtype(sub) {
+  _internalSubtype = INTERNAL_SUBTYPES.includes(sub) ? sub : 'scene';
+  document.querySelectorAll('#cat-internal-subtype-pick .cat-subtype-btn').forEach((b) => {
+    b.classList.toggle('selected', b.dataset.sub === _internalSubtype);
+  });
 }
 
 function _updateAccentBtn() {
@@ -1056,6 +1070,7 @@ export function openCatalystModal(existing = null) {
   document.getElementById('cat-modal-title').textContent = existing ? 'Edit Catalyst' : 'New Catalyst';
   _applyStatus(existing?.status || DEFAULT_STATUS);
   _applyType(existing?.type || DEFAULT_TYPE);
+  _applyInternalSubtype(existing?.internalSubtype || 'scene');
   document.getElementById('cat-title').value = existing?.title || '';
   document.getElementById('cat-url').value = existing?.url || '';
   document.getElementById('cat-desc').value = existing?.description || '';
@@ -1195,6 +1210,10 @@ export function initCatalystModal(onSaved) {
   });
   document.querySelectorAll('#cat-type-pick .cat-type-btn').forEach((b) => {
     b.addEventListener('click', () => _applyType(b.dataset.type));
+  });
+  // MD04: internal subtype picker (scene / game / sim)
+  document.querySelectorAll('#cat-internal-subtype-pick .cat-subtype-btn').forEach((b) => {
+    b.addEventListener('click', () => _applyInternalSubtype(b.dataset.sub));
   });
 
   // MD28: solo / co-dev toggle buttons. Clicking solo-dev while
@@ -1394,6 +1413,7 @@ export function initCatalystModal(onSaved) {
       platform: _getPill('cat-platform-pills') || 'web',
       status: _status,
       type: _type,
+      internalSubtype: _internalSubtype,
       accentColor: _accentColor,
       collaborators: _editingCollabs.slice(),
       isLocked,

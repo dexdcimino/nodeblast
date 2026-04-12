@@ -392,7 +392,12 @@ function handleTileClick(cat) {
   // navigate() so renderRoute runs and the internal-catalyst-view
   // container takes over. External catalysts keep the existing
   // history.pushState + openCatalystDetail modal flow.
+  // MD04: game-subtype internal catalysts go straight to /play.
   if (cat.type === 'internal' && slug) {
+    if (cat.internalSubtype === 'game') {
+      navigate('/play');
+      return;
+    }
     const userPart = buildUserSlug(ownerName, ownerHex);
     navigate(`/${userPart}/${encodeURIComponent(slug)}`);
     return;
@@ -2196,8 +2201,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (e.key === 'Escape') {
-      // MD01: exit play mode on Escape (takes priority)
-      if (_currentRoute?.page === 'play') { navigate('/'); return; }
+      // MD04: exit modal toggle in play mode (takes priority)
+      if (_currentRoute?.page === 'play') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window._nbPlayExitModalOpen) {
+          window._nbCloseExitModal?.();
+        } else {
+          window._nbOpenExitModal?.();
+        }
+        return;
+      }
       // Let individual components handle their own Escape first (they all
       // listen on document). This block is a catchall for the search
       // dropdown in case something slips through.

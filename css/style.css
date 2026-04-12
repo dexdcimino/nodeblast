@@ -1267,6 +1267,20 @@ body.cat-modal-open{overflow:hidden;}
 #play-status{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.5);color:rgba(255,255,255,0.6);font-family:var(--fn);font-size:12px;padding:4px 12px;border-radius:20px;pointer-events:none;transition:opacity .3s;}
 .hdr-play-btn{background:var(--clr);color:#fff;border:none;border-radius:8px;padding:6px 16px;font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;}
 .hdr-play-btn:hover{opacity:.85;}
+/* MD04: header hidden in play mode */
+#hdr.play-mode{background:transparent !important;border-bottom:none !important;box-shadow:none !important;visibility:hidden;}
+#play-exit-btn{z-index:220;}
+/* MD04: exit confirmation modal (matches DexNote pm-exit-confirm) */
+#play-exit-modal{display:none;position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+#play-exit-modal.open{display:flex;}
+#play-exit-modal-box{display:flex;flex-direction:column;align-items:center;gap:16px;}
+#play-exit-modal-title{color:#fff;font-family:var(--fn);font-size:18px;font-weight:600;margin:0;}
+#play-exit-modal-sub{color:rgba(255,255,255,0.5);font-family:var(--fn);font-size:13px;margin:-8px 0 0;}
+#play-exit-modal-btns{display:flex;gap:12px;}
+#play-exit-yes{padding:8px 28px;border-radius:6px;border:none;background:var(--clr);color:#0a0a0f;font-family:var(--fn);font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;}
+#play-exit-yes:hover{opacity:.85;transform:scale(1.03);}
+#play-exit-no{padding:8px 28px;border-radius:6px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#ccc;font-family:var(--fn);font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s,border-color .15s;}
+#play-exit-no:hover{opacity:.85;transform:scale(1.03);border-color:rgba(255,255,255,0.4);}
 
 #not-found{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:var(--bg);z-index:80;}
 

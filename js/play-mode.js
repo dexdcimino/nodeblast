@@ -1,7 +1,8 @@
 // ══════════════════════════════════════
-//  NodeBlast — PLAY MODE (MD01 + MD02)
+//  NodeBlast — PLAY MODE (MD01–MD04)
 //  Route UI layer: loads Babylon + Photon CDNs, launches the 3D
-//  scene with multiplayer sync, tears down cleanly on route change.
+//  scene with multiplayer sync, DexNote-style exit confirmation,
+//  tears down cleanly on route change.
 // ══════════════════════════════════════
 
 import State from './state.js';
@@ -14,7 +15,8 @@ const BABYLON_LOADERS_CDN = 'https://cdn.babylonjs.com/loaders/babylonjs.loaders
 const PHOTON_CDN = '/photon-realtime-module.js';
 
 let _engine = null;
-let _exitWired = false;
+let _modalWired = false;
+let _exitModalOpen = false;
 
 function _loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -38,6 +40,30 @@ async function _ensurePhoton() {
   await _loadScript(PHOTON_CDN);
 }
 
+// ── Exit modal ──
+
+function openExitModal() {
+  if (_exitModalOpen) return;
+  _exitModalOpen = true;
+  try { document.exitPointerLock(); } catch {}
+  const modal = document.getElementById('play-exit-modal');
+  if (modal) {
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function closeExitModal() {
+  _exitModalOpen = false;
+  const modal = document.getElementById('play-exit-modal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+}
+
+// ── Route lifecycle ──
+
 export async function renderPlayRoute() {
   const view = document.getElementById('play-view');
   const canvas = document.getElementById('play-canvas');
@@ -45,10 +71,28 @@ export async function renderPlayRoute() {
 
   document.title = 'play — nodeblast';
   view.classList.add('visible');
+  document.getElementById('hdr')?.classList.add('play-mode');
 
-  if (!_exitWired) {
-    document.getElementById('play-exit-btn')?.addEventListener('click', () => navigate('/'));
-    _exitWired = true;
+  // Window bridge for init.js Escape handler
+  window._nbOpenExitModal = openExitModal;
+  window._nbCloseExitModal = closeExitModal;
+  Object.defineProperty(window, '_nbPlayExitModalOpen', {
+    get: () => _exitModalOpen,
+    configurable: true,
+  });
+
+  // Wire modal + exit buttons once
+  if (!_modalWired) {
+    _modalWired = true;
+    document.getElementById('play-exit-btn')?.addEventListener('click', () => openExitModal());
+    document.getElementById('play-exit-yes')?.addEventListener('click', () => {
+      closeExitModal();
+      navigate('/');
+    });
+    document.getElementById('play-exit-no')?.addEventListener('click', () => closeExitModal());
+    document.getElementById('play-exit-modal')?.addEventListener('click', (e) => {
+      if (e.target === document.getElementById('play-exit-modal')) closeExitModal();
+    });
   }
 
   try {
@@ -56,7 +100,6 @@ export async function renderPlayRoute() {
     const result = initGame(canvas);
     _engine = result.engine;
 
-    // Load Photon SDK and connect — non-blocking relative to Babylon
     // Identity HUD
     const identEl = document.getElementById('play-identity');
     if (identEl) {
@@ -84,6 +127,7 @@ export async function renderPlayRoute() {
 }
 
 export function destroyPlayRoute() {
+  closeExitModal();
   destroyPhoton();
   if (_engine) {
     destroyGame(_engine);
@@ -91,5 +135,8 @@ export function destroyPlayRoute() {
   }
   const view = document.getElementById('play-view');
   if (view) view.classList.remove('visible');
+  document.getElementById('hdr')?.classList.remove('play-mode');
+  window._nbOpenExitModal = null;
+  window._nbCloseExitModal = null;
   try { document.exitPointerLock(); } catch {}
 }
