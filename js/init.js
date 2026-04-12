@@ -565,21 +565,50 @@ function _renderMyCatalystsMini() {
     container,
     tiles: _myCatalysts,
     showAdd: true,
-    onTileClick: (cat) => {
-      // Close the account menu so the edit modal isn't obscured by
-      // the dropdown, then open the edit modal.
-      closeAccountMenu();
-      setTimeout(() => openCatalystModal(cat), 80);
-    },
-    onAddClick: () => {
-      closeAccountMenu();
-      setTimeout(() => _handleAddCatalystClick(), 80);
-    },
+    // MD19: tile click opens the edit modal as a full-screen overlay
+    // anywhere on the site. openCatalystModal now closes the account
+    // menu itself, so there's no need for a setTimeout here — the
+    // modal + dropdown swap happens in the same tick. Any route is
+    // supported because the modal is fixed-position, z-indexed above
+    // every other layer, and performs no navigation.
+    onTileClick: (cat) => openCatalystModal(cat),
+    onAddClick: () => _handleAddCatalystClick(),
     // Drag reorder — writes to the same sortOrder field the main
-    // profile grid reads. Both grids re-render from the shared
-    // subscription tick so mini ↔ main stay in sync.
-    onReorder: handleReorder,
+    // profile grid reads. Uses its own handler so the optimistic
+    // cache update lands on _myCatalysts (the source of truth for
+    // the mini grid) instead of _currentTiles, which is stale or
+    // empty on any route other than the user's own profile.
+    onReorder: handleMiniReorder,
   });
+}
+
+// MD19: dedicated reorder handler for the dropdown mini grid. Same
+// persistence path as handleReorder (reorderCatalysts + shared
+// Firestore doc), but the optimistic local cache update operates on
+// _myCatalysts so the mini grid doesn't flash back to the old order
+// when the user drags from any route other than their own profile.
+async function handleMiniReorder(orderedIds) {
+  if (!State.user) return;
+  const byId = new Map(_myCatalysts.map((t) => [t.id, t]));
+  const next = [];
+  orderedIds.forEach((id, i) => {
+    const t = byId.get(id);
+    if (!t) return;
+    next.push({ ...t, sortOrder: i });
+  });
+  _myCatalysts = next;
+  // If the user is currently on their own profile page, also update
+  // _currentTiles so the main grid stays in sync until the Firestore
+  // snapshot lands. Harmless otherwise.
+  if (_currentTiles.length && _currentTiles.every((t) => byId.has(t.id))) {
+    _currentTiles = next;
+  }
+  try {
+    await reorderCatalysts(State.user.uid, orderedIds);
+  } catch (err) {
+    console.warn('[init] mini reorder persist failed:', err);
+    toast('Reorder failed');
+  }
 }
 
 function renderSkeleton() {
@@ -623,18 +652,20 @@ function _renderMyPinnedMini() {
     container,
     tiles,
     showAdd: false,
+    // MD19: pinned tiles navigate to the source catalyst (different
+    // from the user's own tiles which overlay the edit modal in place).
+    // Close the menu first so navigation isn't visually stacked under
+    // the dropdown.
     onTileClick: (cat) => {
       closeAccountMenu();
-      setTimeout(() => {
-        const lower = (cat.ownerName || '').toLowerCase();
-        const hex = (cat.ownerHex || '').toLowerCase();
-        const slug = cat.slug || '';
-        if (lower && hex && slug) {
-          navigate('/' + buildUserSlug(lower, hex) + '/' + slug);
-        } else if (lower && hex) {
-          navigate('/' + buildUserSlug(lower, hex));
-        }
-      }, 80);
+      const lower = (cat.ownerName || '').toLowerCase();
+      const hex = (cat.ownerHex || '').toLowerCase();
+      const slug = cat.slug || '';
+      if (lower && hex && slug) {
+        navigate('/' + buildUserSlug(lower, hex) + '/' + slug);
+      } else if (lower && hex) {
+        navigate('/' + buildUserSlug(lower, hex));
+      }
     },
   });
 }

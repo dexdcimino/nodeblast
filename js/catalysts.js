@@ -26,7 +26,7 @@ import {
 import State from './state.js';
 import { uploadCatalystThumb, deleteCatalystThumb } from './storage.js';
 import { openColorPopup, closeColorPopup } from './color.js';
-import { toast, showModal, renderUsername, escapeHtml } from './ui-events.js';
+import { toast, showModal, renderUsername, escapeHtml, closeAccountMenu } from './ui-events.js';
 import { navigate, buildUserSlug } from './router.js';
 import { searchUsers } from './users.js';
 
@@ -700,6 +700,13 @@ async function _runCollabSearch(prefix) {
 export function openCatalystModal(existing = null) {
   const modal = document.getElementById('cat-modal');
   if (!modal) return;
+  // MD19: make the modal unambiguously overlay on top of everything.
+  // Close the account dropdown (harmless if it wasn't open) so z-index
+  // conflicts can't strand the modal behind a stacked panel, and lock
+  // body scroll so the page behind doesn't bleed its scroll position
+  // into the modal's scroll gestures.
+  closeAccountMenu();
+  document.body.classList.add('cat-modal-open');
   _editingId = existing?.id || null;
   _pendingFile = null;
   _accentColor = existing?.accentColor || '#' + (State.profile?.hexCode || '5AAA72');
@@ -735,6 +742,9 @@ export function openCatalystModal(existing = null) {
 
 export function closeCatalystModal() {
   document.getElementById('cat-modal')?.classList.remove('open');
+  // MD19: release the body scroll lock so the page behind scrolls
+  // normally again after the modal dismisses.
+  document.body.classList.remove('cat-modal-open');
   closeColorPopup();
   _editingId = null;
   _pendingFile = null;

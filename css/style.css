@@ -854,6 +854,10 @@ body.dragging-active{touch-action:none;}
 ══════════════════════════════════════ */
 #cat-modal{display:none;position:fixed;inset:0;z-index:25000;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
 #cat-modal.open{display:flex;}
+/* MD19: body scroll lock while the catalyst edit modal is open so
+   scrolling the modal never bleeds into the page behind it, no
+   matter which route the modal was opened from. */
+body.cat-modal-open{overflow:hidden;}
 
 /* ══════════════════════════════════════
    SIGN-IN MODAL (MD13)
