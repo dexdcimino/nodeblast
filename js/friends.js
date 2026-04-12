@@ -384,7 +384,13 @@ export async function sendFriendRequest(targetUid) {
     const alreadySnap = await getDoc(doc(db, 'users', State.user.uid, 'friends', targetUid));
     if (alreadySnap.exists()) { toast('Already friends'); return false; }
 
-    await deleteDoc(doc(db, 'users', targetUid, 'friend_requests', State.user.uid)).catch(() => {});
+    // MD32: check if a request is already pending before sending a
+    // new one. The doc id is the sender's uid so the check is O(1).
+    const pendingSnap = await getDoc(doc(db, 'users', targetUid, 'friend_requests', State.user.uid));
+    if (pendingSnap.exists() && pendingSnap.data()?.status === 'pending') {
+      toast('Request already sent');
+      return false;
+    }
 
     const me = _mySelf();
     await setDoc(doc(db, 'users', targetUid, 'friend_requests', State.user.uid), {
@@ -863,10 +869,9 @@ export function initFriends() {
     if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
   });
 
-  // Invite by email — coming soon stub
-  document.getElementById('acct-friends-invite-email')?.addEventListener('click', () => {
-    toast('Invite by email — coming soon');
-  });
+  // MD32: the old "invite by email — coming soon" stub is gone;
+  // the hint row (#acct-friends-hint) is purely informational
+  // and needs no click handler.
 
   // Notification panel button delegation — friends + session invites.
   document.addEventListener('click', (e) => {

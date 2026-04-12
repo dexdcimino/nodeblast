@@ -332,10 +332,12 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .friend-card .friend-util-btn[data-action="favorite"]{opacity:1;}
 
 /* MD15: invite-by-email placeholder row */
-#acct-friends-invite-email{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;border:1px dashed var(--bdr);border-radius:8px;color:var(--tx3);font-size:12px;cursor:pointer;transition:border-color var(--ease),color var(--ease);}
-#acct-friends-invite-email:hover{border-color:var(--tx3);color:var(--tx2);}
-#acct-friends-invite-email svg{flex-shrink:0;}
-.acct-friends-soon{margin-left:auto;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:2px 6px;border-radius:10px;background:color-mix(in srgb,var(--clr-adj) 20%,var(--bg3));color:var(--clr-adj);}
+/* MD32: hint row below the friends list telling users to share
+   their username#hex combo. Replaces the old "Invite by email /
+   coming soon" placeholder from MD15. */
+#acct-friends-hint{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;border:1px dashed var(--bdr);border-radius:8px;color:var(--tx3);font-size:11px;line-height:1.4;}
+#acct-friends-hint svg{flex-shrink:0;opacity:.65;}
+#acct-friends-hint b{color:var(--tx2);font-weight:600;}
 
 /* MD15: notif-item friend/session-invite action buttons */
 .notif-item-text .notif-actions{display:flex;gap:6px;margin-top:6px;}
