@@ -1580,10 +1580,14 @@ function updateAuthUI(user, profile) {
 
   // Sync the saved logo colors across devices. If the signed-in
   // user has stored values in their profile doc, adopt them.
-  // Otherwise leave whatever the guest-mode picker left behind.
+  // Validate against the current palette — if a saved color was
+  // removed from the palette in a code update, reset to default.
   if (profile?.logoTopColor || profile?.logoBotColor) {
-    const nextTop = profile.logoTopColor || _logoTop;
-    const nextBot = profile.logoBotColor || _logoBot;
+    const _ps = new Set(LOGO_PALETTE.map((c) => c.hex.toLowerCase()));
+    const nextTop = (profile.logoTopColor && _ps.has(profile.logoTopColor.toLowerCase()))
+      ? profile.logoTopColor : DEFAULT_LOGO_TOP;
+    const nextBot = (profile.logoBotColor && _ps.has(profile.logoBotColor.toLowerCase()))
+      ? profile.logoBotColor : DEFAULT_LOGO_BOT;
     if (nextTop !== _logoTop || nextBot !== _logoBot) {
       setLogoColors(nextTop, nextBot);
     }
@@ -1761,15 +1765,24 @@ function initLogoPicker() {
   picker.appendChild(buildPickerColumn('bot'));
 
   // Initial paint — respect any cached values the user picked on a
-  // previous visit, else fall back to the defaults.
+  // previous visit, else fall back to the defaults. If the saved
+  // color no longer exists in the current palette (e.g. we swapped
+  // out accent colors in a code update), auto-migrate to the default
+  // so users don't keep orphaned colors.
+  const paletteSet = new Set(LOGO_PALETTE.map((c) => c.hex.toLowerCase()));
   const rawTop = localStorage.getItem(LOGO_TOP_KEY);
   const rawBot = localStorage.getItem(LOGO_BOT_KEY);
-  const initialTop = rawTop || DEFAULT_LOGO_TOP;
-  const initialBot = rawBot || DEFAULT_LOGO_BOT;
-  console.log('[logo] initLogoPicker', {
-    rawTop, rawBot, initialTop, initialBot,
-    defaultTop: DEFAULT_LOGO_TOP, defaultBot: DEFAULT_LOGO_BOT,
-  });
+  const topValid = rawTop && paletteSet.has(rawTop.toLowerCase());
+  const botValid = rawBot && paletteSet.has(rawBot.toLowerCase());
+  const initialTop = topValid ? rawTop : DEFAULT_LOGO_TOP;
+  const initialBot = botValid ? rawBot : DEFAULT_LOGO_BOT;
+  // Persist the migration so it only runs once per palette change.
+  if (rawTop && !topValid) {
+    try { localStorage.setItem(LOGO_TOP_KEY, initialTop); } catch {}
+  }
+  if (rawBot && !botValid) {
+    try { localStorage.setItem(LOGO_BOT_KEY, initialBot); } catch {}
+  }
   setLogoColors(initialTop, initialBot);
 
   // Re-paint the logo whenever the theme toggles so the light-mode
