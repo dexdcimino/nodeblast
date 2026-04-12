@@ -46,6 +46,7 @@ import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js'
 import { initNotifications, initHelpPanel } from './notifications.js';
 import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest } from './friends.js';
 import { renderSocialIconsHTML } from './social.js';
+import { renderPlayRoute, destroyPlayRoute } from './play-mode.js';
 import {
   pinCatalyst,
   unpinCatalyst,
@@ -140,6 +141,8 @@ function hideAllViews() {
   document.getElementById('not-found').classList.remove('visible');
   // MD12: internal catalyst view hidden by default on every route.
   document.getElementById('internal-catalyst-view')?.classList.remove('visible');
+  // MD01: play view hidden on every non-play route.
+  document.getElementById('play-view')?.classList.remove('visible');
   // MD18: tracked footer is a profile-route-only feature.
   _hideTrackedFooter();
   const grid = document.getElementById('grid');
@@ -1413,12 +1416,25 @@ async function renderRoute({ force = false } = {}) {
   // Tear down any listeners from the previous route
   clearSubs();
 
+  // MD01: tear down play mode when navigating away from /play.
+  if (_currentRoute?.page === 'play' && route.page !== 'play') {
+    destroyPlayRoute();
+  }
+
   // Capture whether this is a same-page re-render BEFORE we mutate
   // _currentRoute below — used to skip the fade-out when force-
   // re-rendering the same page (e.g. feed → feed on auth resolution).
   const sameRoute = _currentRoute?.page === route.page;
   _currentRoute = route;
   _updateViewToggle();
+
+  // MD01: play route is fully self-contained — skip the honeycomb
+  // fade and the normal page rendering.
+  if (route.page === 'play') {
+    await renderPlayRoute();
+    return;
+  }
+
   const honey = document.getElementById('honeycomb');
 
   // Smooth fade between routes. Skipped on the very first render and
@@ -1983,6 +1999,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('hdr-brand')?.addEventListener('click', () => navigate('/'));
   document.getElementById('hdr-logo')?.addEventListener('click', () => navigate('/'));
 
+  // MD01: Play button → /play route
+  document.getElementById('play-btn')?.addEventListener('click', () => navigate('/play'));
+
   // Community / My Profile view toggle in the header.
   document.getElementById('view-toggle-community')?.addEventListener('click', () => {
     navigate('/');
@@ -2177,6 +2196,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (e.key === 'Escape') {
+      // MD01: exit play mode on Escape (takes priority)
+      if (_currentRoute?.page === 'play') { navigate('/'); return; }
       // Let individual components handle their own Escape first (they all
       // listen on document). This block is a catchall for the search
       // dropdown in case something slips through.
