@@ -7,6 +7,7 @@ import State from './state.js';
 
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
 let _playerUsername='player',_playerHex='5aaa72';
+let _gunRoot=null,_muzzleOffset=null;
 
 const WALK_SPEED=0.09,SPRINT_MULT=1.85,JUMP_FORCE=0.22,JUMP2_FORCE=0.18,GRAVITY=0.008,FALL_MULT=2.2,GROUND_Y=1.8,AIR_CONTROL=0.28,FRICTION=0.76,INERTIA=0.16;
 
@@ -82,25 +83,56 @@ function _spawnGooSplat(pos){
   if(_gooSplats.length>300){const old=_gooSplats.splice(0,20);old.forEach(m=>{try{m.dispose();}catch{}});}
 }
 
+function _buildGun(){
+  const B=window.BABYLON;
+  _gunRoot=new B.TransformNode('gun_root',_scene);
+  const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.055,height:0.13,depth:0.09},_scene);
+  grip.parent=_gunRoot;grip.position.set(0,-0.06,0);
+  const gm=new B.StandardMaterial('gun_grip_mat',_scene);gm.diffuseColor=new B.Color3(0.12,0.12,0.15);gm.emissiveColor=new B.Color3(0.02,0.02,0.03);grip.material=gm;
+  const barrel=B.MeshBuilder.CreateCylinder('gun_barrel',{diameter:0.045,height:0.22,tessellation:10},_scene);
+  barrel.parent=_gunRoot;barrel.rotation.x=Math.PI/2;barrel.position.set(0,0,0.08);
+  const bm=new B.StandardMaterial('gun_barrel_mat',_scene);bm.diffuseColor=new B.Color3(0.15,0.15,0.18);bm.emissiveColor=new B.Color3(0.02,0.04,0.06);bm.specularColor=new B.Color3(0.4,0.4,0.5);bm.specularPower=64;barrel.material=bm;
+  const dish=B.MeshBuilder.CreateTorus('gun_dish',{diameter:0.13,thickness:0.018,tessellation:20},_scene);
+  dish.parent=_gunRoot;dish.rotation.x=Math.PI/2;dish.position.set(0,0,0.20);
+  const dm=new B.StandardMaterial('gun_dish_mat',_scene);dm.diffuseColor=new B.Color3(0.1,0.55,0.28);dm.emissiveColor=new B.Color3(0,0.30,0.12);dm.specularColor=new B.Color3(0.3,0.8,0.5);dm.specularPower=80;dish.material=dm;
+  for(let i=0;i<4;i++){const spoke=B.MeshBuilder.CreateBox('gun_spoke_'+i,{width:0.008,height:0.1,depth:0.008},_scene);spoke.parent=_gunRoot;spoke.rotation.z=(i/4)*Math.PI*2;spoke.position.set(Math.cos((i/4)*Math.PI*2)*0.046,Math.sin((i/4)*Math.PI*2)*0.046,0.20);spoke.material=dm;}
+  const orb=B.MeshBuilder.CreateSphere('gun_orb',{diameter:0.038,segments:6},_scene);orb.parent=_gunRoot;orb.position.set(0,0,0.20);
+  const om=new B.StandardMaterial('gun_orb_mat',_scene);om.emissiveColor=new B.Color3(0.1,1.0,0.4);om.disableLighting=true;orb.material=om;
+  const ol=new B.PointLight('gun_orb_light',new B.Vector3(0,0,0),_scene);ol.parent=_gunRoot;ol.position=new B.Vector3(0,0,0.20);ol.diffuse=new B.Color3(0.1,1.0,0.4);ol.intensity=0.3;ol.range=2.5;
+  const cell=B.MeshBuilder.CreateBox('gun_cell',{width:0.025,height:0.06,depth:0.055},_scene);cell.parent=_gunRoot;cell.position.set(0.04,-0.02,0.04);
+  const cm=new B.StandardMaterial('gun_cell_mat',_scene);cm.diffuseColor=new B.Color3(0.05,0.3,0.15);cm.emissiveColor=new B.Color3(0,0.18,0.07);cell.material=cm;
+}
+
 function _shoot(){
   const now=Date.now();if(now-_lastShot<SHOT_COOLDOWN)return;_lastShot=now;
-  const B=window.BABYLON,dir=_camera.getDirection(B.Vector3.Forward()).normalize(),origin=_camera.position.add(dir.scale(0.9));
+  const B=window.BABYLON,dir=_camera.getDirection(B.Vector3.Forward()).normalize();
+  const origin=_muzzleOffset?_muzzleOffset.clone():_camera.position.add(dir.scale(0.4));
   const ball=B.MeshBuilder.CreateSphere('proj_'+now,{diameter:0.22,segments:5},_scene);ball.position.copyFrom(origin);
   const mat=new B.StandardMaterial('pm_'+now,_scene);mat.emissiveColor=new B.Color3(0.1,1.0,0.35);mat.alpha=0.88;mat.disableLighting=true;ball.material=mat;
   const flash=new B.PointLight('mf_'+now,origin.clone(),_scene);flash.diffuse=new B.Color3(0.2,1.0,0.4);flash.intensity=3.0;flash.range=7;
   setTimeout(()=>{try{flash.dispose();}catch{}},70);
+  const orb=_scene.getMeshByName('gun_orb');
+  if(orb&&orb.material){orb.material.emissiveColor=new B.Color3(0.3,1.0,0.6);setTimeout(()=>{if(orb.material)orb.material.emissiveColor=new B.Color3(0.1,1.0,0.4);},80);}
   _projectiles.push({mesh:ball,vel:dir.scale(1.6),life:80});
 }
 
 function _updateProjectiles(){
-  const dead=[];
+  const B=window.BABYLON,dead=[];
   for(let i=0;i<_projectiles.length;i++){
-    const p=_projectiles[i];p.life--;p.mesh.position.addInPlace(p.vel);p.vel.y-=0.006;
+    const p=_projectiles[i];p.life--;
+    const prev=p.mesh.position.clone();
+    p.mesh.position.addInPlace(p.vel);p.vel.y-=0.006;
     const px=p.mesh.position.x,py=p.mesh.position.y,pz=p.mesh.position.z;
     let hit=false,hitPos=null;
-    for(const b of _colBlocks){if(px>b.minX-0.15&&px<b.maxX+0.15&&pz>b.minZ-0.15&&pz<b.maxZ+0.15&&py<b.maxY+0.15&&py>-0.5){hit=true;hitPos=p.mesh.position.clone();break;}}
-    if(py<0.12){hit=true;hitPos=new window.BABYLON.Vector3(px,0,pz);}
-    if(Math.abs(px)>65||Math.abs(pz)>65)hit=true;
+    // Swept detection — check along travel path in 0.12-unit steps
+    const travel=p.mesh.position.subtract(prev);const tLen=travel.length();
+    const steps=Math.max(1,Math.ceil(tLen/0.12));const step=travel.scale(1/steps);
+    outer:for(let s=0;s<=steps;s++){
+      const sp=prev.add(step.scale(s));const sx=sp.x,sy=sp.y,sz=sp.z;
+      for(const b of _colBlocks){const m=0.1;if(sx>b.minX-m&&sx<b.maxX+m&&sz>b.minZ-m&&sz<b.maxZ+m&&sy<b.maxY+m&&sy>-0.5){hit=true;hitPos=sp.clone();break outer;}}
+      if(sy<0.08){hit=true;hitPos=new B.Vector3(sx,0,sz);break;}
+    }
+    if(!hit&&(Math.abs(px)>65||Math.abs(pz)>65)){try{p.mesh.dispose();}catch{}dead.push(i);continue;}
     if(hit||p.life<=0){if(hit&&hitPos)_spawnGooSplat(hitPos);try{p.mesh.dispose();}catch{}dead.push(i);}
   }
   for(let i=dead.length-1;i>=0;i--)_projectiles.splice(dead[i],1);
@@ -129,6 +161,8 @@ function _physicsTick(){
   _camera.position.x=Math.max(-58,Math.min(58,_camera.position.x));
   _camera.position.z=Math.max(-58,Math.min(58,_camera.position.z));
   _updateProjectiles();
+  // Gun viewmodel follow camera
+  if(_gunRoot&&_camera){const B=window.BABYLON;const r=_camera.getDirection(B.Vector3.Right()),u=_camera.getDirection(B.Vector3.Up()),f=_camera.getDirection(B.Vector3.Forward());_gunRoot.position=_camera.position.add(r.scale(0.22)).add(u.scale(-0.18)).add(f.scale(0.35));_gunRoot.rotation.copyFrom(_camera.rotation);_muzzleOffset=_gunRoot.position.add(f.scale(0.22));}
   const now=Date.now();
   _remotePlayers.forEach(p=>{
     p.renderX+=(p.targetX-p.renderX)*0.2;p.renderY+=(p.targetY-p.renderY)*0.2;
@@ -224,6 +258,7 @@ export function initGame(canvas){
   _mouseDownHandler=e=>{if(e.button===0&&_pointerLocked)_shoot();};
   document.addEventListener('mousedown',_mouseDownHandler);
   _buildArena();
+  _buildGun();
   _obsHandler=_scene.onBeforeRenderObservable.add(_physicsTick);
   _engine.runRenderLoop(()=>_scene.render());
   _resizeHandler=()=>_engine.resize();window.addEventListener('resize',_resizeHandler);
@@ -240,6 +275,8 @@ export function destroyGame(engine){
   _projectiles.forEach(p=>{try{p.mesh.dispose();}catch{}});_projectiles.length=0;
   _gooSplats.forEach(m=>{try{m.dispose();}catch{}});_gooSplats.length=0;
   _remotePlayers.forEach((_,id)=>removeRemotePlayer(id));_remotePlayers.clear();
+  if(_gunRoot){try{_gunRoot.getChildMeshes().forEach(m=>m.dispose());_gunRoot.dispose();}catch{}_gunRoot=null;}
+  _muzzleOffset=null;
   window._nbGetPlayerState=null;
   _velX=0;_velZ=0;_velY=0;_onGround=true;_sprinting=false;_jumpHeld=false;_jumpsLeft=2;
   _colBlocks.length=0;Object.keys(_keys).forEach(k=>delete _keys[k]);
