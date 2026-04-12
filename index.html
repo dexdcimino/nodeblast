@@ -360,6 +360,12 @@
             <button id="acct-friends-add-btn">Add</button>
           </div>
           <div id="acct-friends-list"></div>
+          <!-- MD15: invite-by-email placeholder row (coming soon, matches DexNote) -->
+          <div id="acct-friends-invite-email" data-tip="Coming soon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span>Invite by email</span>
+            <span class="acct-friends-soon">soon</span>
+          </div>
         </div>
       </div>
     </div><!-- /acct-menu-scroll -->
@@ -720,6 +726,32 @@
       <div id="notif-super-subtitle"></div>
       <div id="notif-super-body"></div>
       <div id="notif-super-actions"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       DM PANEL (MD15 — parity with DexNote)
+       ──────────────────────────────────────
+       Opened via the message button on a friend card. Uses the same
+       Firestore paths as DexNote (`dms/{convoId}` + subcollection)
+       so messages sent from either site appear on both.
+       ══════════════════════════════════════ -->
+  <div id="dm-panel">
+    <div id="dm-resize"><div class="dm-resize-handle"></div></div>
+    <div id="dm-header">
+      <div id="dm-avatar"></div>
+      <span id="dm-recipient-name"></span>
+      <span id="dm-recipient-hex"></span>
+      <button id="dm-close" data-tip="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="dm-messages"></div>
+    <div id="dm-input-wrap">
+      <input id="dm-input" type="text" placeholder="Message..." autocomplete="off" spellcheck="true" maxlength="500" />
+      <button id="dm-send" data-tip="Send">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
     </div>
   </div>
 

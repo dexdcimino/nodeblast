@@ -1,9 +1,8 @@
 // ══════════════════════════════════════════════════════════════
-//  NodeBlast — FRIENDS
-//  Cross-site friends list shared with DexNote.
+//  NodeBlast — FRIENDS + DMs + PRESENCE + SESSION INVITES (MD15)
 //
-//  This module does NOT define a new data model — every read and
-//  write targets the same Firestore paths DexNote already uses:
+//  Cross-site parity with DexNote. Every Firestore path below
+//  mirrors what DexNote reads/writes, so:
 //
 //    users/{uid}/friends/{friendUid}
 //      { uid, username, hexColor, addedAt, favorite }
@@ -11,14 +10,32 @@
 //    users/{uid}/friend_requests/{fromUid}
 //      { fromUid, fromUsername, fromHex, status, createdAt }
 //
-//  Keeping the shapes byte-for-byte identical is what lets a
-//  friend added on DexNote show up in NodeBlast's People list
-//  (and vice versa) with zero migration code.
+//    users/{uid}/session_invites/{inviteId}
+//      { fromUid, fromUsername, fromHex, sessionId, sessionName,
+//        sessionColor, sessionIcon, status }
+//      — NodeBlast only RECEIVES these. Accept opens dexnote.dev.
+//
+//    dms/{convoId}                                  ← convoId = _getDmConvoId(uid1, uid2)
+//      { participants, lastMessage, lastMessageAt, lastMessageBy,
+//        lastMessageByName, lastMessageByHex, hex_<uid>... }
+//
+//    dms/{convoId}/messages/{autoId}
+//      { fromUid, fromHex, text, createdAt, node? }  ← `node` is
+//        a DexNote rich-chip attachment. NodeBlast sends text-only
+//        messages but renders incoming messages with a `node` field
+//        as plain text in the bubble (fallback path).
+//
+//    users/{uid}/presence/current                   ← Firestore-based
+//      { state: 'online' | 'offline', lastChanged }
+//      — DexNote uses RTDB presence at `presence/{uid}`. NodeBlast
+//      doesn't bundle RTDB, so cross-site presence WILL NOT sync
+//      between DexNote and NodeBlast. This module only reflects
+//      presence for users who were last seen on NodeBlast.
 //
 //  DexNote stores `hexColor`/`fromHex` WITH a leading '#'. NodeBlast
-//  internally strips the '#' (see auth.js stripHash), so this
-//  module normalizes both directions: reads tolerate either form,
-//  writes always include the '#' so DexNote stays happy.
+//  internally strips the '#' (see auth.js stripHash), so this module
+//  normalizes both directions: reads tolerate either form, writes
+//  always include the '#' so DexNote stays happy.
 // ══════════════════════════════════════════════════════════════
 
 import { app } from './firebase-config.js';
@@ -28,23 +45,52 @@ import {
   doc,
   getDoc,
   setDoc,
+  addDoc,
   deleteDoc,
   onSnapshot,
   query,
+  where,
   orderBy,
+  limit,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js';
 import State from './state.js';
-import { toast, renderUsername, escapeHtml } from './ui-events.js';
+import { toast, renderUsername, escapeHtml, showModal } from './ui-events.js';
 import { navigate, buildUserSlug } from './router.js';
 import { userLookupKey } from './users.js';
 
 const db = getFirestore(app);
 
+// ── Friend list + request subscriptions ─────────────────────────
 let _friendsUnsub = null;
 let _requestsUnsub = null;
-let _friends = [];              // live cache of the current user's friends
-let _seenRequestIds = new Set(); // suppress duplicate notifications for the same request
+let _friends = [];
+let _seenRequestIds = new Set();
+
+// ── Presence ────────────────────────────────────────────────────
+// Per-friend onSnapshot listeners on users/{uid}/presence/current.
+// Keyed by friend uid so we can tear down individually when the
+// friends list changes.
+const _presenceUnsubs = new Map(); // uid → unsub
+const _presenceState = new Map();  // uid → 'online' | 'offline'
+let _selfPresenceTimer = null;
+
+// ── DM state (a single panel, one convo open at a time) ─────────
+let _dmUnsub = null;
+let _dmConvoId = null;
+let _dmRecipient = null; // { uid, name, hex (with #) }
+// Top-level DM listener — watches every convo the user is part of
+// so incoming messages from OTHER convos trigger a notification.
+let _dmTopListUnsub = null;
+// Track the last seen message timestamp per convo so we don't
+// re-notify on initial listener mount.
+const _lastDmSeenAt = new Map();
+
+// ── Session invites ────────────────────────────────────────────
+let _sessionInviteUnsub = null;
+const _shownInviteIds = new Set();
+
+/* ── helpers ────────────────────────────────────────────── */
 
 function _withHash(h) {
   const s = (h || '').toString().trim();
@@ -64,6 +110,23 @@ function _mySelf() {
   };
 }
 
+// Deterministic convo ID matching DexNote (dm_{smallerUid}_{largerUid}).
+function _getDmConvoId(uid1, uid2) {
+  return uid1 < uid2 ? `dm_${uid1}_${uid2}` : `dm_${uid2}_${uid1}`;
+}
+
+// Pick a readable foreground color for a given background hex
+// (same perceived-luminance formula DexNote uses).
+function _contrastColor(hex) {
+  const h = _noHash(hex);
+  if (h.length !== 6) return '#fff';
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 140 ? '#111' : '#fff';
+}
+
 export function isFriend(uid) {
   if (!uid) return false;
   return _friends.some((f) => f.uid === uid);
@@ -73,25 +136,41 @@ export function getFriends() {
   return _friends.slice();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  Rendering — account menu "People" list
-// ══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
+ *  RENDERING — account-menu People list
+ * ══════════════════════════════════════════════════════════════ */
 
 function _friendCardHTML(f) {
   const hex = _noHash(f.hexColor);
   const color = '#' + hex;
   const name = f.username || 'anon';
   const nameHtml = renderUsername(name, color, false);
+  const presence = _presenceState.get(f.uid) || 'offline';
+  const favClass = f.favorite ? 'active' : '';
   return `
     <div class="friend-card" data-uid="${escapeHtml(f.uid)}" style="--friend-hex:${color}">
-      <div class="friend-avatar" style="border-color:${color}">${escapeHtml((name[0] || '?').toUpperCase())}</div>
+      <div class="friend-avatar" style="border-color:${color}">
+        ${escapeHtml((name[0] || '?').toUpperCase())}
+        <span class="friend-presence ${presence}" data-presence></span>
+      </div>
       <div class="friend-body">
         <div class="friend-name">${nameHtml}</div>
         <div class="friend-hex">#${escapeHtml(hex)}</div>
       </div>
-      <button class="friend-remove-btn" data-action="remove" title="Remove friend">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <div class="friend-actions">
+        <button class="friend-util-btn" data-action="favorite" title="Favorite" data-tip="Favorite">
+          <svg class="friend-star ${favClass}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+        <button class="friend-util-btn" data-action="copy" title="Copy ID" data-tip="Copy ID">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <button class="friend-util-btn" data-action="message" title="Message" data-tip="Message">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+        <button class="friend-util-btn friend-remove-btn" data-action="remove" title="Remove friend" data-tip="Remove">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
     </div>
   `;
 }
@@ -99,19 +178,38 @@ function _friendCardHTML(f) {
 function _renderFriendsList() {
   const list = document.getElementById('acct-friends-list');
   const countEl = document.getElementById('acct-friends-count');
-  if (countEl) countEl.textContent = String(_friends.length);
+  if (countEl) {
+    const n = _friends.length;
+    countEl.textContent = n === 1 ? '1 person' : n + ' people';
+  }
   if (!list) return;
   if (_friends.length === 0) {
     list.innerHTML = '<div class="friend-empty">No friends yet. Add one with username#hexcode.</div>';
     return;
   }
-  const sorted = [..._friends].sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+  // Favorites first, then alphabetic by username.
+  const sorted = [..._friends].sort((a, b) => {
+    if ((b.favorite ? 1 : 0) !== (a.favorite ? 1 : 0)) return (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0);
+    return (a.username || '').localeCompare(b.username || '');
+  });
   list.innerHTML = sorted.map(_friendCardHTML).join('');
 }
 
-// ══════════════════════════════════════════════════════════════
-//  Live subscriptions
-// ══════════════════════════════════════════════════════════════
+// Live presence indicator update — called by the per-friend
+// presence snapshot listener so we can touch just one card rather
+// than re-rendering the whole list on every heartbeat.
+function _applyPresenceDot(uid, presence) {
+  _presenceState.set(uid, presence);
+  const dot = document.querySelector(`.friend-card[data-uid="${CSS.escape(uid)}"] [data-presence]`);
+  if (dot) {
+    dot.classList.remove('online', 'offline');
+    dot.classList.add(presence === 'online' ? 'online' : 'offline');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  SUBSCRIPTIONS — friends + requests
+ * ══════════════════════════════════════════════════════════════ */
 
 function _startFriendsSub(uid) {
   _stopFriendsSub();
@@ -128,8 +226,7 @@ function _startFriendsSub(uid) {
         };
       });
       _renderFriendsList();
-      // Re-check the currently visible profile bar so the
-      // "Add Friend" / "Friends" button can flip if needed.
+      _syncPresenceSubscriptions();
       if (typeof window._nbRefreshFriendBtn === 'function') {
         try { window._nbRefreshFriendBtn(); } catch {}
       }
@@ -142,9 +239,6 @@ function _stopFriendsSub() {
   if (_friendsUnsub) { try { _friendsUnsub(); } catch {} _friendsUnsub = null; }
 }
 
-// Listen for incoming friend requests and push each new pending
-// one into the notification panel. Only fires for `type === 'added'`
-// so an accept/decline that deletes the doc doesn't re-notify.
 function _startRequestsSub(uid) {
   _stopRequestsSub();
   _seenRequestIds = new Set();
@@ -185,9 +279,95 @@ function _pushRequestNotif(requestId, req) {
   });
 }
 
-// ══════════════════════════════════════════════════════════════
-//  Writes — send / accept / decline / remove
-// ══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
+ *  PRESENCE (Firestore-based — see MD15 module header note)
+ * ══════════════════════════════════════════════════════════════ */
+
+// Heartbeat every 45s. Firestore sees the update via the listener
+// on users/{uid}/presence/current; there's no onDisconnect like
+// RTDB provides, so we rely on a stale-timestamp check at read time.
+async function _beatSelfPresence() {
+  if (!State.user) return;
+  try {
+    await setDoc(
+      doc(db, 'users', State.user.uid, 'presence', 'current'),
+      { state: 'online', lastChanged: serverTimestamp() },
+      { merge: true },
+    );
+  } catch (err) {
+    // Permissions/offline — silent so we don't spam the console.
+  }
+}
+
+function _startSelfPresence() {
+  _stopSelfPresence();
+  _beatSelfPresence();
+  _selfPresenceTimer = setInterval(_beatSelfPresence, 45000);
+  // Best-effort mark offline when the tab closes. Firestore
+  // writes on unload are not guaranteed to land, but worth a try.
+  window.addEventListener('beforeunload', _markSelfOfflineBestEffort);
+}
+
+function _stopSelfPresence() {
+  if (_selfPresenceTimer) { clearInterval(_selfPresenceTimer); _selfPresenceTimer = null; }
+  window.removeEventListener('beforeunload', _markSelfOfflineBestEffort);
+}
+
+function _markSelfOfflineBestEffort() {
+  if (!State.user) return;
+  try {
+    setDoc(
+      doc(db, 'users', State.user.uid, 'presence', 'current'),
+      { state: 'offline', lastChanged: serverTimestamp() },
+      { merge: true },
+    );
+  } catch {}
+}
+
+// Spin up / down per-friend presence listeners to match the
+// current friend list. Called from the friends snapshot handler.
+function _syncPresenceSubscriptions() {
+  const wantedUids = new Set(_friends.map((f) => f.uid));
+  // Tear down any listener for a uid that's no longer a friend.
+  for (const uid of _presenceUnsubs.keys()) {
+    if (!wantedUids.has(uid)) {
+      try { _presenceUnsubs.get(uid)(); } catch {}
+      _presenceUnsubs.delete(uid);
+      _presenceState.delete(uid);
+    }
+  }
+  // Spin up listeners for new friends.
+  for (const uid of wantedUids) {
+    if (_presenceUnsubs.has(uid)) continue;
+    const unsub = onSnapshot(
+      doc(db, 'users', uid, 'presence', 'current'),
+      (snap) => {
+        const data = snap.data();
+        // Stale check: if lastChanged > 2min ago, treat as offline.
+        let presence = 'offline';
+        if (data?.state === 'online') {
+          const ts = data.lastChanged?.toMillis?.() ?? 0;
+          if (ts > 0 && Date.now() - ts < 2 * 60 * 1000) presence = 'online';
+        }
+        _applyPresenceDot(uid, presence);
+      },
+      () => { /* silent */ },
+    );
+    _presenceUnsubs.set(uid, unsub);
+  }
+}
+
+function _stopAllPresenceSubs() {
+  for (const unsub of _presenceUnsubs.values()) {
+    try { unsub(); } catch {}
+  }
+  _presenceUnsubs.clear();
+  _presenceState.clear();
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  WRITES — send / accept / decline / remove / favorite
+ * ══════════════════════════════════════════════════════════════ */
 
 export async function sendFriendRequest(targetUid) {
   if (!State.user) { toast('Sign in to add friends'); return false; }
@@ -197,15 +377,13 @@ export async function sendFriendRequest(targetUid) {
     const alreadySnap = await getDoc(doc(db, 'users', State.user.uid, 'friends', targetUid));
     if (alreadySnap.exists()) { toast('Already friends'); return false; }
 
-    // Clear any stale request this user may have previously sent so
-    // the "pending" listener on the target refires cleanly.
     await deleteDoc(doc(db, 'users', targetUid, 'friend_requests', State.user.uid)).catch(() => {});
 
     const me = _mySelf();
     await setDoc(doc(db, 'users', targetUid, 'friend_requests', State.user.uid), {
       fromUid: me.uid,
       fromUsername: me.username,
-      fromHex: me.hexColor,          // always '#rrggbb' — matches DexNote exactly
+      fromHex: me.hexColor,
       status: 'pending',
       createdAt: serverTimestamp(),
     });
@@ -218,9 +396,6 @@ export async function sendFriendRequest(targetUid) {
   }
 }
 
-// Look up a user by "name#hex" string (used by the account-menu input).
-// Returns the matching uid, or null. Normalizes the separator so the
-// format is the same one DexNote uses.
 export async function sendFriendRequestByHandle(raw) {
   if (!State.user) { toast('Sign in to add friends'); return false; }
   const match = (raw || '').trim().match(/^(.+)#([0-9a-fA-F]{6})$/);
@@ -243,7 +418,6 @@ export async function sendFriendRequestByHandle(raw) {
 export async function acceptFriendRequest(requestId) {
   if (!State.user || !requestId) return;
   try {
-    // Re-read the request to pick up the latest from-user profile.
     const reqRef = doc(db, 'users', State.user.uid, 'friend_requests', requestId);
     const reqSnap = await getDoc(reqRef);
     if (!reqSnap.exists()) { toast('Request not found'); return; }
@@ -252,7 +426,6 @@ export async function acceptFriendRequest(requestId) {
     const fromUsername = req.fromUsername || 'anon';
     const fromHex = _withHash(req.fromHex || '#5aaa72');
 
-    // Write both halves of the friendship + mark the request accepted.
     await setDoc(doc(db, 'users', State.user.uid, 'friends', fromUid), {
       uid: fromUid,
       username: fromUsername,
@@ -268,8 +441,6 @@ export async function acceptFriendRequest(requestId) {
       addedAt: serverTimestamp(),
       favorite: false,
     });
-    // DexNote merges { status: 'accepted' } rather than deleting, so
-    // we do the same — both sites then prune via their own listeners.
     await setDoc(reqRef, { status: 'accepted' }, { merge: true });
     toast('Added ' + fromUsername);
   } catch (err) {
@@ -288,6 +459,22 @@ export async function declineFriendRequest(requestId) {
   }
 }
 
+// MD15: remove-friend confirmation. Spec calls out that the current
+// behavior (instant remove on click) needs a modal — match DexNote's
+// "Remove Friend" modal via the shared showModal helper.
+export function confirmRemoveFriend(friendUid) {
+  const friend = _friends.find((f) => f.uid === friendUid);
+  const name = friend?.username || 'this friend';
+  showModal({
+    title: 'Remove Friend',
+    msg: `Are you sure you want to remove <strong>${escapeHtml(name)}</strong>?`,
+    sub: 'They will also be removed from your list on DexNote. You can re-add them later.',
+    confirmLabel: 'Remove',
+    danger: true,
+    onConfirm: () => removeFriend(friendUid),
+  });
+}
+
 export async function removeFriend(friendUid) {
   if (!State.user || !friendUid) return;
   try {
@@ -299,30 +486,328 @@ export async function removeFriend(friendUid) {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  Lifecycle
-// ══════════════════════════════════════════════════════════════
+async function _toggleFavorite(friendUid) {
+  if (!State.user || !friendUid) return;
+  const friend = _friends.find((f) => f.uid === friendUid);
+  if (!friend) return;
+  const next = !friend.favorite;
+  // Optimistic local update so the list re-sorts immediately.
+  friend.favorite = next;
+  _renderFriendsList();
+  try {
+    await setDoc(
+      doc(db, 'users', State.user.uid, 'friends', friendUid),
+      { favorite: next },
+      { merge: true },
+    );
+  } catch (err) {
+    console.warn('[friends] favorite toggle failed:', err);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  DM PANEL (MD15)
+ * ══════════════════════════════════════════════════════════════ */
+
+function _updateDmHeader() {
+  const avatar = document.getElementById('dm-avatar');
+  const nameEl = document.getElementById('dm-recipient-name');
+  const hexEl = document.getElementById('dm-recipient-hex');
+  if (!_dmRecipient) return;
+  const hex = _withHash(_dmRecipient.hex || '#5aaa72');
+  const hexShort = _noHash(hex).slice(0, 6);
+  const initial = (_dmRecipient.name || '?').charAt(0).toUpperCase();
+  if (avatar) {
+    avatar.textContent = initial;
+    avatar.style.background = hex;
+    avatar.style.color = _contrastColor(hex);
+  }
+  if (nameEl) {
+    nameEl.textContent = _dmRecipient.name || 'User';
+    nameEl.style.color = hex;
+  }
+  if (hexEl) {
+    hexEl.textContent = '#' + hexShort;
+    hexEl.style.color = hex;
+  }
+}
+
+function _renderDmMessage(msg, isMine) {
+  const msgArea = document.getElementById('dm-messages');
+  if (!msgArea) return;
+  const myHex = _withHash(State.profile?.hexCode || '5aaa72');
+  const theirHex = _withHash(_dmRecipient?.hex || '5aaa72');
+  const bubbleHex = isMine ? myHex : theirHex;
+  const bubbleClr = _contrastColor(bubbleHex);
+  const bubble = document.createElement('div');
+  bubble.className = 'dm-bubble ' + (isMine ? 'mine' : 'theirs');
+  bubble.style.background = bubbleHex;
+  bubble.style.color = bubbleClr;
+  // DexNote messages can carry a rich `node` chip attachment.
+  // We don't have the chip system on NodeBlast so render the
+  // text fallback. If there's no text AND a node, show a
+  // minimal placeholder so the bubble still renders.
+  if (msg.text) {
+    bubble.textContent = msg.text;
+  } else if (msg.node) {
+    bubble.textContent = '[' + (msg.node.type || 'attachment') + ']';
+    bubble.style.fontStyle = 'italic';
+    bubble.style.opacity = '0.85';
+  }
+  msgArea.appendChild(bubble);
+}
+
+export function openDM(friend) {
+  if (!State.user || !friend) return;
+  _dmRecipient = {
+    uid: friend.uid,
+    name: friend.username,
+    hex: _withHash(friend.hexColor),
+  };
+  _dmConvoId = _getDmConvoId(State.user.uid, friend.uid);
+  _updateDmHeader();
+
+  const panel = document.getElementById('dm-panel');
+  const msgArea = document.getElementById('dm-messages');
+  if (!panel || !msgArea) return;
+  msgArea.innerHTML = '';
+  panel.classList.add('open');
+  setTimeout(() => document.getElementById('dm-input')?.focus(), 80);
+
+  // Subscribe to messages. Replace any prior subscription.
+  if (_dmUnsub) { try { _dmUnsub(); } catch {} _dmUnsub = null; }
+  _dmUnsub = onSnapshot(
+    query(
+      collection(db, 'dms', _dmConvoId, 'messages'),
+      orderBy('createdAt', 'asc'),
+      limit(200),
+    ),
+    (snap) => {
+      msgArea.innerHTML = '';
+      snap.forEach((d) => {
+        const msg = d.data() || {};
+        const isMine = msg.fromUid === State.user.uid;
+        _renderDmMessage(msg, isMine);
+      });
+      msgArea.scrollTop = msgArea.scrollHeight;
+    },
+    (err) => console.warn('[dm] message sub error:', err),
+  );
+}
+
+export function closeDM() {
+  const panel = document.getElementById('dm-panel');
+  panel?.classList.remove('open');
+  if (_dmUnsub) { try { _dmUnsub(); } catch {} _dmUnsub = null; }
+  _dmConvoId = null;
+  _dmRecipient = null;
+}
+
+async function _sendDmMessage() {
+  const input = document.getElementById('dm-input');
+  if (!input || !_dmConvoId || !State.user || !_dmRecipient) return;
+  const text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  const me = _mySelf();
+  try {
+    await addDoc(collection(db, 'dms', _dmConvoId, 'messages'), {
+      fromUid: me.uid,
+      fromHex: me.hexColor,
+      text,
+      createdAt: serverTimestamp(),
+    });
+    // Update convo doc so cross-site conversation listings + the
+    // hex mirror fields both stay fresh (matches DexNote's schema).
+    await setDoc(
+      doc(db, 'dms', _dmConvoId),
+      {
+        participants: [State.user.uid, _dmRecipient.uid].sort(),
+        lastMessage: text.slice(0, 100),
+        lastMessageAt: serverTimestamp(),
+        lastMessageBy: State.user.uid,
+        lastMessageByName: me.username,
+        lastMessageByHex: me.hexColor,
+        ['hex_' + State.user.uid]: me.hexColor,
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    console.warn('[dm] sendMessage failed:', err);
+    toast('Failed to send message');
+  }
+}
+
+// Top-level watcher on every convo the user is part of. Fires a
+// notification when a new incoming message arrives for a convo
+// that ISN'T currently open in the panel.
+function _startDmTopList(uid) {
+  _stopDmTopList();
+  _dmTopListUnsub = onSnapshot(
+    query(collection(db, 'dms'), where('participants', 'array-contains', uid)),
+    (snap) => {
+      snap.docChanges().forEach((change) => {
+        if (change.type === 'removed') return;
+        const data = change.doc.data() || {};
+        const convoId = change.doc.id;
+        const lastBy = data.lastMessageBy;
+        if (!lastBy || lastBy === uid) return; // my own send, skip
+        const ts = data.lastMessageAt?.toMillis?.() ?? 0;
+        const prev = _lastDmSeenAt.get(convoId) || 0;
+        if (ts <= prev) return;
+        _lastDmSeenAt.set(convoId, ts);
+        // Skip the initial snapshot (when we first mount, every
+        // convo fires `added`) — only notify on genuinely new
+        // messages after a baseline is established.
+        if (change.type === 'added' && prev === 0) return;
+        // Suppress if the recipient has the DM panel open to the
+        // sender's convo already (user is actively reading).
+        if (_dmConvoId === convoId) return;
+        _pushDmNotif(data);
+      });
+    },
+    (err) => console.warn('[dm] top-list sub error:', err),
+  );
+}
+
+function _stopDmTopList() {
+  if (_dmTopListUnsub) { try { _dmTopListUnsub(); } catch {} _dmTopListUnsub = null; }
+  _lastDmSeenAt.clear();
+}
+
+function _pushDmNotif(convoData) {
+  if (typeof window._nbAddNotif !== 'function') return;
+  const fromName = convoData.lastMessageByName || 'Someone';
+  const fromHex = _noHash(convoData.lastMessageByHex || '5aaa72');
+  const preview = (convoData.lastMessage || '').toString().slice(0, 80);
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#${fromHex}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+  window._nbAddNotif({
+    text: `<b>${escapeHtml(fromName)}</b>: ${escapeHtml(preview)}`,
+    icon,
+    type: 'dms',
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  SESSION INVITES (MD15 — receive only)
+ * ══════════════════════════════════════════════════════════════ */
+
+function _startSessionInvitesSub(uid) {
+  _stopSessionInvitesSub();
+  _shownInviteIds.clear();
+  _sessionInviteUnsub = onSnapshot(
+    query(collection(db, 'users', uid, 'session_invites'), where('status', '==', 'pending')),
+    (snap) => {
+      snap.docChanges().forEach((change) => {
+        if (change.type === 'removed') { _shownInviteIds.delete(change.doc.id); return; }
+        const inv = change.doc.data() || {};
+        if (inv.status !== 'pending') return;
+        const id = change.doc.id;
+        if (_shownInviteIds.has(id)) return;
+        _shownInviteIds.add(id);
+        _pushSessionInviteNotif(id, inv);
+      });
+    },
+    (err) => console.warn('[invites] session invites sub error:', err),
+  );
+}
+
+function _stopSessionInvitesSub() {
+  if (_sessionInviteUnsub) { try { _sessionInviteUnsub(); } catch {} _sessionInviteUnsub = null; }
+}
+
+function _pushSessionInviteNotif(inviteId, inv) {
+  if (typeof window._nbAddNotif !== 'function') return;
+  const sessColor = inv.sessionColor || '#6BAADC';
+  const fromName = inv.fromUsername || 'Unknown';
+  const fromHex = _noHash(inv.fromHex || '5aaa72');
+  const sessName = inv.sessionName || 'Session';
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="${sessColor}" stroke="${sessColor}" stroke-width="1.5"><circle cx="12" cy="12" r="9"/></svg>`;
+  window._nbAddNotif({
+    text: `<b>${escapeHtml(fromName)}</b> invited you to <span style="color:${escapeHtml(sessColor)}">${escapeHtml(sessName)}</span>
+           <div class="notif-actions">
+             <button class="notif-btn-primary" data-si-accept="${escapeHtml(inviteId)}" data-si-sess="${escapeHtml(inv.sessionId || '')}">Open on DexNote</button>
+             <button class="notif-btn-secondary" data-si-decline="${escapeHtml(inviteId)}">Decline</button>
+           </div>`,
+    icon,
+    type: 'invites',
+  });
+  // Suppress-lint: fromHex is retained for future styling hooks.
+  void fromHex;
+}
+
+async function _acceptSessionInvite(inviteId, sessionId) {
+  if (!State.user || !inviteId) return;
+  try {
+    // Mark accepted in the user's own session_invites doc so DexNote
+    // sees the state change and stops re-notifying.
+    await setDoc(
+      doc(db, 'users', State.user.uid, 'session_invites', inviteId),
+      { status: 'accepted' },
+      { merge: true },
+    );
+  } catch (err) {
+    console.warn('[invites] accept failed:', err);
+  }
+  // Open DexNote in a new tab. NodeBlast can't join a DexNote
+  // session directly — the user continues over there.
+  const url = sessionId
+    ? `https://dexnote.dev/?invite=${encodeURIComponent(sessionId)}`
+    : 'https://dexnote.dev/';
+  window.open(url, '_blank', 'noopener');
+}
+
+async function _declineSessionInvite(inviteId) {
+  if (!State.user || !inviteId) return;
+  try {
+    await deleteDoc(doc(db, 'users', State.user.uid, 'session_invites', inviteId));
+  } catch (err) {
+    console.warn('[invites] decline failed:', err);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  LIFECYCLE
+ * ══════════════════════════════════════════════════════════════ */
 
 export function initFriends() {
-  // People list click: remove button or navigate to profile.
+  // People list click delegation — star / copy / message / remove / card.
   const list = document.getElementById('acct-friends-list');
   list?.addEventListener('click', async (e) => {
-    const rmBtn = e.target.closest('[data-action="remove"]');
+    const btn = e.target.closest('[data-action]');
     const card = e.target.closest('.friend-card');
     if (!card) return;
     const uid = card.dataset.uid;
-    if (rmBtn) {
-      e.stopPropagation();
-      await removeFriend(uid);
-      return;
-    }
-    // Card click → open that friend's profile page.
     const friend = _friends.find((f) => f.uid === uid);
     if (!friend) return;
-    navigate('/' + buildUserSlug(friend.username.toLowerCase(), _noHash(friend.hexColor)));
+
+    if (!btn) {
+      // Bare card body click → navigate to profile.
+      e.stopPropagation();
+      navigate('/' + buildUserSlug((friend.username || '').toLowerCase(), _noHash(friend.hexColor)));
+      return;
+    }
+
+    e.stopPropagation();
+    const action = btn.dataset.action;
+    if (action === 'remove') {
+      confirmRemoveFriend(uid);
+    } else if (action === 'favorite') {
+      _toggleFavorite(uid);
+    } else if (action === 'copy') {
+      const id = (friend.username || 'anon') + '#' + _noHash(friend.hexColor);
+      try {
+        await navigator.clipboard.writeText(id);
+        toast('Copied ' + id);
+      } catch {
+        toast(id);
+      }
+    } else if (action === 'message') {
+      openDM(friend);
+    }
   });
 
-  // Account menu "Add" button — uses DexNote's username#hex input format.
+  // Add button / Enter in the input
   const addBtn = document.getElementById('acct-friends-add-btn');
   const addInput = document.getElementById('acct-friends-add-input');
   const doAdd = async () => {
@@ -336,25 +821,47 @@ export function initFriends() {
     if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
   });
 
-  // Notification panel accept/decline buttons — event-delegated on
-  // document because the notif items live under #notif-list and are
-  // re-created by the notifications module, not by this file.
+  // Invite by email — coming soon stub
+  document.getElementById('acct-friends-invite-email')?.addEventListener('click', () => {
+    toast('Invite by email — coming soon');
+  });
+
+  // Notification panel button delegation — friends + session invites.
   document.addEventListener('click', (e) => {
-    const accept = e.target.closest('[data-fr-accept]');
-    if (accept) {
+    const fa = e.target.closest('[data-fr-accept]');
+    if (fa) {
       e.stopPropagation();
-      const id = accept.getAttribute('data-fr-accept');
-      acceptFriendRequest(id);
-      accept.closest('.notif-item')?.remove();
+      acceptFriendRequest(fa.getAttribute('data-fr-accept'));
+      fa.closest('.notif-item')?.remove();
       return;
     }
-    const decline = e.target.closest('[data-fr-decline]');
-    if (decline) {
+    const fd = e.target.closest('[data-fr-decline]');
+    if (fd) {
       e.stopPropagation();
-      const id = decline.getAttribute('data-fr-decline');
-      declineFriendRequest(id);
-      decline.closest('.notif-item')?.remove();
+      declineFriendRequest(fd.getAttribute('data-fr-decline'));
+      fd.closest('.notif-item')?.remove();
+      return;
     }
+    const sa = e.target.closest('[data-si-accept]');
+    if (sa) {
+      e.stopPropagation();
+      _acceptSessionInvite(sa.getAttribute('data-si-accept'), sa.getAttribute('data-si-sess') || '');
+      sa.closest('.notif-item')?.remove();
+      return;
+    }
+    const sd = e.target.closest('[data-si-decline]');
+    if (sd) {
+      e.stopPropagation();
+      _declineSessionInvite(sd.getAttribute('data-si-decline'));
+      sd.closest('.notif-item')?.remove();
+    }
+  });
+
+  // DM panel controls
+  document.getElementById('dm-close')?.addEventListener('click', closeDM);
+  document.getElementById('dm-send')?.addEventListener('click', _sendDmMessage);
+  document.getElementById('dm-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); _sendDmMessage(); }
   });
 
   _renderFriendsList();
@@ -365,9 +872,20 @@ export function initFriends() {
 export function setFriendsCurrentUser(uid) {
   _stopFriendsSub();
   _stopRequestsSub();
+  _stopAllPresenceSubs();
+  _stopSelfPresence();
+  _stopDmTopList();
+  _stopSessionInvitesSub();
+  closeDM();
   _friends = [];
   _renderFriendsList();
-  if (!uid) return;
+  if (!uid) {
+    _markSelfOfflineBestEffort();
+    return;
+  }
   _startFriendsSub(uid);
   _startRequestsSub(uid);
+  _startSelfPresence();
+  _startDmTopList(uid);
+  _startSessionInvitesSub(uid);
 }

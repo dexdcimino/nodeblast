@@ -309,13 +309,68 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-friends-list .friend-empty{padding:10px 8px;font-size:12px;color:var(--tx3);text-align:center;}
 .friend-card{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;cursor:pointer;transition:background var(--ease);}
 .friend-card:hover{background:var(--bg3);}
-.friend-card .friend-avatar{width:30px;height:30px;border-radius:50%;border:2px solid var(--friend-hex,var(--clr-adj));background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:13px;font-weight:700;flex-shrink:0;}
-.friend-card .friend-body{flex:1;min-width:0;display:flex;flex-direction:column;}
+.friend-card .friend-avatar{width:32px;height:32px;border-radius:50%;border:2px solid var(--friend-hex,var(--clr-adj));background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:13px;font-weight:700;flex-shrink:0;position:relative;}
+/* MD15: presence dot — sits on the bottom-right of the avatar.
+   Green when the friend's presence doc is 'online' within the
+   2-minute staleness window; gray otherwise. */
+.friend-presence{position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:50%;background:var(--tx3);border:2px solid var(--bg2);transition:background var(--ease);}
+.friend-presence.online{background:#3ec66e;}
+.friend-card:hover .friend-presence{border-color:var(--bg3);}
+.friend-card .friend-body{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25;}
 .friend-card .friend-name{font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.friend-card .friend-hex{font-size:11px;color:var(--friend-hex,var(--tx3));font-family:var(--fn);}
-.friend-card .friend-remove-btn{background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;border-radius:4px;display:none;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
-.friend-card:hover .friend-remove-btn{display:inline-flex;}
-.friend-card .friend-remove-btn:hover{color:#ff6b6b;background:var(--bg4);}
+.friend-card .friend-hex{font-size:11px;color:var(--friend-hex,var(--tx3));font-family:var(--fn);letter-spacing:0.02em;}
+/* Action button row — star / copy / message / remove. Hidden until
+   the card is hovered so the resting state stays clean. */
+.friend-card .friend-actions{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;opacity:0;transition:opacity var(--ease);}
+.friend-card:hover .friend-actions{opacity:1;}
+.friend-card .friend-util-btn{background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
+.friend-card .friend-util-btn:hover{color:var(--tx);background:var(--bg4);}
+.friend-card .friend-util-btn[data-action="favorite"] .friend-star.active{color:#f5c23c;fill:#f5c23c;}
+.friend-card .friend-util-btn[data-action="remove"]:hover{color:#ff6b6b;}
+/* Favorites always keep their star visible (not just on hover) so
+   the user can see which friends they've starred at a glance. */
+.friend-card .friend-util-btn[data-action="favorite"]{opacity:1;}
+
+/* MD15: invite-by-email placeholder row */
+#acct-friends-invite-email{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;border:1px dashed var(--bdr);border-radius:8px;color:var(--tx3);font-size:12px;cursor:pointer;transition:border-color var(--ease),color var(--ease);}
+#acct-friends-invite-email:hover{border-color:var(--tx3);color:var(--tx2);}
+#acct-friends-invite-email svg{flex-shrink:0;}
+.acct-friends-soon{margin-left:auto;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:2px 6px;border-radius:10px;background:color-mix(in srgb,var(--clr-adj) 20%,var(--bg3));color:var(--clr-adj);}
+
+/* MD15: notif-item friend/session-invite action buttons */
+.notif-item-text .notif-actions{display:flex;gap:6px;margin-top:6px;}
+.notif-item-text .notif-actions button{flex:1;padding:5px 10px;border-radius:6px;border:1px solid var(--bdr);font-family:var(--fn);font-size:11px;font-weight:600;cursor:pointer;transition:all var(--ease);}
+.notif-item-text .notif-btn-primary{background:var(--clr-adj);color:var(--clr-adj-on,#fff);border-color:var(--clr-adj);}
+.notif-item-text .notif-btn-primary:hover{opacity:.88;}
+.notif-item-text .notif-btn-secondary{background:transparent;color:var(--tx2);}
+.notif-item-text .notif-btn-secondary:hover{background:var(--bg3);color:var(--tx);}
+
+/* ══════════════════════════════════════
+   DM PANEL (MD15)
+══════════════════════════════════════ */
+/* Fixed bottom-right docked chat. DexNote-style inline dimensions;
+   opens on friend message click, closes on x or sign-out. */
+#dm-panel{display:none;position:fixed;bottom:0;right:10px;width:330px;z-index:8999;background:var(--bg2);border:1px solid var(--bdr);border-top-left-radius:12px;border-top-right-radius:12px;box-shadow:0 -8px 40px rgba(0,0,0,.45);font-family:var(--fn);flex-direction:column;overflow:hidden;height:340px;min-height:220px;max-height:60vh;}
+#dm-panel.open{display:flex;}
+#dm-resize{height:6px;cursor:ns-resize;flex-shrink:0;display:flex;align-items:center;justify-content:center;touch-action:none;}
+#dm-resize .dm-resize-handle{width:32px;height:3px;border-radius:2px;background:var(--bdr);opacity:.6;}
+#dm-header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--bdr);min-height:40px;flex-shrink:0;}
+#dm-avatar{width:28px;height:28px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--tx);flex-shrink:0;}
+#dm-recipient-name{font-size:14px;font-weight:700;color:var(--tx);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#dm-recipient-hex{font-size:11px;font-family:var(--fn);color:var(--tx3);flex-shrink:0;}
+#dm-close{background:none;border:none;padding:4px;cursor:pointer;color:var(--tx3);display:flex;align-items:center;transition:color var(--ease);}
+#dm-close:hover{color:var(--tx);}
+#dm-messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:6px;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;}
+#dm-messages::-webkit-scrollbar{width:6px;}
+#dm-messages::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px;}
+.dm-bubble{max-width:82%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.4;word-wrap:break-word;overflow-wrap:break-word;}
+.dm-bubble.mine{align-self:flex-end;border-bottom-right-radius:4px;}
+.dm-bubble.theirs{align-self:flex-start;border-bottom-left-radius:4px;}
+#dm-input-wrap{display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--bdr);flex-shrink:0;}
+#dm-input{flex:1;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:14px;padding:7px 10px;outline:none;transition:border-color var(--ease);}
+#dm-input:focus{border-color:var(--clr-adj);}
+#dm-send{background:none;border:none;cursor:pointer;color:var(--tx3);display:flex;align-items:center;padding:4px;transition:color var(--ease);}
+#dm-send:hover{color:var(--clr-adj);}
 
 /* "Add Friend" / "✓ Friends" state on the profile bar action button */
 #profile-bar-action.is-friend{opacity:.75;cursor:default;}
