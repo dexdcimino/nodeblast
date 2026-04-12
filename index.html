@@ -164,6 +164,42 @@
   </div>
 
   <!-- ══════════════════════════════════════
+       INTERNAL CATALYST VIEW (MD12 scaffold)
+       ──────────────────────────────────────
+       Full-page view for catalysts with type === 'internal'. Only
+       visible when the route resolves to an internal catalyst; the
+       existing profile bar + hex grid are hidden while this is open.
+       Populated by renderInternalCatalyst() in init.js.
+       ══════════════════════════════════════ -->
+  <div id="internal-catalyst-view">
+    <div id="internal-catalyst-inner">
+      <button id="internal-catalyst-back" class="cat-btn" data-tip="Back to profile">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back
+      </button>
+      <div id="internal-catalyst-header">
+        <div id="internal-catalyst-thumb"></div>
+        <div id="internal-catalyst-meta">
+          <div id="internal-catalyst-title-row">
+            <h1 id="internal-catalyst-title"></h1>
+            <span id="internal-catalyst-status" class="cat-detail-status"></span>
+          </div>
+          <div id="internal-catalyst-creator"></div>
+          <div id="internal-catalyst-desc"></div>
+          <div id="internal-catalyst-collab"></div>
+        </div>
+      </div>
+      <div id="internal-catalyst-body">
+        <div id="internal-catalyst-placeholder">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><circle cx="12" cy="12" r="3"/></svg>
+          <div class="internal-catalyst-placeholder-title">Project workspace coming soon</div>
+          <div class="internal-catalyst-placeholder-sub">This is where interactive content, collaboration tools, and the live project surface will live.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
        404
        ══════════════════════════════════════ -->
   <div id="not-found">
@@ -442,6 +478,19 @@
         </button>
       </div>
 
+      <!-- MD12: type toggle — external links to an off-site URL (default),
+           internal is an on-site project workspace that lives on nodeblast. -->
+      <div id="cat-type-pick" role="tablist" aria-label="Catalyst type">
+        <button class="cat-type-btn selected" data-type="external" data-tip="Links to an external URL" role="tab">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          External Link
+        </button>
+        <button class="cat-type-btn" data-type="internal" data-tip="Opens on nodeblast with its own workspace" role="tab">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg>
+          Internal Project
+        </button>
+      </div>
+
       <div class="cat-modal-split">
         <!-- LEFT: hexagonal thumbnail preview + accent picker. Stacks
              vertically on narrow screens. -->
@@ -465,7 +514,7 @@
             <input id="cat-title" type="text" maxlength="40" placeholder="Project name" spellcheck="false" autocomplete="off" />
           </div>
 
-          <div class="cat-field">
+          <div class="cat-field" id="cat-url-field">
             <label class="cat-label">URL</label>
             <div class="cat-url-row">
               <input id="cat-url" type="text" placeholder="https://..." spellcheck="false" autocomplete="off" />
@@ -475,6 +524,12 @@
               </button>
             </div>
             <div id="cat-url-error" class="cat-field-error"></div>
+          </div>
+          <!-- Shown when type === 'internal'. Replaces the URL field so
+               the user knows what to expect for on-site projects. -->
+          <div id="cat-internal-msg" class="cat-field cat-internal-msg" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+            <span>This catalyst will have its own page on nodeblast.</span>
           </div>
 
           <div class="cat-field">

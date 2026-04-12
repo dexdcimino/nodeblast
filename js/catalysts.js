@@ -36,6 +36,11 @@ export const CATEGORIES = ['games', 'tools', 'creative', 'ai', 'sites', 'wild'];
 export const PLATFORMS = ['web', 'mobile', 'both'];
 export const STATUSES = ['live', 'early', 'placeholder'];
 const DEFAULT_STATUS = 'live';
+// MD12: external = points to a URL off-site (existing behavior),
+// internal = opens a dedicated on-site workspace at /name.hex/slug.
+// Default is external so legacy catalysts keep working unchanged.
+export const CATALYST_TYPES = ['external', 'internal'];
+const DEFAULT_TYPE = 'external';
 
 function normalizeUrl(raw) {
   if (!raw) return '';
@@ -372,6 +377,7 @@ export async function createCatalyst(data, file) {
     category: CATEGORIES.includes(data.category) ? data.category : 'sites',
     platform: PLATFORMS.includes(data.platform) ? data.platform : 'web',
     status: STATUSES.includes(data.status) ? data.status : DEFAULT_STATUS,
+    type: CATALYST_TYPES.includes(data.type) ? data.type : DEFAULT_TYPE,
     thumbURL,
     logoURL: '',
     accentColor: data.accentColor || '#5AAA72',
@@ -400,6 +406,7 @@ export async function updateCatalyst(id, data, file) {
     category: CATEGORIES.includes(data.category) ? data.category : 'sites',
     platform: PLATFORMS.includes(data.platform) ? data.platform : 'web',
     status: STATUSES.includes(data.status) ? data.status : DEFAULT_STATUS,
+    type: CATALYST_TYPES.includes(data.type) ? data.type : DEFAULT_TYPE,
     accentColor: data.accentColor || '#5AAA72',
     // Refresh the owner-denormalized fields in case the editor changed
     // their profile between catalyst creation and this edit.
@@ -515,6 +522,7 @@ let _editingId = null;
 let _pendingFile = null;
 let _accentColor = '#5AAA72';
 let _status = DEFAULT_STATUS;
+let _type = DEFAULT_TYPE;
 // Working set of collaborators while the edit modal is open. Each
 // entry: { uid, displayName, hexCode, photoURL, isAdmin }. Owner is
 // NOT included (it's implicit). Reset on every modal open.
@@ -542,6 +550,20 @@ function _applyStatus(status) {
       ? 'URL (optional for WIP)'
       : 'https://...';
   }
+}
+
+// MD12: toggle the modal between external (URL-backed) and internal
+// (on-site workspace). When internal, we hide the URL field because
+// there's nothing to link — the catalyst's own page is its content.
+function _applyType(type) {
+  _type = CATALYST_TYPES.includes(type) ? type : DEFAULT_TYPE;
+  document.querySelectorAll('#cat-type-pick .cat-type-btn').forEach((b) => {
+    b.classList.toggle('selected', b.dataset.type === _type);
+  });
+  const urlField = document.getElementById('cat-url-field');
+  const internalMsg = document.getElementById('cat-internal-msg');
+  if (urlField)    urlField.style.display    = _type === 'internal' ? 'none' : '';
+  if (internalMsg) internalMsg.style.display = _type === 'internal' ? 'block' : 'none';
 }
 
 function _updateAccentBtn() {
@@ -684,6 +706,7 @@ export function openCatalystModal(existing = null) {
 
   document.getElementById('cat-modal-title').textContent = existing ? 'Edit Catalyst' : 'New Catalyst';
   _applyStatus(existing?.status || DEFAULT_STATUS);
+  _applyType(existing?.type || DEFAULT_TYPE);
   document.getElementById('cat-title').value = existing?.title || '';
   document.getElementById('cat-url').value = existing?.url || '';
   document.getElementById('cat-desc').value = existing?.description || '';
@@ -736,6 +759,9 @@ export function initCatalystModal(onSaved) {
   });
   document.querySelectorAll('#cat-status-pick .cat-status-btn').forEach((b) => {
     b.addEventListener('click', () => _applyStatus(b.dataset.status));
+  });
+  document.querySelectorAll('#cat-type-pick .cat-type-btn').forEach((b) => {
+    b.addEventListener('click', () => _applyType(b.dataset.type));
   });
 
   const drop = document.getElementById('cat-thumb-drop');
@@ -830,17 +856,25 @@ export function initCatalystModal(onSaved) {
     const url = document.getElementById('cat-url').value.trim();
     _clearUrlError();
     if (!title) { toast('Title required'); return; }
-    // URL is optional for "placeholder" (WIP) catalysts, required otherwise.
-    const urlRequired = _status !== 'placeholder';
+    // URL is required for external catalysts (unless they're WIP/placeholder)
+    // and NEVER required for internal catalysts — internal projects live
+    // on-site so there's no external URL to validate against.
+    const urlRequired = _type === 'external' && _status !== 'placeholder';
     if (urlRequired && !url) { _showUrlError('URL required'); return; }
-    if (url && !isValidUrl(url)) { _showUrlError('Enter a valid URL (e.g. example.com)'); return; }
+    if (_type === 'external' && url && !isValidUrl(url)) {
+      _showUrlError('Enter a valid URL (e.g. example.com)');
+      return;
+    }
     const data = {
       title,
-      url,
+      // Internal catalysts don't carry an external URL — always store
+      // empty string so stale UI state can't leak into the doc.
+      url: _type === 'internal' ? '' : url,
       description: document.getElementById('cat-desc').value.trim(),
       category: _getPill('cat-category-pills') || 'sites',
       platform: _getPill('cat-platform-pills') || 'web',
       status: _status,
+      type: _type,
       accentColor: _accentColor,
       collaborators: _editingCollabs.slice(),
     };

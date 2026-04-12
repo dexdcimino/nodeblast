@@ -703,13 +703,26 @@ body.dragging-active{touch-action:none;}
 #cat-modal-title{font-size:20px;font-weight:700;color:var(--tx);margin-bottom:14px;}
 
 /* Status picker (Live / Early / WIP) — sits below the modal title */
-#cat-status-pick{display:flex;justify-content:center;gap:4px;margin-bottom:18px;}
+#cat-status-pick{display:flex;justify-content:center;gap:4px;margin-bottom:10px;}
 .cat-status-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;background:var(--bg3);border:1.5px solid var(--bdr);color:var(--tx2);font-family:var(--fn);font-size:12px;font-weight:500;cursor:pointer;transition:all var(--ease);}
 .cat-status-btn:hover{color:var(--tx);border-color:var(--tx3);}
 .cat-status-btn.selected{background:var(--bg4);color:var(--tx);}
 .cat-status-btn.selected[data-status="live"]{border-color:var(--clr);}
 .cat-status-btn.selected[data-status="early"]{border-color:#E8853A;}
 .cat-status-btn.selected[data-status="placeholder"]{border-color:var(--tx3);}
+
+/* MD12: type toggle — sits below the status pills. Same visual
+   language so it reads as a related control. */
+#cat-type-pick{display:flex;justify-content:center;gap:4px;margin-bottom:18px;}
+.cat-type-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;background:var(--bg3);border:1.5px solid var(--bdr);color:var(--tx2);font-family:var(--fn);font-size:12px;font-weight:500;cursor:pointer;transition:all var(--ease);}
+.cat-type-btn:hover{color:var(--tx);border-color:var(--tx3);}
+.cat-type-btn.selected{background:var(--bg4);color:var(--tx);border-color:var(--clr-adj);}
+.cat-type-btn svg{flex-shrink:0;}
+
+/* Replaces the URL field when type === 'internal'. Subtle hint that
+   tells the user the on-site page will be their link. */
+.cat-internal-msg{display:flex;align-items:center;gap:8px;padding:12px 14px;background:color-mix(in srgb,var(--clr-adj) 10%,var(--bg3));border:1px solid color-mix(in srgb,var(--clr-adj) 30%,var(--bdr));border-radius:10px;color:var(--tx2);font-size:13px;line-height:1.4;}
+.cat-internal-msg svg{color:var(--clr-adj);flex-shrink:0;}
 .cat-status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
 .cat-field{margin-bottom:14px;display:flex;flex-direction:column;gap:6px;}
@@ -864,6 +877,46 @@ body.dragging-active{touch-action:none;}
    404
 ══════════════════════════════════════ */
 #not-found{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:var(--bg);z-index:80;}
+
+/* ══════════════════════════════════════
+   INTERNAL CATALYST VIEW (MD12)
+══════════════════════════════════════ */
+/* Sits at the same top offset as #grid so it fully replaces the
+   profile view when an internal catalyst opens. Toggled by
+   init.js via the .visible class. */
+#internal-catalyst-view{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;display:none;overflow-y:auto;background:var(--bg);z-index:85;padding:32px clamp(20px,6vw,120px) 48px;}
+#internal-catalyst-view.visible{display:block;}
+#internal-catalyst-inner{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:22px;}
+
+#internal-catalyst-back{align-self:flex-start;}
+
+#internal-catalyst-header{display:flex;gap:24px;align-items:flex-start;background:var(--bg2);border:1px solid var(--bdr);border-radius:18px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+#internal-catalyst-thumb{flex-shrink:0;width:140px;height:162px;clip-path:url(#hex-clip);background-color:var(--bg3);background-size:cover;background-position:center;}
+#internal-catalyst-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;}
+#internal-catalyst-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+#internal-catalyst-title{font-size:26px;font-weight:800;color:var(--tx);letter-spacing:-0.02em;margin:0;line-height:1.15;}
+#internal-catalyst-creator{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--tx2);cursor:pointer;}
+#internal-catalyst-creator:hover{color:var(--tx);}
+#internal-catalyst-creator .cat-detail-creator-avatar{width:24px;height:24px;}
+#internal-catalyst-desc{font-size:14px;color:var(--tx2);line-height:1.55;white-space:pre-wrap;}
+#internal-catalyst-desc:empty{display:none;}
+#internal-catalyst-collab{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx3);}
+#internal-catalyst-collab svg{color:var(--tx3);flex-shrink:0;}
+#internal-catalyst-collab:empty{display:none;}
+
+#internal-catalyst-body{background:var(--bg2);border:1px dashed var(--bdr);border-radius:18px;padding:60px 24px;display:flex;align-items:center;justify-content:center;min-height:340px;}
+#internal-catalyst-placeholder{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;max-width:420px;color:var(--tx3);}
+#internal-catalyst-placeholder svg{color:var(--clr-adj);opacity:.7;}
+.internal-catalyst-placeholder-title{font-size:17px;font-weight:700;color:var(--tx2);}
+.internal-catalyst-placeholder-sub{font-size:13px;line-height:1.55;color:var(--tx3);}
+
+@media (max-width: 640px) {
+  #internal-catalyst-view{padding:20px 16px 32px;}
+  #internal-catalyst-header{flex-direction:column;align-items:center;text-align:center;padding:20px;}
+  #internal-catalyst-thumb{width:120px;height:139px;}
+  #internal-catalyst-title{font-size:22px;}
+  #internal-catalyst-body{padding:40px 16px;min-height:260px;}
+}
 #not-found.visible{display:flex;}
 #not-found-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:48px 56px;text-align:center;max-width:380px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;gap:10px;}
 #not-found-code{font-size:56px;font-weight:800;color:var(--clr-adj);letter-spacing:-2px;line-height:1;}

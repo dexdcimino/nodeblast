@@ -97,6 +97,8 @@ function hideAllViews() {
   document.getElementById('profile-bar').classList.remove('visible');
   document.getElementById('profile-bio')?.classList.remove('visible');
   document.getElementById('not-found').classList.remove('visible');
+  // MD12: internal catalyst view hidden by default on every route.
+  document.getElementById('internal-catalyst-view')?.classList.remove('visible');
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
   grid.classList.remove('with-filter', 'feed-mode');
@@ -314,19 +316,33 @@ function show404() {
 ══════════════════════════════════════ */
 
 function handleTileClick(cat) {
+  // Own tile → edit modal, regardless of type. Editing an internal
+  // catalyst still happens via the same modal; the full-page view is
+  // for viewers, not the editor.
   if (State.user && cat.ownerId === State.user.uid) {
     openCatalystModal(cat);
-  } else {
-    const ownerName = (cat.ownerName || 'anon').toLowerCase();
-    const ownerHex = cat.ownerHex || '';
-    const slug = cat.slug || '';
-    if (slug) {
-      const userPart = buildUserSlug(ownerName, ownerHex);
-      history.pushState({}, '', `/${userPart}/${encodeURIComponent(slug)}`);
-      setPageTitle([cat.title, cat.ownerName || 'anon']);
-    }
-    openCatalystDetail(cat);
+    return;
   }
+  const ownerName = (cat.ownerName || 'anon').toLowerCase();
+  const ownerHex = cat.ownerHex || '';
+  const slug = cat.slug || '';
+
+  // MD12: internal catalysts navigate to their full-page view via
+  // navigate() so renderRoute runs and the internal-catalyst-view
+  // container takes over. External catalysts keep the existing
+  // history.pushState + openCatalystDetail modal flow.
+  if (cat.type === 'internal' && slug) {
+    const userPart = buildUserSlug(ownerName, ownerHex);
+    navigate(`/${userPart}/${encodeURIComponent(slug)}`);
+    return;
+  }
+
+  if (slug) {
+    const userPart = buildUserSlug(ownerName, ownerHex);
+    history.pushState({}, '', `/${userPart}/${encodeURIComponent(slug)}`);
+    setPageTitle([cat.title, cat.ownerName || 'anon']);
+  }
+  openCatalystDetail(cat);
 }
 
 function handleCreatorClick(cat) {
@@ -624,26 +640,116 @@ async function renderFeedRoute() {
   trackSub(unsub);
 }
 
+// MD12: full-page internal catalyst view. Pivots away from the
+// profile bar + hex grid and paints the #internal-catalyst-view
+// container with the catalyst's header + placeholder body. The back
+// button returns the user to the owning profile page.
+function renderInternalCatalyst(user, cat) {
+  const view = document.getElementById('internal-catalyst-view');
+  if (!view) return;
+
+  // Reset everything first, then hide the grid entirely so only the
+  // internal view is visible. hideAllViews already strips the profile
+  // bar, feed mode, community list, etc.
+  hideAllViews();
+  const grid = document.getElementById('grid');
+  if (grid) grid.style.display = 'none';
+  view.classList.add('visible');
+
+  setPageTitle([cat.title || 'project', user?.displayName || cat.ownerName || '']);
+
+  // Thumbnail
+  const thumbEl = document.getElementById('internal-catalyst-thumb');
+  if (thumbEl) {
+    thumbEl.style.backgroundImage = cat.thumbURL ? `url("${cat.thumbURL}")` : '';
+    thumbEl.style.background = cat.thumbURL
+      ? thumbEl.style.background
+      : 'var(--bg3)';
+  }
+
+  // Title + status badge
+  const titleEl = document.getElementById('internal-catalyst-title');
+  if (titleEl) titleEl.textContent = cat.title || 'Untitled';
+  const statusEl = document.getElementById('internal-catalyst-status');
+  if (statusEl) {
+    const status = cat.status || 'live';
+    const labelMap = { live: 'Live', early: 'Early', placeholder: 'WIP' };
+    const colorMap = { live: 'var(--clr)', early: '#E8853A', placeholder: 'var(--tx3)' };
+    statusEl.dataset.status = status;
+    statusEl.innerHTML = `<span class="cat-status-dot" style="background:${colorMap[status]}"></span>${labelMap[status] || 'Live'}`;
+    statusEl.classList.add('visible');
+  }
+
+  // Creator row — clickable → navigate to the owner's profile.
+  const creatorEl = document.getElementById('internal-catalyst-creator');
+  if (creatorEl) {
+    const ownerHex = cat.ownerHex || '5aaa72';
+    const ownerName = cat.ownerName || 'anon';
+    const unameHtml = renderUsername(ownerName, '#' + ownerHex, !!cat.ownerIsAdmin);
+    creatorEl.innerHTML = `
+      <div class="cat-detail-creator-avatar" style="border-color:#${escapeHtml(ownerHex)}">
+        ${cat.ownerPhoto ? `<img src="${escapeHtml(cat.ownerPhoto)}" alt="">` : ''}
+      </div>
+      <span>${unameHtml} <span style="color:#${escapeHtml(ownerHex)}">#${escapeHtml(ownerHex)}</span></span>
+    `;
+    creatorEl.onclick = () => {
+      navigate('/' + buildUserSlug(ownerName.toLowerCase(), ownerHex));
+    };
+  }
+
+  // Description
+  const descEl = document.getElementById('internal-catalyst-desc');
+  if (descEl) descEl.textContent = cat.description || '';
+
+  // Collaborators — owner + extras. Matches the detail modal's
+  // count semantics (1 = solo owner).
+  const collabEl = document.getElementById('internal-catalyst-collab');
+  if (collabEl) {
+    const extras = Array.isArray(cat.collaborators) ? cat.collaborators : [];
+    const total = 1 + extras.length;
+    collabEl.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>${total === 1 ? '1 contributor' : total + ' contributors'}</span>
+    `;
+  }
+}
+
+// Used by the three catalyst-match branches inside renderProfileRoute.
+// Returns true if the catalyst was routed to the internal view (caller
+// should NOT also open the detail modal).
+function _routeInternalIfNeeded(user, cat) {
+  if (cat?.type !== 'internal') return false;
+  renderInternalCatalyst(user, cat);
+  return true;
+}
+
 async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
   hideAllViews();
   setPageTitle([username]);
 
   const cacheKey = profileCacheKey(username, hex);
 
-  // Paint cached view instantly if we have one
+  // Paint cached view instantly if we have one. If the openSlug
+  // matches an internal catalyst in the cache, we pivot straight to
+  // the internal view and skip profile-bar painting entirely so the
+  // viewer sees only the project page.
   const cached = _profileCache.get(cacheKey);
   if (cached) {
-    const isOwn = State.user && cached.user.uid === State.user.uid;
-    showProfileBar(cached.user, cached.catalysts.length, isOwn);
-    renderGrid(cached.catalysts, {
-      showAdd: isOwn,
-      emptyMessage: isOwn
-        ? 'Create your first catalyst'
-        : 'This alchemist hasn\'t created any catalysts yet.',
-    });
-    if (openSlug) {
-      const match = cached.catalysts.find((c) => c.slug === openSlug);
-      if (match) openCatalystDetail(match);
+    const cachedMatch = openSlug ? cached.catalysts.find((c) => c.slug === openSlug) : null;
+    if (cachedMatch && _routeInternalIfNeeded(cached.user, cachedMatch)) {
+      // Internal view is now painted from cache. Still continue below
+      // to resolve the live user + subscription so the page updates if
+      // something changes server-side.
+    } else {
+      const isOwn = State.user && cached.user.uid === State.user.uid;
+      showProfileBar(cached.user, cached.catalysts.length, isOwn);
+      renderGrid(cached.catalysts, {
+        showAdd: isOwn,
+        emptyMessage: isOwn
+          ? 'Create your first catalyst'
+          : 'This alchemist hasn\'t created any catalysts yet.',
+      });
+      if (cachedMatch) openCatalystDetail(cachedMatch);
     }
   } else {
     renderSkeleton();
@@ -662,6 +768,13 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
   // Live subscription for this user's catalysts. Replaces one-shot load.
   const unsub = subscribeUserCatalysts(user.uid, (catalysts) => {
     _profileCache.set(cacheKey, { user, catalysts });
+    const match = openSlug ? catalysts.find((c) => c.slug === openSlug) : null;
+    // MD12: route internal matches to the full-page view before
+    // touching the profile bar / grid so the project page takes over.
+    if (match && _routeInternalIfNeeded(user, match)) {
+      setPageTitle([match.title, user.displayName || username]);
+      return;
+    }
     showProfileBar(user, catalysts.length, isOwn);
     renderGrid(catalysts, {
       showAdd: isOwn,
@@ -669,12 +782,9 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
         ? 'Create your first catalyst'
         : 'This alchemist hasn\'t created any catalysts yet.',
     });
-    if (openSlug) {
-      const match = catalysts.find((c) => c.slug === openSlug);
-      if (match) {
-        setPageTitle([match.title, user.displayName || username]);
-        openCatalystDetail(match);
-      }
+    if (match) {
+      setPageTitle([match.title, user.displayName || username]);
+      openCatalystDetail(match);
     }
   });
   trackSub(unsub);
@@ -685,7 +795,7 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
     const direct = await getCatalystBySlug(user.uid, openSlug);
     if (direct) {
       setPageTitle([direct.title, user.displayName || username]);
-      openCatalystDetail(direct);
+      if (!_routeInternalIfNeeded(user, direct)) openCatalystDetail(direct);
     }
   }
 }
@@ -1121,6 +1231,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 404 → home
   document.getElementById('not-found-home')?.addEventListener('click', () => navigate('/'));
+
+  // MD12: internal catalyst back button — navigates to the owning
+  // profile page. The owner info is read from the route so this
+  // works even if the user refreshed directly on the project URL.
+  document.getElementById('internal-catalyst-back')?.addEventListener('click', () => {
+    const route = _currentRoute || getRoute();
+    if (route?.username) {
+      navigate('/' + buildUserSlug(route.username.toLowerCase(), route.hex || ''));
+    } else {
+      navigate('/');
+    }
+  });
 
   // Sign-in buttons live inside the account menu footer (guest mode).
   // signIn() flips the _signingIn flag so the menu's outside-click
