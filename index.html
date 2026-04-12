@@ -13,7 +13,7 @@
   <meta name="twitter:title" content="nodeblast" />
   <meta name="twitter:description" content="A launchpad for creators." />
   <link rel="canonical" href="https://nodeblast.dev" />
-  <link rel="icon" type="image/svg+xml" href="assets/nodeblast_logo_v1.svg" />
+  <link rel="icon" type="image/svg+xml" href="assets/nodeblast_logo_v2.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -36,18 +36,14 @@
     <div id="hdr-left">
       <div id="hdr-logo-wrap">
         <div id="hdr-logo" data-tip="Home">
-          <svg id="hdr-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-10.65 10.65 256 234.7">
-            <g transform="rotate(90 117.35 128)">
-              <!-- MD31: paths synced from assets/nodeblast_logo_v1.svg. IDs
-                   are preserved for JS recoloring; see prior session notes
-                   on the confusing naming (visual intent ≠ literal ID). -->
-              <path id="nodeblast_circle_bottom" fill="#ffffff" d="M162.4,18.5C150.9,7.1,134.9,0,117.4,0s-33.4,7.1-45,18.5l-48.1,27.8C9.3,54.9,0,70.9,0,88.2v79.7c0,17.3,9.2,33.2,24.2,41.9h0c13.1,7.5,29.3-2,29.2-17.1v-.6c0-35.4,28.7-64,64-64s64-28.7,64-64-7.3-33.9-19-45.5h0ZM119,87.9c-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4Z"/>
-              <g id="nodeblast_logo_bottom" fill="#ed2355">
-                <path d="M72.3,237.5c11.5,11.4,27.4,18.5,45,18.5s33.4-7.1,45-18.5l48.1-27.8c15-8.6,24.2-24.6,24.2-41.9v-79.7c0-17.3-9.2-33.2-24.2-41.9h0c-13.1-7.5-29.3,2-29.2,17.1v.6c0,35.4-28.7,64-64,64s-64,28.7-64,64,7.3,33.9,19,45.5h0ZM115.7,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>
-              </g>
-              <path id="nodeblast_circle_top" fill="#ed2355" d="M119,87.9c-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4Z"/>
-              <path id="nodeblast_logo_top" fill="#ffffff" d="M115.9,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>
-            </g>
+          <!-- MD33: paths from assets/nodeblast_logo_v2.svg — pre-rotated,
+               no code-based transform needed. IDs renamed from top/bottom
+               to left/right. Circles are transparent (negative space). -->
+          <svg id="hdr-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 234.6">
+              <path id="nodeblast_logo_right" fill="#7ac74f" d="M237.5,162.3c11.4-11.5,18.5-27.4,18.5-45s-13.2-35.8-18.5-45-27.8-48.1-27.8-48.1C201.1,9.2,185.1,0,167.8,0h-79.7c-17.3,0-33.2,9.2-41.9,24.2h0c-7.5,13.1,2,29.3,17.1,29.2h.6c35.4,0,64,28.7,64,64s28.7,64,64,64,33.9-7.3,45.5-19h.1q0-.1,0,0ZM168.1,118.9c-.9-14.5,11-26.4,25.5-25.5,11.9.8,21.6,10.4,22.4,22.4.9,14.5-11,26.4-25.5,25.5-11.9-.8-21.6-10.4-22.4-22.4Z"/>
+              <path id="nodeblast_logo_left" fill="#127596" d="M18.5,72.3C7.1,83.8,0,99.7,0,117.3s13.2,35.8,18.5,45c5.3,9.2,27.8,48.1,27.8,48.1,8.6,15,24.6,24.2,41.9,24.2h79.7c17.3,0,33.2-9.2,41.9-24.2h0c7.5-13.1-2-29.3-17.1-29.2h-.6c-35.4,0-64-28.7-64-64s-28.7-64-64-64-33.9,7.3-45.5,19h-.1q0,0,0,.1ZM87.9,115.7c.9,14.5-11,26.4-25.5,25.5-11.9-.8-21.6-10.4-22.4-22.4-.9-14.5,11-26.4,25.5-25.5,11.9.8,21.6,10.4,22.4,22.4Z"/>
+              <path id="nodeblast_circle_right" fill="transparent" d="M168.1,118.9c-.9-14.5,11-26.4,25.5-25.5,11.9.8,21.6,10.4,22.4,22.4.9,14.5-11,26.4-25.5,25.5-11.9-.8-21.6-10.4-22.4-22.4Z"/>
+              <path id="nodeblast_circle_left" fill="transparent" d="M87.9,115.8c.9,14.5-11,26.4-25.5,25.5-11.9-.8-21.6-10.4-22.4-22.4-.9-14.5,11-26.4,25.5-25.5,11.9.8,21.6,10.4,22.4,22.4Z"/>
           </svg>
         </div>
         <div id="logo-picker"><!-- swatches populated from theme.js ACCENTS --></div>

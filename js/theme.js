@@ -12,11 +12,12 @@ const PALETTES = {
 //  Logo color palette — both columns of the picker share this list
 // ──────────────────────────────────────────────────────────────
 //  Each picker column independently selects one of these 10 colors:
-//    - LEFT  (top) → #nodeblast_logo_top, #nodeblast_circle_bottom,
-//                    "blast" wordmark, AND drives the site-wide --clr
-//                    accent (so buttons/borders/etc. recolor with it).
-//    - RIGHT (bot) → #nodeblast_logo_bottom, #nodeblast_circle_top,
-//                    "node" wordmark — pure decoration, no --clr.
+//    - LEFT  (top) → #nodeblast_logo_left, "node" wordmark,
+//                    AND drives the site-wide --clr accent.
+//    - RIGHT (bot) → #nodeblast_logo_right, "blast" wordmark —
+//                    pure decoration, no --clr.
+//  Circles are transparent negative space (hole-punched by the
+//  compound paths in the big halves).
 // ══════════════════════════════════════════════════════════════
 
 export const LOGO_PALETTE = [
@@ -32,11 +33,12 @@ export const LOGO_PALETTE = [
   { hex: '#9AA5B4', name: 'Cool Gray' },        // 10
 ];
 
-// MD31: defaults pulled from assets/nodeblast_logo_v1.svg.
-// .st1 (#7ac74f green) fills nodeblast_logo_top; .st0 (#127596 teal)
-// fills nodeblast_logo_bottom.
-export const DEFAULT_LOGO_TOP = '#7ac74f';   // SVG .st1 green
-export const DEFAULT_LOGO_BOT = '#127596';   // SVG .st0 teal
+// MD33: defaults from assets/nodeblast_logo_v2.svg.
+// .st0 (#127596 teal) fills nodeblast_logo_left; .st1 (#7ac74f green)
+// fills nodeblast_logo_right. "Top" (left column) maps to the left
+// half; "Bot" (right column) maps to the right half.
+export const DEFAULT_LOGO_TOP = '#127596';   // SVG .st0 teal (left)
+export const DEFAULT_LOGO_BOT = '#7ac74f';   // SVG .st1 green (right)
 
 let _transTimer = null;
 let _currentAccent = null;
@@ -153,19 +155,12 @@ export function applyAccent(hex) {
 let _faviconBlobUrl = null;
 
 function buildLogoSvg(topColor, botColor) {
-  // Both small inner dots are intentionally OMITTED — the big half
-  // paths have those dots cut out as inner subpaths (even-odd fill),
-  // so leaving the small-dot fill paths off gives us the negative
-  // space the picker spec calls for.
-  //
-  // The wrapping <g> rotates the artwork 90° CW around its center
-  // (117.35, 128). The viewBox is shifted so the rotated bounding
-  // box (256 × 234.7) sits flush at origin (-10.65, 10.65).
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10.65 10.65 256 234.7">`
-    + `<g transform="rotate(90 117.35 128)">`
-    + `<path fill="${topColor}" d="M162.4,18.5C150.9,7.1,134.9,0,117.4,0s-33.4,7.1-45,18.5l-48.1,27.8C9.3,54.9,0,70.9,0,88.2v79.7c0,17.3,9.2,33.2,24.2,41.9h0c13.1,7.5,29.3-2,29.2-17.1v-.6c0-35.4,28.7-64,64-64s64-28.7,64-64-7.3-33.9-19-45.5h0ZM119,87.9c-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4Z"/>`
-    + `<path fill="${botColor}" d="M72.3,237.5c11.5,11.4,27.4,18.5,45,18.5s33.4-7.1,45-18.5l48.1-27.8c15-8.6,24.2-24.6,24.2-41.9v-79.7c0-17.3-9.2-33.2-24.2-41.9h0c-13.1-7.5-29.3,2-29.2,17.1v.6c0,35.4-28.7,64-64,64s-64,28.7-64,64,7.3,33.9,19,45.5h0ZM115.7,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>`
-    + `</g>`
+  // MD33: V2 paths — pre-rotated, no transform needed. topColor
+  // paints the left half, botColor the right. Circles are omitted
+  // since the compound paths cut the holes via even-odd fill.
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 234.6">`
+    + `<path fill="${botColor}" d="M237.5,162.3c11.4-11.5,18.5-27.4,18.5-45s-13.2-35.8-18.5-45-27.8-48.1-27.8-48.1C201.1,9.2,185.1,0,167.8,0h-79.7c-17.3,0-33.2,9.2-41.9,24.2h0c-7.5,13.1,2,29.3,17.1,29.2h.6c35.4,0,64,28.7,64,64s28.7,64,64,64,33.9-7.3,45.5-19h.1q0-.1,0,0ZM168.1,118.9c-.9-14.5,11-26.4,25.5-25.5,11.9.8,21.6,10.4,22.4,22.4.9,14.5-11,26.4-25.5,25.5-11.9-.8-21.6-10.4-22.4-22.4Z"/>`
+    + `<path fill="${topColor}" d="M18.5,72.3C7.1,83.8,0,99.7,0,117.3s13.2,35.8,18.5,45c5.3,9.2,27.8,48.1,27.8,48.1,8.6,15,24.6,24.2,41.9,24.2h79.7c17.3,0,33.2-9.2,41.9-24.2h0c7.5-13.1-2-29.3-17.1-29.2h-.6c-35.4,0-64-28.7-64-64s-28.7-64-64-64-33.9,7.3-45.5,19h-.1q0,0,0,.1ZM87.9,115.7c.9,14.5-11,26.4-25.5,25.5-11.9-.8-21.6-10.4-22.4-22.4-.9-14.5,11-26.4,25.5-25.5,11.9.8,21.6,10.4,22.4,22.4Z"/>`
     + `</svg>`;
 }
 

@@ -1664,17 +1664,10 @@ let _logoTop = DEFAULT_LOGO_TOP;
 let _logoBot = DEFAULT_LOGO_BOT;
 
 function paintLogo(top, bot) {
-  // The SVG IDs in index.html are confusingly named — the path data
-  // doesn't match the names. Mapping by VISUAL intent:
-  //
-  //   Big top yin-yang half  → id="nodeblast_circle_bottom"
-  //   Big bottom yin-yang half → id="nodeblast_logo_bottom"
-  //   Small upper inner dot  → id="nodeblast_circle_top"
-  //   Small lower inner dot  → id="nodeblast_logo_top"
-  //
-  // Spec: top half pairs with "node" + left column color, bottom
-  // half pairs with "blast" + right column color, both small dots
-  // are transparent negative space.
+  // MD33: V2 IDs are left/right (no more confusing top/bottom).
+  //   nodeblast_logo_left  → left half, painted with `top` (left column)
+  //   nodeblast_logo_right → right half, painted with `bot` (right column)
+  //   nodeblast_circle_left / _right → transparent negative space
   //
   // Light-mode adjustment: getThemeAdjustedLogoColor() mixes the raw
   // picker color with ~22% black so the logo and wordmark keep enough
@@ -1683,27 +1676,28 @@ function paintLogo(top, bot) {
   const topAdj = getThemeAdjustedLogoColor(top);
   const botAdj = getThemeAdjustedLogoColor(bot);
 
-  // Left column (top color) → big top half + "node" wordmark.
-  const bigTop = document.getElementById('nodeblast_circle_bottom');
+  // Left column (top color) → left half + "node" wordmark.
+  const leftHalf = document.getElementById('nodeblast_logo_left');
   const nodeEl = document.getElementById('brand-node');
-  if (bigTop) bigTop.setAttribute('fill', topAdj);
+  if (leftHalf) leftHalf.setAttribute('fill', topAdj);
   if (nodeEl) nodeEl.style.color = topAdj;
 
-  // Right column (bot color) → big bottom half + "blast" wordmark.
-  const bigBot  = document.getElementById('nodeblast_logo_bottom');
+  // Right column (bot color) → right half + "blast" wordmark.
+  const rightHalf = document.getElementById('nodeblast_logo_right');
   const blastEl = document.getElementById('brand-blast');
-  if (bigBot)  bigBot.setAttribute('fill', botAdj);
+  if (rightHalf) rightHalf.setAttribute('fill', botAdj);
   if (blastEl) blastEl.style.color = botAdj;
 
-  // Both small inner dots → transparent (header bg shows through).
-  const upperDot = document.getElementById('nodeblast_circle_top');
-  const lowerDot = document.getElementById('nodeblast_logo_top');
-  if (upperDot) upperDot.setAttribute('fill', 'transparent');
-  if (lowerDot) lowerDot.setAttribute('fill', 'transparent');
+  // Circles → transparent (already hole-punched by the compound
+  // paths, but explicitly clear in case a prior paint wrote a color).
+  const circL = document.getElementById('nodeblast_circle_left');
+  const circR = document.getElementById('nodeblast_circle_right');
+  if (circL) circL.setAttribute('fill', 'transparent');
+  if (circR) circR.setAttribute('fill', 'transparent');
 
   console.log('[logo] paintLogo applied', {
     top, bot, topAdj, botAdj,
-    bigTopFound: !!bigTop, bigBotFound: !!bigBot,
+    leftFound: !!leftHalf, rightFound: !!rightHalf,
     nodeFound: !!nodeEl, blastFound: !!blastEl,
   });
 }
