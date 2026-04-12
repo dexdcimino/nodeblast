@@ -361,7 +361,14 @@ function _renderNow(state) {
 }
 
 function _renderTiles(honey, containerW, COLS, count, decorate) {
-  const hexW = (containerW - GAP * (COLS + 1)) / (COLS + 0.5);
+  // MD25: left-aligned honeycomb. hexW is sized to exactly fill an
+  // odd (non-offset) row at COLS tiles wide — `COLS*hexW + (COLS+1)*GAP = containerW`.
+  // Even rows carry COLS-1 tiles with a half-step offset so they
+  // interlock with the row above. The previous `/ (COLS + 0.5)`
+  // formula reserved room for a centered even row's half-tile
+  // overflow; with left-align that overflow is gone and the widest
+  // row is the odd row, so the formula simplifies.
+  const hexW = (containerW - GAP * (COLS + 1)) / Math.max(COLS, 1);
   const hexH = hexW * 1.1547;
   const stepX = hexW + GAP;
   const stepY = hexH * 0.75 + GAP;
@@ -372,8 +379,12 @@ function _renderTiles(honey, containerW, COLS, count, decorate) {
   let idx = 0;
   for (let row = 0; row < rowCounts.length; row++) {
     const rowCount = rowCounts[row];
-    const rowWidth = rowCount * hexW + (rowCount - 1) * GAP;
-    const rowLeft = (containerW - rowWidth) / 2;
+    // MD25: left-align. Leading pad is always GAP; offset rows
+    // (every other row, starting with row index 1) slide right by
+    // half a step so their tiles interlock with the row above.
+    // `isOffsetRow` is 0-indexed to match the row index in this loop.
+    const isOffsetRow = row % 2 === 1;
+    const rowLeft = GAP + (isOffsetRow ? stepX / 2 : 0);
     const top = GRID_TOP_PAD + row * stepY;
 
     for (let col = 0; col < rowCount; col++) {
@@ -704,7 +715,10 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
     return;
   }
 
-  const hexW = (containerW - MINI_GAP * (MINI_COLS + 1)) / (MINI_COLS + 0.5);
+  // MD25: same left-aligned honeycomb math as the main grid —
+  // hexW is sized to exactly fill a 4-tile row inside the dropdown
+  // body. Even rows get a half-step offset below.
+  const hexW = (containerW - MINI_GAP * (MINI_COLS + 1)) / Math.max(MINI_COLS, 1);
   const hexH = hexW * 1.1547;
   const stepX = hexW + MINI_GAP;
   const stepY = hexH * 0.75 + MINI_GAP;
@@ -718,8 +732,9 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
   let idx = 0;
   for (let row = 0; row < rowCounts.length; row++) {
     const rowCount = rowCounts[row];
-    const rowWidth = rowCount * hexW + (rowCount - 1) * MINI_GAP;
-    const rowLeft = (containerW - rowWidth) / 2;
+    // MD25: left-align with half-step offset on every other row.
+    const isOffsetRow = row % 2 === 1;
+    const rowLeft = MINI_GAP + (isOffsetRow ? stepX / 2 : 0);
     const top = row * stepY;
 
     for (let col = 0; col < rowCount; col++) {

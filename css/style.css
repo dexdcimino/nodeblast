@@ -394,7 +394,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    The "+" tile lives at the end of the tile array, so scrolling
    down always reaches it. scrollbar-width:thin + a custom
    webkit thumb keeps the scroller subtle in both themes. */
-#acct-catalysts-list{position:relative;padding:4px 0;font-size:13px;color:var(--tx3);text-align:center;min-height:20px;max-height:520px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;}
+#acct-catalysts-list{position:relative;padding:4px 0;font-size:13px;color:var(--tx3);text-align:center;min-height:20px;max-height:600px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;}
 #acct-catalysts-list::-webkit-scrollbar{width:6px;}
 #acct-catalysts-list::-webkit-scrollbar-track{background:transparent;}
 #acct-catalysts-list::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px;}
