@@ -6,8 +6,9 @@
 // ══════════════════════════════════════
 
 import State from './state.js';
-import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer } from './game.js';
-import { initPhoton, destroyPhoton } from './photon-client.js';
+import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer, getRemotePlayerIds } from './game.js';
+import { initPhoton, destroyPhoton, setPhotonStatus } from './photon-client.js';
+import { initHathora, destroyHathora, hathoraSendMove, isHathoraConnected } from './hathora-client.js';
 import { navigate } from './router.js';
 
 const BABYLON_CDN = 'https://cdn.babylonjs.com/babylon.js';
@@ -108,16 +109,52 @@ export async function renderPlayRoute() {
       identEl.innerHTML = `<span style="color:#${hex}">\u25a0</span> ${name}`;
     }
 
+    // Hathora window bridges for photon-client.js dual-send
+    window._nbHathoraConnected = isHathoraConnected;
+    window._nbHathoraSendMove = hathoraSendMove;
+
     await _ensurePhoton();
     initPhoton({
       onConnected: (myId) => {
         console.log('[play] photon connected, actor:', myId);
+        // Layer Hathora on top of Photon for authoritative state
+        const name = State.profile?.displayName || 'player';
+        const hex = State.profile?.hexCode || '5aaa72';
+        initHathora({
+          roomId: 'nodeblast-main',
+          username: name,
+          hex: hex,
+          onSnapshot: (players, myHathoraId) => {
+            const snapshotIds = new Set();
+            players.forEach((p) => {
+              if (p.id === myHathoraId) return;
+              snapshotIds.add(p.id);
+              addOrUpdateRemotePlayer(p.id, p.x, p.y, p.z, p.rotY, p.username, p.hex);
+            });
+            getRemotePlayerIds().forEach((id) => {
+              if (!snapshotIds.has(id)) removeRemotePlayer(id);
+            });
+          },
+          onConnected: (id) => {
+            console.log('[play] hathora connected:', id);
+            setPhotonStatus('online (authoritative)');
+          },
+          onError: (err) => {
+            console.warn('[play] hathora failed, staying on photon:', err?.message || err);
+            setPhotonStatus('online (relay)');
+          },
+        });
       },
       onPlayerUpdate: (id, x, y, z, rotY, pitch, username, hex) => {
-        addOrUpdateRemotePlayer(id, x, y, z, rotY, username, hex);
+        // Only use Photon updates when Hathora is not connected
+        if (!isHathoraConnected()) {
+          addOrUpdateRemotePlayer(id, x, y, z, rotY, username, hex);
+        }
       },
       onPlayerLeave: (id) => {
-        removeRemotePlayer(id);
+        if (!isHathoraConnected()) {
+          removeRemotePlayer(id);
+        }
       },
     });
   } catch (err) {
@@ -128,6 +165,7 @@ export async function renderPlayRoute() {
 
 export function destroyPlayRoute() {
   closeExitModal();
+  destroyHathora();
   destroyPhoton();
   if (_engine) {
     destroyGame(_engine);
@@ -138,5 +176,7 @@ export function destroyPlayRoute() {
   document.getElementById('hdr')?.classList.remove('play-mode');
   window._nbOpenExitModal = null;
   window._nbCloseExitModal = null;
+  window._nbHathoraConnected = null;
+  window._nbHathoraSendMove = null;
   try { document.exitPointerLock(); } catch {}
 }

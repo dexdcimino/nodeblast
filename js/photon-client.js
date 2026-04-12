@@ -101,7 +101,13 @@ function _startSendLoop() {
   _sendTimer = setInterval(() => {
     if (window._nbGetPlayerState) {
       const s = window._nbGetPlayerState();
-      if (s) photonSendState(s.x, s.y, s.z, s.rotY, s.pitch, s.username, s.hex);
+      if (!s) return;
+      // If Hathora is connected, send moves there (authoritative).
+      // Photon still sends for lobby presence + Safari fallback.
+      if (window._nbHathoraConnected?.()) {
+        window._nbHathoraSendMove?.(s.x, s.y, s.z, s.rotY, s.pitch);
+      }
+      photonSendState(s.x, s.y, s.z, s.rotY, s.pitch, s.username, s.hex);
     }
   }, SEND_RATE_MS);
 }

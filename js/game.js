@@ -105,6 +105,10 @@ export function addOrUpdateRemotePlayer(id, x, y, z, rotY, username, hex) {
   }
 }
 
+export function getRemotePlayerIds() {
+  return Array.from(_remotePlayers.keys());
+}
+
 export function removeRemotePlayer(id) {
   const p = _remotePlayers.get(id);
   if (p) {
