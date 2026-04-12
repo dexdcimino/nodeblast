@@ -37,6 +37,8 @@ import {
   refreshOwnerOnAllCatalysts,
   reorderCatalysts,
   openUnlockModal,
+  listCatalystBackups,
+  restoreCatalystBackup,
 } from './catalysts.js';
 import { getUserByUsernameHex } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './router.js';
@@ -2082,6 +2084,66 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       toast(next ? 'Pinned list is now public' : 'Pinned list is now private');
     }
+  });
+
+  // MD24: backup restore modal wiring. Settings → "Restore catalysts
+  // from backup" opens a dedicated modal that lists the 10 most
+  // recent backups (metadata only). Clicking a row fires a confirm
+  // via showModal, and on confirm we call restoreCatalystBackup.
+  const backupModal = document.getElementById('backup-modal');
+  const backupList = document.getElementById('backup-modal-list');
+  const closeBackupModal = () => backupModal?.classList.remove('open');
+  document.getElementById('backup-modal-close')?.addEventListener('click', closeBackupModal);
+  backupModal?.addEventListener('click', (e) => { if (e.target === backupModal) closeBackupModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && backupModal?.classList.contains('open')) closeBackupModal();
+  });
+
+  document.getElementById('settings-restore-backup-btn')?.addEventListener('click', async () => {
+    if (!State.user) { toast('Sign in first'); return; }
+    if (!backupModal || !backupList) return;
+    backupList.innerHTML = '<div class="backup-empty">Loading…</div>';
+    backupModal.classList.add('open');
+    const rows = await listCatalystBackups(State.user.uid);
+    if (!rows.length) {
+      backupList.innerHTML = '<div class="backup-empty">No backups yet. Create or edit a catalyst to make your first snapshot.</div>';
+      return;
+    }
+    backupList.innerHTML = '';
+    rows.forEach((row) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'backup-row';
+      const when = row.createdAtMs
+        ? new Date(row.createdAtMs).toLocaleString(undefined, {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit',
+          })
+        : 'Unknown';
+      const countText = row.catalystCount === 1 ? '1 catalyst' : `${row.catalystCount} catalysts`;
+      btn.innerHTML = `
+        <div class="backup-row-when">${escapeHtml(when)}</div>
+        <div class="backup-row-count">${escapeHtml(countText)}</div>
+      `;
+      btn.addEventListener('click', () => {
+        showModal({
+          title: 'Restore this backup?',
+          msg: `Your catalysts will be replaced with the snapshot from <b>${escapeHtml(when)}</b> (${escapeHtml(countText)}). This cannot be undone.`,
+          confirmLabel: 'Restore',
+          danger: true,
+          onConfirm: async () => {
+            const ok = await restoreCatalystBackup(State.user.uid, row.id);
+            if (ok) {
+              toast('Catalysts restored');
+              closeBackupModal();
+            } else {
+              toast('Restore failed');
+            }
+          },
+        });
+      });
+      backupList.appendChild(btn);
+    });
   });
 
   // When the catalyst detail popup closes via back button, strip the slug

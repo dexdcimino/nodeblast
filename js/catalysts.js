@@ -303,9 +303,180 @@ export async function reorderCatalysts(ownerId, orderedIds) {
       }
     });
     if (writes > 0) await batch.commit();
+    // MD24: snapshot after the reorder lands so the new sortOrder
+    // values are captured in the backup. Skipped when a restore is
+    // in flight so we don't overwrite the backup we just restored.
+    if (!_restoring) saveCatalystBackup(ownerId).catch(() => {});
   } catch (err) {
     console.warn('[catalysts] reorderCatalysts failed:', err);
     throw err;
+  }
+}
+
+/* ══════════════════════════════════════
+   MD24: catalyst backup system
+   ──────────────────────────────────────
+   Every create/update/delete/reorder schedules a fire-and-forget
+   snapshot write at `users/{uid}/catalyst_backups/{Date.now()}`
+   containing the user's full catalyst list. We keep at most
+   BACKUP_LIMIT docs per user, FIFO — the oldest is deleted before
+   writing a new one when we're at capacity.
+
+   Doc ids are millisecond timestamps cast to strings so simple
+   string sorting on the id matches chronological order (good for
+   ~9000 years). `createdAt` is still stored via serverTimestamp
+   for display.
+
+   The restore path is a scaffold: read the backup doc, delete every
+   current catalyst owned by this user, then setDoc() each item from
+   the backup back to `catalysts/{id}`. Thumbnails live in Storage
+   and are NOT rewritten — we only restore the Firestore doc (the
+   thumbURL in the backup still points at the old Storage path, so
+   images survive as long as they weren't deleted by something else).
+══════════════════════════════════════ */
+
+const BACKUP_LIMIT = 10;
+
+// Save a snapshot of every catalyst the user currently owns. Reads
+// fresh from Firestore so a post-mutation call includes the change
+// that just landed. Fire-and-forget — any failure is logged but
+// never blocks the caller. Returns the new backup doc id on success.
+export async function saveCatalystBackup(uid) {
+  if (!uid) return null;
+  try {
+    const listSnap = await getDocs(query(
+      collection(db, 'catalysts'),
+      where('ownerId', '==', uid),
+    ));
+    const catalysts = listSnap.docs.map((d) => {
+      const raw = d.data();
+      // Strip Firestore sentinels (Timestamp, serverTimestamp) by
+      // converting them to plain millis numbers so the backup doc is
+      // self-contained and round-trippable.
+      const snap = { id: d.id };
+      for (const [k, v] of Object.entries(raw)) {
+        if (v && typeof v === 'object' && typeof v.toMillis === 'function') {
+          snap[k] = v.toMillis();
+        } else {
+          snap[k] = v;
+        }
+      }
+      return snap;
+    });
+
+    // FIFO cleanup: if we're at capacity, delete the oldest backup
+    // before writing the new one. "Oldest" = smallest doc id (since
+    // ids are stringified ms timestamps). We over-delete by 1 extra
+    // so hitting capacity twice in quick succession still leaves
+    // room for the new write.
+    const backupsRef = collection(db, 'users', uid, 'catalyst_backups');
+    const existing = await getDocs(query(backupsRef, orderBy('__name__', 'desc')));
+    if (existing.size >= BACKUP_LIMIT) {
+      const victims = existing.docs.slice(BACKUP_LIMIT - 1);
+      await Promise.all(victims.map((d) => deleteDoc(d.ref)));
+    }
+
+    const id = Date.now().toString();
+    await setDoc(doc(db, 'users', uid, 'catalyst_backups', id), {
+      createdAt: serverTimestamp(),
+      createdAtMs: Date.now(),
+      catalystCount: catalysts.length,
+      catalysts,
+    });
+    return id;
+  } catch (err) {
+    console.warn('[catalysts] saveCatalystBackup failed:', err);
+    return null;
+  }
+}
+
+// List the 10 most recent backups for a user, newest first. Returns
+// lightweight metadata only — { id, createdAtMs, catalystCount } —
+// so the UI list can paint without loading every full snapshot.
+export async function listCatalystBackups(uid) {
+  if (!uid) return [];
+  try {
+    const backupsRef = collection(db, 'users', uid, 'catalyst_backups');
+    const snap = await getDocs(query(backupsRef, orderBy('__name__', 'desc'), limit(BACKUP_LIMIT)));
+    return snap.docs.map((d) => {
+      const data = d.data() || {};
+      const ms = data.createdAtMs || Number(d.id) || 0;
+      return {
+        id: d.id,
+        createdAtMs: ms,
+        catalystCount: typeof data.catalystCount === 'number'
+          ? data.catalystCount
+          : (Array.isArray(data.catalysts) ? data.catalysts.length : 0),
+      };
+    });
+  } catch (err) {
+    console.warn('[catalysts] listCatalystBackups failed:', err);
+    return [];
+  }
+}
+
+// Restore a specific backup. Deletes every current catalyst owned by
+// the user, then writes the backup's items back to `catalysts/{id}`.
+// Thumbnails in Storage are left alone — the backup snapshot still
+// carries the original thumbURL so image bindings survive as long as
+// the Storage object hasn't been separately deleted. The _restoring
+// guard flag lets callers suppress the normal post-mutation backup
+// write during this operation (which would otherwise immediately
+// overwrite the backup we just restored with a fresh snapshot).
+let _restoring = false;
+export async function restoreCatalystBackup(uid, backupId) {
+  if (!uid || !backupId) return false;
+  _restoring = true;
+  try {
+    const backupRef = doc(db, 'users', uid, 'catalyst_backups', backupId);
+    const backupSnap = await getDoc(backupRef);
+    if (!backupSnap.exists()) {
+      console.warn('[catalysts] backup not found:', backupId);
+      return false;
+    }
+    const items = backupSnap.data()?.catalysts;
+    if (!Array.isArray(items)) {
+      console.warn('[catalysts] backup has no catalysts array');
+      return false;
+    }
+
+    // Delete every current catalyst doc. We only remove docs, not
+    // Storage thumbnails — the restore path below rewrites those
+    // same doc ids where possible (so the thumb binding is still
+    // valid) and only creates net-new ids when an item in the
+    // backup no longer has a matching doc.
+    const currentSnap = await getDocs(query(
+      collection(db, 'catalysts'),
+      where('ownerId', '==', uid),
+    ));
+    const delBatch = writeBatch(db);
+    currentSnap.docs.forEach((d) => delBatch.delete(d.ref));
+    await delBatch.commit();
+
+    // Write every backed-up item back. setDoc with the original id
+    // reuses the slot. createdAtMs and other numeric timestamps are
+    // restored as-is; updatedAt gets a fresh serverTimestamp so the
+    // caller can tell a restore just happened.
+    const writeB = writeBatch(db);
+    items.forEach((item) => {
+      if (!item?.id) return;
+      const { id, ...rest } = item;
+      writeB.set(doc(db, 'catalysts', id), {
+        ...rest,
+        // Force the current user as owner so a restore run under a
+        // different account (unlikely but possible) can't write to
+        // someone else's namespace.
+        ownerId: uid,
+        updatedAt: serverTimestamp(),
+      });
+    });
+    await writeB.commit();
+    return true;
+  } catch (err) {
+    console.warn('[catalysts] restoreCatalystBackup failed:', err);
+    return false;
+  } finally {
+    _restoring = false;
   }
 }
 
@@ -396,6 +567,8 @@ export async function createCatalyst(data, file) {
     updatedAt: serverTimestamp(),
   };
   await setDoc(catRef, doc1);
+  // MD24: fire-and-forget backup write after the create lands.
+  if (!_restoring) saveCatalystBackup(State.user.uid).catch(() => {});
   return { id: catId, ...doc1 };
 }
 
@@ -458,12 +631,16 @@ export async function updateCatalyst(id, data, file) {
     catch (err) { console.warn('[catalysts] thumb re-upload failed:', err); }
   }
   await updateDoc(ref, updates);
+  // MD24: snapshot after the edit lands.
+  if (!_restoring) saveCatalystBackup(State.user.uid).catch(() => {});
 }
 
 export async function deleteCatalyst(id) {
   if (!State.user) throw new Error('Not signed in');
   await deleteCatalystThumb(State.user.uid, id);
   await deleteDoc(doc(db, 'catalysts', id));
+  // MD24: snapshot the post-delete state.
+  if (!_restoring) saveCatalystBackup(State.user.uid).catch(() => {});
 }
 
 // MD6 NOTE ON NAMING: the vote type value `'frost'` and the document

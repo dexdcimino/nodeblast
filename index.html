@@ -455,6 +455,16 @@
             </div>
           </div>
         </div>
+        <!-- MD24: Account section — catalyst backup restore. The backup
+             WRITE side is fully automatic (triggered on create / edit /
+             delete / reorder); this button is the restore entry point. -->
+        <div class="settings-section">
+          <div class="settings-section-title">Account</div>
+          <button class="settings-action-row" id="settings-restore-backup-btn">
+            <div class="settings-row-label">Restore catalysts from backup</div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
       </div>
       <div id="settings-view-footer">
         <button class="acct-menu-item" id="settings-back-btn">
@@ -693,6 +703,27 @@
           <button type="submit" id="unlock-modal-submit" class="cat-btn primary">Unlock</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       BACKUP RESTORE MODAL (MD24)
+       ──────────────────────────────────────
+       Shown from Settings → Restore catalysts from backup. Lists the
+       10 most recent snapshots with timestamps and catalyst counts.
+       Clicking a row opens the confirm modal; on confirm the whole
+       catalyst list is overwritten with the backup.
+       ══════════════════════════════════════ -->
+  <div id="backup-modal">
+    <div id="backup-modal-card">
+      <button id="backup-modal-close" data-tip="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div id="backup-modal-title">Restore from backup</div>
+      <div id="backup-modal-sub">Pick a snapshot — your catalysts will be replaced with that version.</div>
+      <div id="backup-modal-list">
+        <div class="backup-empty">Loading…</div>
+      </div>
     </div>
   </div>
 
