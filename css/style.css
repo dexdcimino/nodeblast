@@ -697,6 +697,31 @@ body.dragging-active{touch-action:none;}
 ══════════════════════════════════════ */
 #cat-modal{display:none;position:fixed;inset:0;z-index:25000;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
 #cat-modal.open{display:flex;}
+
+/* ══════════════════════════════════════
+   SIGN-IN MODAL (MD13)
+══════════════════════════════════════ */
+/* Lives at z-index above the catalyst modal so it can be layered on
+   top if a guest ever triggers both. Backdrop blur matches the rest
+   of the modal family. */
+#signin-modal{display:none;position:fixed;inset:0;z-index:25500;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;}
+#signin-modal.open{display:flex;}
+#signin-modal-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:18px;padding:32px 36px 28px;width:100%;max-width:400px;box-shadow:0 28px 80px rgba(0,0,0,.6);position:relative;animation:fadeup .25s ease both;text-align:center;}
+#signin-modal-close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;display:flex;align-items:center;transition:color var(--ease);}
+#signin-modal-close:hover{color:var(--tx);}
+#signin-modal-title{font-size:22px;font-weight:800;color:var(--tx);margin-bottom:6px;letter-spacing:-0.01em;}
+#signin-modal-sub{font-size:13px;color:var(--tx3);line-height:1.5;margin-bottom:22px;max-width:320px;margin-left:auto;margin-right:auto;}
+#signin-modal-buttons{display:flex;flex-direction:column;gap:10px;}
+.signin-modal-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:12px 18px;border-radius:10px;border:1.5px solid var(--bdr);background:var(--bg3);color:var(--tx);font-family:var(--fn);font-size:14px;font-weight:600;cursor:pointer;transition:all var(--ease);}
+.signin-modal-btn:hover{border-color:var(--clr-adj);background:var(--bg4);}
+.signin-modal-btn svg{flex-shrink:0;}
+#signin-modal-error{margin-top:14px;font-size:12px;color:var(--danger);min-height:16px;}
+
+/* Guest state on the account-menu catalyst section — dimmed + can't
+   expand. The click handler toasts + opens the sign-in modal. */
+.acct-dropdown-section.guest-locked{opacity:.55;pointer-events:auto;}
+.acct-dropdown-section.guest-locked .acct-dropdown-toggle{cursor:pointer;}
+.acct-dropdown-section.guest-locked .acct-dropdown-body{display:none !important;}
 #cat-modal-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:28px 32px 22px;width:90%;max-width:720px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,.55);position:relative;animation:fadeup .22s ease both;}
 #cat-modal-close{position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;display:flex;align-items:center;transition:color var(--ease);z-index:1;}
 #cat-modal-close:hover{color:var(--tx);}

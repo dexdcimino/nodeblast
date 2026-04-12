@@ -383,10 +383,23 @@ function renderGrid(tiles, { showAdd = false, emptyMessage = '' } = {}) {
     showAdd,
     emptyMessage,
     onTileClick: handleTileClick,
-    onAddClick: () => openCatalystModal(null),
+    onAddClick: _handleAddCatalystClick,
     onCreatorClick: handleCreatorClick,
     onReorder: showAdd ? handleReorder : null,
   });
+}
+
+// MD13: guarded add-catalyst click. Opens the create modal only
+// when signed in; otherwise toasts + prompts sign-in. Shared by
+// the main renderGrid call + the resize-handler renderHexGrid call
+// so the gating lives in one place.
+function _handleAddCatalystClick() {
+  if (!State.user) {
+    toast('Sign in to create a catalyst');
+    openSigninModal();
+    return;
+  }
+  openCatalystModal(null);
 }
 
 function renderSkeleton() {
@@ -868,7 +881,10 @@ function paintGuestProfilePill() {
   if (avatarSm) { avatarSm.innerHTML = ''; avatarSm.classList.add('guest'); avatarSm.style.borderColor = ''; }
   if (avatarLg) { avatarLg.innerHTML = ''; avatarLg.classList.add('guest'); avatarLg.style.borderColor = ''; }
 
-  document.getElementById('acct-name-short').textContent = 'Alchemist';
+  // MD13: label the guest pill "Sign in" so the entry point is
+  // explicit. Clicking it opens the sign-in modal (see acct-btn
+  // handler override below).
+  document.getElementById('acct-name-short').textContent = 'Sign in';
   document.getElementById('acct-name').textContent = 'Alchemist';
   document.getElementById('acct-hex-label').innerHTML = '';
   document.getElementById('acct-hex-dot').style.background = 'var(--tx3)';
@@ -880,6 +896,16 @@ function paintGuestProfilePill() {
 
   // Hide edit profile for guests
   document.getElementById('acct-edit-btn').style.display = 'none';
+
+  // MD13: gray out the Catalysts dropdown section — guests can't
+  // create catalysts, so tapping it prompts the sign-in modal
+  // instead of expanding the dropdown (handler wired at boot).
+  const catSection = document.getElementById('acct-catalysts-section');
+  if (catSection) {
+    catSection.classList.add('guest-locked');
+    catSection.classList.remove('open');
+  }
+
   _updateViewToggle();
 }
 
@@ -919,6 +945,9 @@ function updateAuthUI(user, profile) {
   // Unhide edit profile button
   const editBtn = document.getElementById('acct-edit-btn');
   if (editBtn) editBtn.style.display = '';
+
+  // MD13: un-gray the Catalysts section (signed-in users can create)
+  document.getElementById('acct-catalysts-section')?.classList.remove('guest-locked');
 
   // Paint avatars — guest class must come off first
   const avatarSm = document.getElementById('acct-avatar-sm');
@@ -1136,6 +1165,53 @@ function initLogoPicker() {
   });
 }
 
+/* ══════════════════════════════════════
+   MD13: sign-in modal
+══════════════════════════════════════ */
+
+// Open the centered sign-in modal. Safe to call from anywhere —
+// `initSigninModal` below wires the close button + backdrop + escape.
+function openSigninModal() {
+  const m = document.getElementById('signin-modal');
+  const err = document.getElementById('signin-modal-error');
+  if (!m) return;
+  if (err) err.textContent = '';
+  m.classList.add('open');
+}
+
+function closeSigninModal() {
+  document.getElementById('signin-modal')?.classList.remove('open');
+}
+
+// One-time wiring for the sign-in modal. Provider buttons route
+// through the same signIn() export that the original guest footer
+// uses so there's only one auth code path to reason about.
+function initSigninModal() {
+  const modal = document.getElementById('signin-modal');
+  if (!modal) return;
+  document.getElementById('signin-modal-close')?.addEventListener('click', closeSigninModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeSigninModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeSigninModal();
+  });
+  document.getElementById('signin-modal-google')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try { await signIn('google'); closeSigninModal(); }
+    catch (err) {
+      const el = document.getElementById('signin-modal-error');
+      if (el) el.textContent = err?.message || 'Sign-in failed';
+    }
+  });
+  document.getElementById('signin-modal-github')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try { await signIn('github'); closeSigninModal(); }
+    catch (err) {
+      const el = document.getElementById('signin-modal-error');
+      if (el) el.textContent = err?.message || 'Sign-in failed';
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Palette first, accent second — applyPalette writes --clr, so the
   // logo accent must be applied *after* it to end up as the effective
@@ -1149,6 +1225,30 @@ document.addEventListener('DOMContentLoaded', () => {
   initPalettePickers();
   initColorPicker();
   initAudioSettings();
+  initSigninModal();
+
+  // MD13: intercept the account pill click BEFORE initAccountMenu
+  // wires its own listener. When a guest clicks, we open the sign-in
+  // modal instead of the dropdown. stopImmediatePropagation blocks
+  // the later same-phase listener so the dropdown never opens.
+  document.getElementById('acct-btn')?.addEventListener('click', (e) => {
+    if (State.user) return; // signed in → let the dropdown handler run
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    openSigninModal();
+  });
+
+  // MD13: intercept the catalysts-dropdown toggle for guests so
+  // tapping "Catalysts" in the account menu surfaces the sign-in
+  // modal instead of expanding an empty list.
+  document.querySelector('#acct-catalysts-section .acct-dropdown-toggle')
+    ?.addEventListener('click', (e) => {
+      if (State.user) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      toast('Sign in to create a catalyst');
+      openSigninModal();
+    });
   initAccountMenu({
     onSignOut: () => {
       showModal({
@@ -1156,7 +1256,12 @@ document.addEventListener('DOMContentLoaded', () => {
         msg: 'You will need to sign in again to access your account.',
         confirmLabel: 'Sign out',
         danger: true,
-        onConfirm: () => signOut(),
+        onConfirm: async () => {
+          await signOut();
+          // MD13: land the user on the public community feed after
+          // sign-out instead of a profile page they can no longer edit.
+          navigate('/');
+        },
       });
     },
     onSaveProfile: async (updates) => {
@@ -1342,7 +1447,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tiles: _currentTiles,
       showAdd: _currentShowAdd,
       onTileClick: handleTileClick,
-      onAddClick: () => openCatalystModal(null),
+      onAddClick: _handleAddCatalystClick,
       onCreatorClick: handleCreatorClick,
       onReorder: _currentShowAdd ? handleReorder : null,
     });
