@@ -117,6 +117,39 @@ function showFilterBar() {
   document.getElementById('grid').classList.add('with-filter', 'feed-mode');
 }
 
+// Copy or share a profile link. Uses navigator.share (native share
+// sheet on mobile, share-target on desktop Chrome) when available,
+// otherwise falls back to navigator.clipboard.writeText. Final
+// fallback is a toast of the raw link text for browsers that block
+// both APIs. Shared by the profile-bar button and the community-card
+// share button so the UX stays identical across surfaces.
+async function shareProfileLink({ displayName, hexCode, usernameLower }) {
+  const name = (usernameLower || (displayName || '').toLowerCase());
+  const hex = (hexCode || '').toLowerCase();
+  const slug = buildUserSlug(name, hex);
+  const link = `${window.location.origin}/${slug}`;
+  const title = (displayName || 'Profile') + ' on NodeBlast';
+
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ title, url: link });
+      return;
+    } catch (err) {
+      // User cancelled share sheet (AbortError) — don't fall through
+      // to clipboard since they explicitly dismissed. Any other error
+      // falls through to clipboard below.
+      if (err?.name === 'AbortError') return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(link);
+    toast('Link copied!');
+  } catch {
+    toast(link);
+  }
+}
+
 function showProfileBar(user, catalystCount, isOwn) {
   const bar = document.getElementById('profile-bar');
   bar.classList.add('visible');
@@ -168,6 +201,19 @@ function showProfileBar(user, catalystCount, isOwn) {
 
   const actionBtn = document.getElementById('profile-bar-action');
   const shareBtn = document.getElementById('profile-bar-share');
+
+  // Share button is visible on BOTH own and other-user profiles
+  // (MD11). Click routes through shareProfileLink which prefers the
+  // native share sheet and falls back to clipboard copy.
+  if (shareBtn) {
+    shareBtn.style.display = 'inline-flex';
+    shareBtn.onclick = () => shareProfileLink({
+      displayName: user.displayName,
+      hexCode: user.hexCode,
+      usernameLower: user.usernameLower,
+    });
+  }
+
   if (isOwn) {
     _viewingOther = null;
     actionBtn.textContent = 'Edit Profile';
@@ -177,21 +223,6 @@ function showProfileBar(user, catalystCount, isOwn) {
       openAccountMenuFromPill();
       setTimeout(() => document.getElementById('acct-edit-btn')?.click(), 80);
     };
-    if (shareBtn) {
-      shareBtn.style.display = 'inline-flex';
-      const usernameLower = (user.usernameLower || (user.displayName || '').toLowerCase());
-      const hex = user.hexCode || '';
-      shareBtn.onclick = async () => {
-        const slug = buildUserSlug(usernameLower, hex);
-        const link = `${window.location.origin}/${slug}`;
-        try {
-          await navigator.clipboard.writeText(link);
-          toast('Profile link copied!');
-        } catch {
-          toast(link);
-        }
-      };
-    }
   } else {
     // Not our own profile — the action button becomes "Add Friend" /
     // "✓ Friends" so people can connect directly from a profile page.
@@ -200,7 +231,6 @@ function showProfileBar(user, catalystCount, isOwn) {
     // the moment the Firestore write is mirrored back.
     _viewingOther = { uid: user.uid, displayName: user.displayName, hexCode: user.hexCode };
     _applyFriendButton(user);
-    if (shareBtn) { shareBtn.style.display = 'none'; shareBtn.onclick = null; }
   }
 }
 
@@ -458,6 +488,21 @@ function _buildCommunityCard(group) {
   const n = group.catalysts.length;
   count.textContent = n + (n === 1 ? ' catalyst' : ' catalysts');
   hdr.appendChild(count);
+
+  // Share button — copies the profile URL to clipboard (or opens
+  // the native share sheet). stopPropagation so the click doesn't
+  // also fire the header's navigate-to-profile handler.
+  const shareBtn = document.createElement('button');
+  shareBtn.type = 'button';
+  shareBtn.className = 'community-card-share';
+  shareBtn.setAttribute('data-tip', 'Copy profile link');
+  shareBtn.setAttribute('aria-label', 'Share profile');
+  shareBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+  shareBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    shareProfileLink({ displayName: group.displayName, hexCode: hex });
+  });
+  hdr.appendChild(shareBtn);
 
   hdr.addEventListener('click', () => {
     const lower = (group.displayName || '').toLowerCase();

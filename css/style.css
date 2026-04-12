@@ -566,6 +566,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-hex-dot{width:8px;height:8px;border-radius:50%;background:var(--card-hex,var(--clr-adj));}
 .community-card-hex{font-size:12px;color:var(--tx2);font-family:var(--fn);}
 .community-card-count{margin-left:auto;font-size:12px;color:var(--tx3);font-weight:500;flex-shrink:0;}
+.community-card-share{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx2);cursor:pointer;padding:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease),background var(--ease);}
+.community-card-share:hover{color:var(--tx);border-color:var(--clr-adj);background:var(--bg3);}
 .community-tiles{display:flex;flex-wrap:wrap;gap:22px;justify-content:flex-start;align-items:flex-start;}
 .community-empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px;}
 
