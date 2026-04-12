@@ -49,14 +49,12 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
   _client.onJoinedLobby = () => {
     console.log('[photon] joined lobby');
     setPhotonStatus('finding room...');
-    _client.joinOrCreateRoom('nodeblast-main', {
-      maxPlayers: MAX_PLAYERS_PER_ROOM,
-    }, {});
+    _client.joinRoom('nodeblast-main');
   };
 
   _client.onJoinRoomFailed = (code, msg) => {
-    console.warn('[photon] join room failed:', code, msg);
-    setPhotonStatus('room error: ' + code);
+    console.log('[photon] room not found, creating:', code, msg);
+    _client.createRoom('nodeblast-main', { maxPlayers: MAX_PLAYERS_PER_ROOM });
   };
 
   _client.onJoinRoom = () => {
