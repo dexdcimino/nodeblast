@@ -10,7 +10,7 @@ import { navigate } from './router.js';
 
 const BABYLON_CDN = 'https://cdn.babylonjs.com/babylon.js';
 const BABYLON_LOADERS_CDN = 'https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js';
-const PHOTON_CDN = 'https://cdn.jsdelivr.net/npm/photon-javascript-sdk@4.8.0/photon-javascript-sdk.min.js';
+const PHOTON_CDN = 'https://cdn.photonengine.io/photon-javascript-sdk/4.8.0/photon.min.js';
 
 let _engine = null;
 let _exitWired = false;
