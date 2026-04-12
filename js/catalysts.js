@@ -1622,16 +1622,20 @@ async function _paintCatalystDetail(catalyst) {
   // Collaborator row + expandable list. Owner is implicit (always
   // shows first); the catalyst doc's collaborators array stores the
   // additional contributors. Click the row to toggle the list.
+  // MD30: use devCount when devMode is 'co' so the label reflects
+  // the user-stated headcount (which can exceed the named collabs).
+  // Pill rendering reuses the rich/basic split from MD29.
   const collabRow = document.getElementById('cat-detail-collab');
   const collabText = document.getElementById('cat-detail-collab-text');
   const collabList = document.getElementById('cat-detail-collab-list');
   const extras = Array.isArray(catalyst.collaborators) ? catalyst.collaborators : [];
-  const totalCollabs = 1 + extras.length;
+  const totalCollabs = (catalyst.devMode === 'co' && typeof catalyst.devCount === 'number' && catalyst.devCount > 1)
+    ? catalyst.devCount
+    : 1 + extras.length;
   if (collabText) {
     collabText.textContent = totalCollabs === 1 ? '1 contributor' : totalCollabs + ' contributors';
   }
   if (collabRow) {
-    // Reset to collapsed each time the modal opens.
     collabRow.dataset.expanded = 'false';
     collabRow.style.cursor = totalCollabs > 1 ? 'pointer' : 'default';
   }
@@ -1641,21 +1645,32 @@ async function _paintCatalystDetail(catalyst) {
       const ownerName = catalyst.ownerName || 'anon';
       const ownerHex = catalyst.ownerHex || '5aaa72';
       const ownerPhoto = catalyst.ownerPhoto || '';
-      const ownerInitial = (ownerName || 'A').charAt(0).toUpperCase();
-      const buildAvatar = (photo, initial) => photo
-        ? `<img src="${escapeHtml(photo)}" alt="">`
-        : escapeHtml(initial);
+      const buildAv = (photo, initial, borderHex) => {
+        const inner = photo
+          ? `<img src="${escapeHtml(photo)}" alt="">`
+          : escapeHtml(initial);
+        return `<div class="cat-detail-collab-avatar" style="border-color:#${escapeHtml(borderHex)}">${inner}</div>`;
+      };
+      const personSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="8" r="4"/><path d="M20 21c0-3.87-3.58-7-8-7s-8 3.13-8 7z"/></svg>';
       const rows = [
+        // Owner — always first, rich pill style
         `<div class="cat-detail-collab-item owner">
-           <div class="cat-detail-collab-avatar" style="border-color:#${escapeHtml(ownerHex)}">${buildAvatar(ownerPhoto, ownerInitial)}</div>
+           ${buildAv(ownerPhoto, (ownerName||'A').charAt(0).toUpperCase(), ownerHex)}
            <div class="cat-detail-collab-name">${escapeHtml(ownerName)}<span class="cat-detail-collab-role">owner</span></div>
          </div>`,
         ...extras.map((c) => {
+          if (c.type === 'unregistered') {
+            const nm = c.name || c.displayName || 'anon';
+            return `<div class="cat-detail-collab-item basic">
+              <div class="cat-detail-collab-avatar basic-avatar">${personSvg}</div>
+              <div class="cat-detail-collab-name">${escapeHtml(nm)}</div>
+            </div>`;
+          }
           const name = c.displayName || 'anon';
           const hex = c.hexCode || '5aaa72';
           const photo = c.photoURL || '';
           return `<div class="cat-detail-collab-item">
-            <div class="cat-detail-collab-avatar" style="border-color:#${escapeHtml(hex)}">${buildAvatar(photo, (name || 'A').charAt(0).toUpperCase())}</div>
+            ${buildAv(photo, (name||'A').charAt(0).toUpperCase(), hex)}
             <div class="cat-detail-collab-name">${escapeHtml(name)}<span class="cat-detail-collab-hex">#${escapeHtml(hex)}</span></div>
           </div>`;
         }),

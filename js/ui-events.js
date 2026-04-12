@@ -365,8 +365,16 @@ export function initAccountMenu(handlers) {
     toggleEdit();
   });
   document.getElementById('acct-edit-cancel-btn')?.addEventListener('click', _closeEditPanel);
+  // MD30: live space → underscore conversion on the username input.
+  document.getElementById('acct-username-input')?.addEventListener('input', (e) => {
+    const el = e.target;
+    const cursor = el.selectionStart;
+    el.value = el.value.replace(/ /g, '_');
+    el.selectionStart = el.selectionEnd = cursor;
+  });
   document.getElementById('acct-edit-save-btn')?.addEventListener('click', async () => {
-    const name = document.getElementById('acct-username-input').value.trim();
+    // MD30: safety-net strip on save in case the live handler missed
+    const name = document.getElementById('acct-username-input').value.replace(/ /g, '_').trim();
     const hex = document.getElementById('acct-edit-hex-input').value.replace('#', '').toLowerCase();
     const bio = (document.getElementById('acct-bio-input')?.value || '').trim().slice(0, 150);
     const socialLinks = _collectLinks();

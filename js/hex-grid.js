@@ -175,8 +175,13 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   // collaborators array), so total = 1 + extras. We prefer the
   // denormalized collaboratorCount field when present, otherwise
   // compute from the array length, otherwise default to 1.
+  // MD30: also show the badge when devMode === 'co' and devCount
+  // > 1, even if the named collaborators list is short (the user
+  // may have set a higher headcount in the edit modal).
   let collabCount;
-  if (typeof cat.collaboratorCount === 'number') {
+  if (cat.devMode === 'co' && typeof cat.devCount === 'number' && cat.devCount > 1) {
+    collabCount = cat.devCount;
+  } else if (typeof cat.collaboratorCount === 'number') {
     collabCount = cat.collaboratorCount;
   } else if (Array.isArray(cat.collaborators)) {
     collabCount = 1 + cat.collaborators.length;
