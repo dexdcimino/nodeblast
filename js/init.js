@@ -36,6 +36,7 @@ import {
   subscribePublicFeed,
   refreshOwnerOnAllCatalysts,
   reorderCatalysts,
+  openUnlockModal,
 } from './catalysts.js';
 import { getUserByUsernameHex } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './router.js';
@@ -366,6 +367,21 @@ function handleTileClick(cat) {
   const ownerName = (cat.ownerName || 'anon').toLowerCase();
   const ownerHex = cat.ownerHex || '';
   const slug = cat.slug || '';
+
+  // MD23: password gate. For non-owners, a locked catalyst has to
+  // clear the unlock modal before any routing or popup happens. The
+  // external path eventually hits openCatalystDetail which also
+  // checks, but we gate here so locked INTERNAL catalysts (which go
+  // via navigate() and never touch openCatalystDetail) are covered
+  // too. Once the password is correct, the success callback replays
+  // the original click path without the lock flag.
+  if (cat.isLocked && cat.lockPassword) {
+    openUnlockModal(cat, () => {
+      const unlocked = { ...cat, isLocked: false, lockPassword: '' };
+      handleTileClick(unlocked);
+    });
+    return;
+  }
 
   // MD12: internal catalysts navigate to their full-page view via
   // navigate() so renderRoute runs and the internal-catalyst-view

@@ -784,6 +784,22 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    keep the title visible over whatever theme surface is behind. */
 .hex-tile.no-thumb .hex-fade{background:linear-gradient(to top,rgba(0,0,0,0.32) 0%,rgba(0,0,0,0.18) 28%,rgba(0,0,0,0) 55%);}
 
+/* MD23: locked-catalyst tile styles. The thumb pseudo-element gets
+   a strong blur + slight dim, and a centered padlock overlay
+   announces the lock. The title still renders (over the fade
+   gradient) so viewers can tell what they're looking at. */
+.hex-tile.locked::before{filter:blur(14px) brightness(0.55);}
+.hex-tile.locked:hover::before{filter:blur(12px) brightness(0.65);}
+.hex-tile.locked .hex-placeholder{opacity:0.12;}
+.hex-lock-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:#fff;z-index:4;}
+.hex-lock-svg{width:34%;height:34%;max-width:64px;max-height:64px;filter:drop-shadow(0 3px 10px rgba(0,0,0,0.55));}
+.hex-tile.mini-hex-tile .hex-lock-svg{width:44%;height:44%;}
+/* Hide the rest of the overlay signal clutter on locked tiles so
+   the padlock reads cleanly. Title still renders at the bottom. */
+.hex-tile.locked .hex-collab-badge,
+.hex-tile.locked .hex-vote,
+.hex-tile.locked .hex-creator-avatar{opacity:0.35;}
+
 /* Title + hover domain — anchored to the bottom of the hex inside the
    narrowing bottom quadrant. Padding-bottom keeps the text above the
    bottom point; padding-x keeps it inside the hex where it narrows. */
@@ -903,6 +919,52 @@ body.cat-modal-open{overflow:hidden;}
 .signin-modal-btn:hover{border-color:var(--clr-adj);background:var(--bg4);}
 .signin-modal-btn svg{flex-shrink:0;}
 #signin-modal-error{margin-top:14px;font-size:12px;color:var(--danger);min-height:16px;}
+
+/* ══════════════════════════════════════
+   MD23: CATALYST LOCK + UNLOCK MODAL
+══════════════════════════════════════ */
+/* Lock row inside the edit catalyst modal. Toggle button flips
+   between off/on states via aria-pressed; password input appears
+   only when the toggle is on (`.cat-field.locked` class). */
+.cat-lock-row{display:flex;align-items:center;gap:10px;}
+.cat-lock-toggle{flex-shrink:0;display:inline-flex;align-items:center;gap:8px;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;padding:8px 14px;cursor:pointer;color:var(--tx2);font-family:var(--fn);font-size:13px;font-weight:600;transition:all var(--ease);}
+.cat-lock-toggle:hover{color:var(--tx);border-color:var(--clr-adj);}
+.cat-lock-toggle.on{background:var(--clr-adj);color:var(--clr-adj-on,#000);border-color:var(--clr-adj);}
+.cat-lock-toggle .cat-lock-icon-open{display:none;}
+.cat-lock-toggle.on .cat-lock-icon-closed{display:none;}
+.cat-lock-toggle.on .cat-lock-icon-open{display:inline;}
+#cat-lock-password{flex:1;min-width:0;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;padding:9px 12px;color:var(--tx);font-family:var(--fn);font-size:13px;outline:none;transition:border-color var(--ease);display:none;}
+#cat-lock-password:focus{border-color:var(--clr-adj);}
+#cat-lock-field.locked #cat-lock-password{display:block;}
+
+/* Unlock modal — sits at z-index 24500 between the detail popup
+   (24000) and the edit modal (25000), so correct-password flow can
+   hand off to the detail popup without disappearing behind it. */
+#unlock-modal{display:none;position:fixed;inset:0;z-index:24500;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;}
+#unlock-modal.open{display:flex;}
+#unlock-modal-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:30px 32px 24px;width:100%;max-width:380px;box-shadow:0 28px 70px rgba(0,0,0,.6);position:relative;animation:fadeup .22s ease both;text-align:center;}
+#unlock-modal-close{position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;display:flex;align-items:center;transition:color var(--ease);}
+#unlock-modal-close:hover{color:var(--tx);}
+#unlock-modal-icon{display:flex;justify-content:center;color:var(--clr-adj);margin-bottom:10px;}
+#unlock-modal-title{font-size:18px;font-weight:700;color:var(--tx);margin-bottom:4px;}
+#unlock-modal-sub{font-size:13px;color:var(--tx3);margin-bottom:18px;min-height:16px;}
+#unlock-modal-form{display:flex;flex-direction:column;gap:10px;}
+#unlock-modal-input{width:100%;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:10px;padding:11px 14px;color:var(--tx);font-family:var(--fn);font-size:14px;outline:none;text-align:center;transition:border-color var(--ease);}
+#unlock-modal-input:focus{border-color:var(--clr-adj);}
+#unlock-modal-error{font-size:12px;color:var(--danger,#e85d5d);min-height:16px;opacity:0;transition:opacity var(--ease);}
+#unlock-modal-error.visible{opacity:1;}
+#unlock-modal-buttons{display:flex;gap:8px;margin-top:6px;}
+#unlock-modal-buttons .cat-btn{flex:1;justify-content:center;}
+/* Shake animation on the input after a wrong password — restarts
+   on each failed attempt via a reflow toggle in _attemptUnlock. */
+@keyframes unlock-shake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-8px);}
+  40%{transform:translateX(8px);}
+  60%{transform:translateX(-5px);}
+  80%{transform:translateX(5px);}
+}
+#unlock-modal-input.shake{animation:unlock-shake .4s ease;border-color:var(--danger,#e85d5d);}
 
 /* Guest state on the account-menu catalyst section — dimmed + can't
    expand. The click handler toasts + opens the sign-in modal. */

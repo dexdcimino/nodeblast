@@ -105,6 +105,11 @@ export const PLACEHOLDER_LOGO_SVG = `<svg class="hex-placeholder-logo" xmlns="ht
   </g>
 </svg>`;
 
+// MD23: padlock icon rendered over locked catalyst tiles. Same
+// currentColor pattern so CSS can tint it. Non-rotated because a
+// padlock on its side looks weird.
+const LOCK_OVERLAY_SVG = '<svg class="hex-lock-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+
 // Small people icon for the collaborator-count badge. Currently hidden
 // (collaborator data model doesn't exist yet), but the markup renders
 // conditionally so flipping on a future write pushes it live without
@@ -122,6 +127,14 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   // fade gradient (heavy overlay is only needed over a photo).
   const placeholderHTML = !cat.thumbURL
     ? `<div class="hex-placeholder">${PLACEHOLDER_LOGO_SVG}</div>`
+    : '';
+
+  // MD23: padlock overlay for password-protected catalysts. The
+  // `.locked` class on the tile element (wired in the caller) drives
+  // the thumbnail blur + dim via CSS. The overlay itself holds the
+  // big padlock icon that makes the locked state unmistakable.
+  const lockHTML = cat.isLocked && cat.lockPassword
+    ? `<div class="hex-lock-overlay">${LOCK_OVERLAY_SVG}</div>`
     : '';
 
   // Creator avatar on community tiles only. Profile pages show the
@@ -175,6 +188,7 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   //   .hex-collab-badge   — top left corner (conditional)
   //   .hex-vote-fire/poop — bottom corners (conditional on count > 0)
   //   .hex-fade           — bottom linear gradient for title legibility
+  //   .hex-lock-overlay   — centered padlock (locked tiles only)
   //   .hex-info           — title + (hover) domain, anchored bottom
   return `
     ${placeholderHTML}
@@ -184,6 +198,7 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     ${fireHTML}
     ${poopHTML}
     <div class="hex-fade"></div>
+    ${lockHTML}
     <div class="hex-info">
       <div class="hex-title">${title}</div>
       ${domain ? `<div class="hex-domain" data-url-link>${GLOBE_MINI_SVG}<span>${escapeHtml(domain)}</span></div>` : ''}
@@ -299,6 +314,8 @@ function _renderNow(state) {
       if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
       else el.classList.add('no-thumb');
       if (tile.status === 'placeholder') el.classList.add('wip');
+      // MD23: mark locked tiles so the thumb blur + dim kick in.
+      if (tile.isLocked && tile.lockPassword) el.classList.add('locked');
       el.innerHTML = catalystTileHTML(tile, { showCreatorAvatar: !!state.showCreatorAvatar });
       el.addEventListener('click', (e) => {
         if (_suppressNextClick) { _suppressNextClick = false; return; }
@@ -601,6 +618,8 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
   if (cat.thumbURL) el.style.setProperty('--thumb', `url("${cat.thumbURL}")`);
   else el.classList.add('no-thumb');
   if (cat.status === 'placeholder') el.classList.add('wip');
+  // MD23: locked-tile class for thumb blur + overlay.
+  if (cat.isLocked && cat.lockPassword) el.classList.add('locked');
   el.innerHTML = catalystTileHTML(cat, { showCreatorAvatar });
 
   // MD18: pin/unpin button for community-view tiles. Rendered as an
@@ -737,10 +756,20 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
           el.innerHTML = `<div class="hex-placeholder">${PLACEHOLDER_LOGO_SVG}</div>`;
         }
         if (tile.status === 'placeholder') el.classList.add('wip');
-        // No inner HTML (other than the placeholder, if any) — the
-        // `.hex-tile::before` pseudo-element paints the thumbnail via
-        // `--thumb`. Tooltip surfaces the title since there's no room
-        // for text on a 60px tile.
+        // MD23: mini tiles still surface the locked state. Owners
+        // will see a small padlock overlay even in the dropdown, and
+        // CSS will add the blur. We inject the overlay inline since
+        // mini tiles normally have no inner DOM.
+        if (tile.isLocked && tile.lockPassword) {
+          el.classList.add('locked');
+          // Append — don't clobber — the placeholder we may have
+          // already rendered for no-thumb minis.
+          el.insertAdjacentHTML('beforeend', '<div class="hex-lock-overlay">' + LOCK_OVERLAY_SVG + '</div>');
+        }
+        // No inner HTML (other than the placeholder + lock overlay,
+        // if any) — the `.hex-tile::before` pseudo-element paints
+        // the thumbnail via `--thumb`. Tooltip surfaces the title
+        // since there's no room for text on a 60px tile.
         el.setAttribute('data-tip', tile.title || 'Catalyst');
         el.addEventListener('click', () => {
           if (_suppressNextClick) { _suppressNextClick = false; return; }

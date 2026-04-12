@@ -639,6 +639,22 @@
               <div id="cat-collab-results"><!-- search results dropdown --></div>
             </div>
           </div>
+
+          <!-- MD23: password lock row. The toggle enables protection,
+               the password input appears inline once enabled. Client
+               -side check only (not true encryption) — see the
+               security note in MD23 spec. -->
+          <div class="cat-field" id="cat-lock-field">
+            <label class="cat-label">Password lock</label>
+            <div class="cat-lock-row">
+              <button type="button" id="cat-lock-toggle" class="cat-lock-toggle" data-tip="Toggle password protection" aria-pressed="false">
+                <svg class="cat-lock-icon-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <svg class="cat-lock-icon-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                <span class="cat-lock-label">Off</span>
+              </button>
+              <input id="cat-lock-password" type="text" placeholder="Password" spellcheck="false" autocomplete="off" maxlength="60" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -648,6 +664,35 @@
         <button id="cat-cancel-btn" class="cat-btn">Cancel</button>
         <button id="cat-submit-btn" class="cat-btn primary">Create Catalyst</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       UNLOCK MODAL (MD23)
+       ──────────────────────────────────────
+       Shown when a non-owner clicks a password-protected catalyst.
+       Sits above the detail popup (z-index 24500) and below the
+       edit modal (25000) so correct-password flow can hand off to
+       the detail popup cleanly.
+       ══════════════════════════════════════ -->
+  <div id="unlock-modal">
+    <div id="unlock-modal-card">
+      <button id="unlock-modal-close" data-tip="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div id="unlock-modal-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div id="unlock-modal-title">This catalyst is password protected</div>
+      <div id="unlock-modal-sub"></div>
+      <form id="unlock-modal-form">
+        <input id="unlock-modal-input" type="password" placeholder="Enter password" spellcheck="false" autocomplete="off" />
+        <div id="unlock-modal-error"></div>
+        <div id="unlock-modal-buttons">
+          <button type="button" id="unlock-modal-cancel" class="cat-btn">Cancel</button>
+          <button type="submit" id="unlock-modal-submit" class="cat-btn primary">Unlock</button>
+        </div>
+      </form>
     </div>
   </div>
 

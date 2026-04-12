@@ -271,7 +271,7 @@ function _resetMenuView() {
 // sitting behind it.
 function _isAnyModalOpen() {
   return !!document.querySelector(
-    '#cat-modal.open, #signin-modal.open, #dex-modal.open, #cat-detail-popup.open'
+    '#cat-modal.open, #signin-modal.open, #dex-modal.open, #cat-detail-popup.open, #unlock-modal.open'
   );
 }
 

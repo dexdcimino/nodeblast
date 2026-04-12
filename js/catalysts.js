@@ -387,6 +387,11 @@ export async function createCatalyst(data, file) {
     isPublic: true,
     collaborators,
     collaboratorCount: 1 + collaborators.length,
+    // MD23: password lock. Client-side deterrent only — see the
+    // security note in MD23. Empty string when locking is off so the
+    // doc shape stays stable.
+    isLocked: !!data.isLocked && !!data.lockPassword,
+    lockPassword: data.isLocked && data.lockPassword ? data.lockPassword : '',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -425,6 +430,16 @@ export async function updateCatalyst(id, data, file) {
   if (Array.isArray(data.collaborators)) {
     updates.collaborators = data.collaborators;
     updates.collaboratorCount = 1 + data.collaborators.length;
+  }
+
+  // MD23: password lock state. Both fields are always written so
+  // that disabling the lock from the edit modal clears the password
+  // on the doc (not just flips isLocked). Writing empty string
+  // rather than deleting the field keeps doc shape consistent.
+  if (typeof data.isLocked === 'boolean') {
+    const pw = (data.lockPassword || '').toString();
+    updates.isLocked = data.isLocked && !!pw;
+    updates.lockPassword = data.isLocked && pw ? pw : '';
   }
 
   // Re-slug only if the title actually changed
@@ -750,11 +765,43 @@ export function openCatalystModal(existing = null) {
   const collabInput = document.getElementById('cat-collab-input');
   if (collabInput) collabInput.value = '';
 
+  // MD23: seed the password lock toggle + input from the existing
+  // doc. Missing fields (older catalysts predating MD23) fall back
+  // to unlocked. _applyLockState handles the visual toggle state
+  // and input visibility.
+  const lockedNow = !!existing?.isLocked && !!existing?.lockPassword;
+  _applyLockState(lockedNow);
+  const pwInput = document.getElementById('cat-lock-password');
+  if (pwInput) pwInput.value = existing?.lockPassword || '';
+
   document.getElementById('cat-submit-btn').textContent = existing ? 'Save Changes' : 'Create Catalyst';
   document.getElementById('cat-delete-btn').style.display = existing ? 'inline-flex' : 'none';
 
   modal.classList.add('open');
   setTimeout(() => document.getElementById('cat-title')?.focus(), 50);
+}
+
+// MD23: drive the lock toggle button + password input visibility.
+// Called from openCatalystModal (to hydrate) and from the toggle's
+// click handler (to flip). Kept as a standalone helper so both
+// paths stay consistent — the button's aria-pressed attribute is
+// the source of truth the submit handler reads.
+function _applyLockState(locked) {
+  const btn = document.getElementById('cat-lock-toggle');
+  const field = document.getElementById('cat-lock-field');
+  const pwInput = document.getElementById('cat-lock-password');
+  if (!btn) return;
+  btn.setAttribute('aria-pressed', locked ? 'true' : 'false');
+  btn.classList.toggle('on', locked);
+  const label = btn.querySelector('.cat-lock-label');
+  if (label) label.textContent = locked ? 'On' : 'Off';
+  if (field) field.classList.toggle('locked', locked);
+  if (pwInput) {
+    // Clear the field when turning off so a subsequent save doesn't
+    // leave a stale password in memory. Turning on leaves whatever
+    // the owner previously typed (or hydrated from Firestore).
+    if (!locked) pwInput.value = '';
+  }
 }
 
 export function closeCatalystModal() {
@@ -774,6 +821,11 @@ export function initCatalystModal(onSaved) {
   const modal = document.getElementById('cat-modal');
   if (!modal) return;
 
+  // MD23: wire the password unlock modal at the same time. One-time
+  // wiring; the modal element is always in the DOM (declared in
+  // index.html), so this is safe to call during boot.
+  initUnlockModal();
+
   document.getElementById('cat-modal-close')?.addEventListener('click', closeCatalystModal);
   document.getElementById('cat-cancel-btn')?.addEventListener('click', closeCatalystModal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeCatalystModal(); });
@@ -789,6 +841,21 @@ export function initCatalystModal(onSaved) {
   });
   document.querySelectorAll('#cat-type-pick .cat-type-btn').forEach((b) => {
     b.addEventListener('click', () => _applyType(b.dataset.type));
+  });
+
+  // MD23: password lock toggle. Clicking the button flips the
+  // aria-pressed state and shows/hides the password input. Pressing
+  // Enter inside the password field fires the submit handler via
+  // the form's default click on the primary button.
+  document.getElementById('cat-lock-toggle')?.addEventListener('click', () => {
+    const btn = document.getElementById('cat-lock-toggle');
+    const next = btn.getAttribute('aria-pressed') !== 'true';
+    _applyLockState(next);
+    if (next) {
+      // Small UX nicety — auto-focus the password field when the
+      // user enables the lock so they can type immediately.
+      setTimeout(() => document.getElementById('cat-lock-password')?.focus(), 30);
+    }
   });
 
   const drop = document.getElementById('cat-thumb-drop');
@@ -892,6 +959,19 @@ export function initCatalystModal(onSaved) {
       _showUrlError('Enter a valid URL (e.g. example.com)');
       return;
     }
+    // MD23: pull lock state out of the form. Toggle button carries
+    // the boolean as an aria-pressed attribute; password lives in a
+    // sibling text input. We don't force the caller to enter a
+    // password — toggling on with an empty field just clears the
+    // lock on save (handled in createCatalyst/updateCatalyst).
+    const lockToggleBtn = document.getElementById('cat-lock-toggle');
+    const isLocked = lockToggleBtn?.getAttribute('aria-pressed') === 'true';
+    const lockPassword = document.getElementById('cat-lock-password')?.value?.trim() || '';
+    if (isLocked && !lockPassword) {
+      toast('Enter a password or turn the lock off');
+      return;
+    }
+
     const data = {
       title,
       // Internal catalysts don't carry an external URL — always store
@@ -904,6 +984,8 @@ export function initCatalystModal(onSaved) {
       type: _type,
       accentColor: _accentColor,
       collaborators: _editingCollabs.slice(),
+      isLocked,
+      lockPassword,
     };
     const submitBtn = document.getElementById('cat-submit-btn');
     submitBtn.disabled = true; submitBtn.textContent = 'Saving...';
@@ -986,6 +1068,95 @@ function _renderVoteButtons() {
 }
 
 export async function openCatalystDetail(catalyst) {
+  const pop = document.getElementById('cat-detail-popup');
+  if (!pop || !catalyst) return;
+
+  // MD23: gate locked catalysts. Owners always bypass — their UID
+  // matches ownerId so we skip the prompt entirely. Anyone else gets
+  // the unlock modal; the success callback hands the unlocked
+  // catalyst to _paintCatalystDetail so the detail popup finally
+  // paints.
+  const isOwner = !!(State.user && catalyst.ownerId === State.user.uid);
+  if (catalyst.isLocked && catalyst.lockPassword && !isOwner) {
+    openUnlockModal(catalyst, () => {
+      _paintCatalystDetail(catalyst);
+    });
+    return;
+  }
+
+  _paintCatalystDetail(catalyst);
+}
+
+// MD23: password-gate modal. Public entry point so init.js can also
+// trigger it from handleTileClick for internal catalysts (which
+// navigate to a route instead of opening the detail popup). On
+// success we call `onSuccess` and close the modal; on failure we
+// shake the input and leave the modal open for another try.
+let _unlockTarget = null;
+let _unlockSuccess = null;
+export function openUnlockModal(catalyst, onSuccess) {
+  const modal = document.getElementById('unlock-modal');
+  if (!modal || !catalyst) return;
+  _unlockTarget = catalyst;
+  _unlockSuccess = typeof onSuccess === 'function' ? onSuccess : null;
+  const sub = document.getElementById('unlock-modal-sub');
+  if (sub) sub.textContent = catalyst.title ? '"' + catalyst.title + '"' : '';
+  const input = document.getElementById('unlock-modal-input');
+  const err = document.getElementById('unlock-modal-error');
+  if (input) { input.value = ''; input.classList.remove('shake'); }
+  if (err) { err.textContent = ''; err.classList.remove('visible'); }
+  modal.classList.add('open');
+  setTimeout(() => input?.focus(), 50);
+}
+
+export function closeUnlockModal() {
+  document.getElementById('unlock-modal')?.classList.remove('open');
+  _unlockTarget = null;
+  _unlockSuccess = null;
+}
+
+function _attemptUnlock() {
+  if (!_unlockTarget) return;
+  const input = document.getElementById('unlock-modal-input');
+  const err = document.getElementById('unlock-modal-error');
+  const attempt = (input?.value || '').trim();
+  const expected = (_unlockTarget.lockPassword || '').trim();
+  if (attempt && attempt === expected) {
+    const cb = _unlockSuccess;
+    closeUnlockModal();
+    try { cb?.(); } catch (e) { console.warn('[unlock] success callback threw:', e); }
+    return;
+  }
+  // Wrong password — shake + error message. Leave the modal open so
+  // the user can try again. We re-focus the input after the shake
+  // animation clears.
+  if (err) {
+    err.textContent = 'Incorrect password';
+    err.classList.add('visible');
+  }
+  if (input) {
+    input.classList.remove('shake');
+    // Force reflow so the animation restarts on repeat attempts.
+    void input.offsetWidth;
+    input.classList.add('shake');
+    input.select();
+  }
+}
+
+function initUnlockModal() {
+  const modal = document.getElementById('unlock-modal');
+  if (!modal) return;
+  document.getElementById('unlock-modal-close')?.addEventListener('click', closeUnlockModal);
+  document.getElementById('unlock-modal-cancel')?.addEventListener('click', closeUnlockModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeUnlockModal(); });
+  const form = document.getElementById('unlock-modal-form');
+  form?.addEventListener('submit', (e) => { e.preventDefault(); _attemptUnlock(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeUnlockModal();
+  });
+}
+
+function _paintCatalystDetail(catalyst) {
   const pop = document.getElementById('cat-detail-popup');
   if (!pop || !catalyst) return;
   _detailCatalyst = catalyst;
