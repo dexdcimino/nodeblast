@@ -12,6 +12,9 @@ let _camera = null;
 let _pointerLocked = false;
 let _playerUsername = 'player';
 let _playerHex = '5aaa72';
+let _keyDownHandler = null;
+let _keyUpHandler = null;
+let _jumpHandler = null;
 const _remotePlayers = new Map();
 
 export function getPlayerState() {
@@ -151,15 +154,51 @@ export function initGame(canvas) {
   camera.keysDown = [83, 40];
   camera.keysLeft = [65, 37];
   camera.keysRight = [68, 39];
-  camera.speed = 0.12;
+  camera.speed = 0.5;
   camera.angularSensibility = 800;
   camera.inertia = 0.3;
   camera.minZ = 0.05;
   camera.fov = 1.309; // 75 degrees
   camera.checkCollisions = true;
-  camera.applyGravity = false;
+  camera.applyGravity = true;
   camera.ellipsoid = new B.Vector3(0.5, 0.9, 0.5);
   camera.ellipsoidOffset = new B.Vector3(0, 0.9, 0);
+  scene.gravity = new B.Vector3(0, -0.5, 0);
+
+  // Sprint (Shift) + Jump (Space)
+  let _sprinting = false;
+  let _canJump = true;
+  _keyDownHandler = (e) => {
+    if (e.key === 'Shift' && !_sprinting) {
+      _sprinting = true;
+      camera.speed = 1.4;
+    }
+  };
+  _keyUpHandler = (e) => {
+    if (e.key === 'Shift') {
+      _sprinting = false;
+      camera.speed = 0.5;
+    }
+  };
+  _jumpHandler = (e) => {
+    if (e.code === 'Space' && _canJump) {
+      e.preventDefault();
+      _canJump = false;
+      let jumpVel = 0.22;
+      const jumpInt = setInterval(() => {
+        if (!_camera) { clearInterval(jumpInt); return; }
+        _camera.position.y += jumpVel;
+        jumpVel -= 0.018;
+        if (jumpVel < -0.1) {
+          clearInterval(jumpInt);
+          setTimeout(() => { _canJump = true; }, 200);
+        }
+      }, 16);
+    }
+  };
+  document.addEventListener('keydown', _keyDownHandler);
+  document.addEventListener('keyup', _keyUpHandler);
+  document.addEventListener('keydown', _jumpHandler);
 
   // Pointer lock
   _pointerLocked = false;
@@ -249,6 +288,9 @@ export function destroyGame(engine) {
     window.removeEventListener('resize', _resizeHandler);
     _resizeHandler = null;
   }
+  if (_keyDownHandler) { document.removeEventListener('keydown', _keyDownHandler); _keyDownHandler = null; }
+  if (_keyUpHandler) { document.removeEventListener('keyup', _keyUpHandler); _keyUpHandler = null; }
+  if (_jumpHandler) { document.removeEventListener('keydown', _jumpHandler); _jumpHandler = null; }
   _remotePlayers.forEach((p) => {
     try { p.labelTex.dispose(); } catch {}
     try { p.labelPlane.dispose(); } catch {}

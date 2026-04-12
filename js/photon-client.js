@@ -81,6 +81,7 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
   };
 
   _client.onEvent = (code, content, actorNr) => {
+    console.log('[photon] event received:', code, 'from actor:', actorNr, 'myId:', _myId);
     if (code === 1 && actorNr !== _myId && _onPlayerUpdate) {
       _onPlayerUpdate(
         actorNr,
@@ -119,6 +120,7 @@ function _startSendLoop() {
     if (!window._nbGetPlayerState) return;
     const s = window._nbGetPlayerState();
     if (!s) return;
+    console.log('[photon] sending state:', s.x.toFixed(2), s.z.toFixed(2));
     if (window._nbHathoraConnected?.()) {
       window._nbHathoraSendMove?.(s.x, s.y, s.z, s.rotY, s.pitch);
     }
