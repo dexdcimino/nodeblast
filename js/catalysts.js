@@ -563,6 +563,12 @@ export async function createCatalyst(data, file) {
     // doc shape stays stable.
     isLocked: !!data.isLocked && !!data.lockPassword,
     lockPassword: data.isLocked && data.lockPassword ? data.lockPassword : '',
+    // MD28: solo/co-dev + developer count. devCount defaults to 1
+    // for solo and 1+collabs for co when the caller doesn't pass it.
+    devMode: data.devMode === 'co' ? 'co' : 'solo',
+    devCount: typeof data.devCount === 'number' && data.devCount >= 1
+      ? data.devCount
+      : 1 + collaborators.length,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -613,6 +619,13 @@ export async function updateCatalyst(id, data, file) {
     const pw = (data.lockPassword || '').toString();
     updates.isLocked = data.isLocked && !!pw;
     updates.lockPassword = data.isLocked && pw ? pw : '';
+  }
+
+  // MD28: solo/co-dev + developer count.
+  if (data.devMode) {
+    updates.devMode = data.devMode === 'co' ? 'co' : 'solo';
+    updates.devCount = typeof data.devCount === 'number' && data.devCount >= 1
+      ? data.devCount : 1;
   }
 
   // Re-slug only if the title actually changed
@@ -895,6 +908,7 @@ async function _runCollabSearch(prefix) {
         isAdmin: !!u.isAdmin,
       });
       _renderCollabChips();
+      _syncDevModeWithCollabs();
       const input = document.getElementById('cat-collab-input');
       if (input) input.value = '';
       _hideCollabResults();
@@ -942,6 +956,16 @@ export function openCatalystModal(existing = null) {
   const collabInput = document.getElementById('cat-collab-input');
   if (collabInput) collabInput.value = '';
 
+  // MD28: seed the dev-mode toggle + count from the existing doc.
+  // Missing fields (legacy catalysts) default to 'solo' / 1.
+  _applyDevMode(existing?.devMode === 'co' ? 'co' : 'solo');
+  const devCountInput = document.getElementById('cat-dev-count');
+  if (devCountInput) {
+    const min = 1 + _editingCollabs.length;
+    devCountInput.value = Math.max(existing?.devCount || 1, min);
+    devCountInput.min = min;
+  }
+
   // MD23: seed the password lock toggle + input from the existing
   // doc. Missing fields (older catalysts predating MD23) fall back
   // to unlocked. _applyLockState handles the visual toggle state
@@ -963,6 +987,40 @@ export function openCatalystModal(existing = null) {
 // click handler (to flip). Kept as a standalone helper so both
 // paths stay consistent — the button's aria-pressed attribute is
 // the source of truth the submit handler reads.
+// MD28: drive the solo-dev / co-dev toggle visual state + dev count
+// visibility. Called from hydration and from the toggle click handlers.
+function _applyDevMode(mode) {
+  const soloBtn = document.getElementById('cat-dev-solo');
+  const coBtn = document.getElementById('cat-dev-co');
+  const countRow = document.getElementById('cat-dev-count-row');
+  if (soloBtn) soloBtn.classList.toggle('selected', mode === 'solo');
+  if (coBtn) coBtn.classList.toggle('selected', mode === 'co');
+  if (countRow) countRow.style.display = mode === 'co' ? '' : 'none';
+}
+
+// MD28: sync dev-mode UI state with the current collabs list. Auto-
+// switches to co-dev when collaborators are added, refreshes the
+// count input's min value so the user can't type below it, and
+// clamps the displayed value when the floor rises above the current
+// input value.
+function _syncDevModeWithCollabs() {
+  const hasCollabs = _editingCollabs.length > 0;
+  const soloBtn = document.getElementById('cat-dev-solo');
+  const coBtn = document.getElementById('cat-dev-co');
+  const countInput = document.getElementById('cat-dev-count');
+  if (hasCollabs) {
+    _applyDevMode('co');
+    if (soloBtn) soloBtn.disabled = true;
+  } else {
+    if (soloBtn) soloBtn.disabled = false;
+  }
+  if (countInput) {
+    const floor = 1 + _editingCollabs.length;
+    countInput.min = floor;
+    if (Number(countInput.value) < floor) countInput.value = floor;
+  }
+}
+
 function _applyLockState(locked) {
   const btn = document.getElementById('cat-lock-toggle');
   const field = document.getElementById('cat-lock-field');
@@ -1018,6 +1076,34 @@ export function initCatalystModal(onSaved) {
   });
   document.querySelectorAll('#cat-type-pick .cat-type-btn').forEach((b) => {
     b.addEventListener('click', () => _applyType(b.dataset.type));
+  });
+
+  // MD28: solo / co-dev toggle buttons. Clicking solo-dev while
+  // collabs exist gets blocked with a toast; otherwise it just flips
+  // the mode and shows/hides the dev-count row.
+  document.getElementById('cat-dev-solo')?.addEventListener('click', () => {
+    if (_editingCollabs.length > 0) {
+      toast(`You have ${_editingCollabs.length} collaborator${_editingCollabs.length > 1 ? 's' : ''}`);
+      return;
+    }
+    _applyDevMode('solo');
+  });
+  document.getElementById('cat-dev-co')?.addEventListener('click', () => {
+    _applyDevMode('co');
+    const countInput = document.getElementById('cat-dev-count');
+    if (countInput) {
+      const floor = 1 + _editingCollabs.length;
+      if (Number(countInput.value) < floor) countInput.value = floor;
+    }
+  });
+  // Clamp the dev-count input on every change so the value never
+  // drops below the mandatory floor (owner + named collabs).
+  document.getElementById('cat-dev-count')?.addEventListener('input', (e) => {
+    const floor = 1 + _editingCollabs.length;
+    if (Number(e.target.value) < floor) {
+      toast(`You have ${_editingCollabs.length} collaborator${_editingCollabs.length > 1 ? 's' : ''}`);
+      e.target.value = floor;
+    }
   });
 
   // MD23: password lock toggle. Clicking the button flips the
@@ -1120,6 +1206,7 @@ export function initCatalystModal(onSaved) {
     if (!Number.isInteger(idx)) return;
     _editingCollabs.splice(idx, 1);
     _renderCollabChips();
+    _syncDevModeWithCollabs();
   });
 
   document.getElementById('cat-submit-btn')?.addEventListener('click', async () => {
@@ -1149,6 +1236,13 @@ export function initCatalystModal(onSaved) {
       return;
     }
 
+    // MD28: read dev-mode toggle state + count. The toggle's selected
+    // class is the source of truth (same pattern as the lock toggle).
+    const devMode = document.getElementById('cat-dev-co')?.classList.contains('selected') ? 'co' : 'solo';
+    const devCountRaw = Number(document.getElementById('cat-dev-count')?.value) || 1;
+    const devCountFloor = 1 + _editingCollabs.length;
+    const devCount = devMode === 'co' ? Math.max(devCountRaw, devCountFloor) : 1;
+
     const data = {
       title,
       // Internal catalysts don't carry an external URL — always store
@@ -1163,6 +1257,8 @@ export function initCatalystModal(onSaved) {
       collaborators: _editingCollabs.slice(),
       isLocked,
       lockPassword,
+      devMode,
+      devCount,
     };
     const submitBtn = document.getElementById('cat-submit-btn');
     submitBtn.disabled = true; submitBtn.textContent = 'Saving...';

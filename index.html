@@ -632,12 +632,28 @@
             </div>
           </div>
 
-          <div class="cat-field">
-            <label class="cat-label">Platform</label>
-            <div class="cat-pills" id="cat-platform-pills">
-              <button class="cat-pill selected" data-val="web">Web</button>
-              <button class="cat-pill" data-val="mobile">Mobile</button>
-              <button class="cat-pill" data-val="both">Both</button>
+          <!-- MD28: Platform + Dev mode on the same row. Platform stays
+               left, the solo/co-dev toggle sits on the right so the two
+               controls read as a paired set. -->
+          <div class="cat-field cat-field-row cat-platform-dev-row">
+            <div class="cat-field-col">
+              <label class="cat-label">Platform</label>
+              <div class="cat-pills" id="cat-platform-pills">
+                <button class="cat-pill selected" data-val="web">Web</button>
+                <button class="cat-pill" data-val="mobile">Mobile</button>
+                <button class="cat-pill" data-val="both">Both</button>
+              </div>
+            </div>
+            <div class="cat-field-col" id="cat-dev-mode-wrap">
+              <label class="cat-label">Dev mode</label>
+              <div class="cat-dev-toggle">
+                <button type="button" class="cat-dev-btn selected" id="cat-dev-solo" data-mode="solo">Solo Dev</button>
+                <button type="button" class="cat-dev-btn" id="cat-dev-co" data-mode="co">Co-Dev</button>
+              </div>
+              <div class="cat-dev-count-row" id="cat-dev-count-row" style="display:none">
+                <label class="cat-label">Devs</label>
+                <input type="number" id="cat-dev-count" min="1" max="999" value="1" />
+              </div>
             </div>
           </div>
 

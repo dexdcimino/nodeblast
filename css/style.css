@@ -1050,6 +1050,21 @@ body.cat-modal-open{overflow:hidden;}
 .cat-field{margin-bottom:14px;display:flex;flex-direction:column;gap:6px;}
 .cat-field-row{flex-direction:row;gap:12px;align-items:flex-start;}
 .cat-field-col{display:flex;flex-direction:column;gap:6px;}
+
+/* MD28: solo / co-dev toggle + developer count spinner. The toggle
+   uses the same segmented-control pattern as the feed-mode toggle
+   (two buttons inside a pillbox) with the site accent for the
+   selected state. */
+.cat-platform-dev-row{justify-content:space-between;}
+.cat-dev-toggle{display:flex;align-items:center;gap:2px;background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;padding:3px;height:36px;}
+.cat-dev-btn{background:none;border:none;padding:0 14px;height:28px;border-radius:14px;font-family:var(--fn);font-size:12px;font-weight:600;color:var(--tx2);cursor:pointer;white-space:nowrap;transition:background var(--ease),color var(--ease),opacity var(--ease);}
+.cat-dev-btn:hover{color:var(--tx);}
+.cat-dev-btn.selected{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
+.cat-dev-btn[disabled]{opacity:.4;cursor:not-allowed;}
+.cat-dev-count-row{display:flex;align-items:center;gap:8px;margin-top:2px;}
+.cat-dev-count-row .cat-label{margin:0;font-size:10px;}
+#cat-dev-count{width:64px;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;padding:5px 8px;color:var(--tx);font-family:var(--fn);font-size:13px;text-align:center;outline:none;transition:border-color var(--ease);}
+#cat-dev-count:focus{border-color:var(--clr-adj);}
 .cat-label{font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--tx3);}
 .cat-field input[type="text"],.cat-field textarea{background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;padding:10px 12px;color:var(--tx);font-family:var(--fn);font-size:14px;outline:none;transition:border-color var(--ease);width:100%;resize:vertical;}
 .cat-field input[type="text"]:focus,.cat-field textarea:focus{border-color:var(--clr-adj);}
