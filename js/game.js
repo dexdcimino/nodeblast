@@ -136,7 +136,7 @@ export function initGame(canvas) {
 
   scene.clearColor = new B.Color4(0.04, 0.04, 0.06, 1);
   scene.collisionsEnabled = true;
-  scene.gravity = new B.Vector3(0, -0.98, 0);
+  scene.gravity = new B.Vector3(0, -0.15, 0);
 
   // Fog — hides the hard edge of the map boundary
   scene.fogMode = B.Scene.FOGMODE_EXP2;
@@ -159,8 +159,8 @@ export function initGame(canvas) {
   camera.fov = 1.309; // 75 degrees
   camera.checkCollisions = true;
   camera.applyGravity = true;
-  camera.ellipsoid = new B.Vector3(0.4, 0.85, 0.4);
-  camera.ellipsoidOffset = new B.Vector3(0, 0.85, 0);
+  camera.ellipsoid = new B.Vector3(0.5, 0.9, 0.5);
+  camera.ellipsoidOffset = new B.Vector3(0, 1, 0);
 
   // Pointer lock
   _pointerLocked = false;
@@ -185,6 +185,7 @@ export function initGame(canvas) {
   groundMat.diffuseColor = new B.Color3(0.08, 0.08, 0.12);
   groundMat.specularColor = new B.Color3(0.05, 0.05, 0.05);
   ground.material = groundMat;
+  ground.position.y = 0;
   ground.checkCollisions = true;
 
   // Invisible boundary walls
