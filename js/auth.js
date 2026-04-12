@@ -104,6 +104,12 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     // MD18: tracked (pinned/followed) privacy flag. Default false
     // so newly created accounts are private until the user opts in.
     trackedPublic: !!topData?.trackedPublic,
+    // MD27: custom color slots synced via the prefs subdoc. Array of
+    // 16 nullable hex strings. Falls back to null (= use localStorage
+    // only) when the subdoc hasn't been seeded yet.
+    customColorSlots: Array.isArray(prefsData?.customColorSlots)
+      ? prefsData.customColorSlots
+      : null,
   };
 }
 

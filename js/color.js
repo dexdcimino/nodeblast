@@ -8,7 +8,25 @@
 //  `dexnotes_custom_slots`, so colors saved in either app show up
 //  in the other. The preset swatch row is gone per MD26 spec; the
 //  picker shows custom slots only.
+//
+//  MD27: cross-site Firestore sync. When a signed-in user saves a
+//  custom slot, the array is also written to
+//  `users/{uid}/prefs/profile` → `customColorSlots` (merge:true).
+//  The existing profile snapshot subscription in auth.js pushes
+//  remote changes back to NodeBlast in real time via
+//  `syncSlotsFromFirestore()`, and the same path will work for
+//  DexNote once it adds the reciprocal write.
 // ══════════════════════════════════════
+
+import { app } from './firebase-config.js';
+import {
+  getFirestore,
+  doc,
+  setDoc,
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+import State from './state.js';
+
+const _db = getFirestore(app);
 
 let _h = 140, _s = 47, _b = 67;
 let _onChange = null;
@@ -50,6 +68,35 @@ try {
 
 function saveCustomSlots() {
   try { localStorage.setItem(CSLOTS_KEY, JSON.stringify(_customSlots)); } catch {}
+  // MD27: mirror to Firestore so other devices / the other site see
+  // the change. Fire-and-forget — localStorage is the immediate
+  // source, Firestore is the cross-device/cross-site bridge.
+  if (State.user?.uid) {
+    setDoc(
+      doc(_db, 'users', State.user.uid, 'prefs', 'profile'),
+      { customColorSlots: _customSlots },
+      { merge: true },
+    ).catch((err) => console.warn('[color] Firestore slot sync failed:', err));
+  }
+}
+
+// MD27: called from updateAuthUI when Firestore delivers a newer
+// set of slots (e.g. saved on another device or from DexNote if it
+// ever adds the reciprocal write). Updates the in-memory array +
+// localStorage + re-renders the slot row. Does NOT call
+// saveCustomSlots() (no Firestore write back) so the snapshot ↔
+// save cycle can't loop.
+export function syncSlotsFromFirestore(arr) {
+  if (!Array.isArray(arr)) return;
+  const padded = arr.slice(0, SLOT_COUNT);
+  while (padded.length < SLOT_COUNT) padded.push(null);
+  // Quick equality check — avoid redundant re-render + localStorage
+  // thrash if the arrays are identical (which they usually are after
+  // the first sync tick).
+  if (JSON.stringify(padded) === JSON.stringify(_customSlots)) return;
+  _customSlots = padded;
+  try { localStorage.setItem(CSLOTS_KEY, JSON.stringify(_customSlots)); } catch {}
+  _renderCustomSlots();
 }
 
 export function hsbToHex(h, s, b) {

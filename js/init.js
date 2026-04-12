@@ -13,7 +13,7 @@ import {
   getThemeAdjustedLogoColor,
   onThemeChange,
 } from './theme.js';
-import { initColorPicker } from './color.js';
+import { initColorPicker, syncSlotsFromFirestore } from './color.js';
 import {
   initTooltips,
   initAccountMenu,
@@ -1566,6 +1566,16 @@ function updateAuthUI(user, profile) {
     if (nextTop !== _logoTop || nextBot !== _logoBot) {
       setLogoColors(nextTop, nextBot);
     }
+  }
+
+  // MD27: push Firestore-synced custom color slots into the picker.
+  // The prefs subdoc (users/{uid}/prefs/profile) is the cross-site
+  // bridge — when NodeBlast or a future DexNote update writes
+  // customColorSlots, the snapshot callback re-fires updateAuthUI
+  // so this push runs automatically and the picker stays in sync.
+  // Null = never seeded → leave whatever localStorage had.
+  if (profile?.customColorSlots) {
+    syncSlotsFromFirestore(profile.customColorSlots);
   }
 
   const acctBtn = document.getElementById('acct-btn');
