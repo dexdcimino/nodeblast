@@ -141,6 +141,9 @@
             <div id="profile-bar-hex-dot"></div>
             <span id="profile-bar-hex-label"></span>
           </div>
+          <!-- Social links — rendered by init.js showProfileBar. Hidden
+               entirely when the user has no links. -->
+          <div id="profile-bar-socials"></div>
         </div>
       </div>
       <div id="profile-bar-right">
@@ -236,6 +239,16 @@
           <div id="acct-bio-wrap">
             <textarea id="acct-bio-input" maxlength="150" rows="2" placeholder="A short description..." spellcheck="false"></textarea>
             <span id="acct-bio-count">0/150</span>
+          </div>
+        </div>
+        <div class="acct-edit-field acct-edit-links-row">
+          <label class="acct-edit-label">Links:</label>
+          <div id="acct-links-wrap">
+            <div id="acct-links-list"><!-- populated by ui-events.js --></div>
+            <button type="button" id="acct-links-add-btn" class="acct-links-add-btn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Link
+            </button>
           </div>
         </div>
         <div id="acct-edit-actions">

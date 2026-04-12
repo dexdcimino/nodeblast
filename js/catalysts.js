@@ -325,6 +325,7 @@ export async function refreshOwnerOnAllCatalysts() {
         ownerHex: State.profile.hexCode || '5aaa72',
         ownerPhoto: State.profile.photoURL || '',
         ownerIsAdmin: !!State.profile.isAdmin,
+        ownerSocialLinks: Array.isArray(State.profile.socialLinks) ? State.profile.socialLinks : [],
       });
     });
     await batch.commit();
@@ -359,6 +360,11 @@ export async function createCatalyst(data, file) {
     ownerHex: State.profile?.hexCode || '5aaa72',
     ownerPhoto: State.profile?.photoURL || '',
     ownerIsAdmin: !!State.profile?.isAdmin,
+    // MD10 denormalize: copy the owner's social links onto every
+    // catalyst doc so community cards can render icons without
+    // N extra user-doc fetches. refreshOwnerOnAllCatalysts propagates
+    // changes after the user edits their links.
+    ownerSocialLinks: Array.isArray(State.profile?.socialLinks) ? State.profile.socialLinks : [],
     title: data.title.slice(0, 40),
     slug,
     url: data.url ? normalizeUrl(data.url) : '',
@@ -402,6 +408,7 @@ export async function updateCatalyst(id, data, file) {
     ownerHex: State.profile?.hexCode || '5aaa72',
     ownerPhoto: State.profile?.photoURL || '',
     ownerIsAdmin: !!State.profile?.isAdmin,
+    ownerSocialLinks: Array.isArray(State.profile?.socialLinks) ? State.profile.socialLinks : [],
     updatedAt: serverTimestamp(),
   };
 

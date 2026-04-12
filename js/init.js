@@ -42,6 +42,7 @@ import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './r
 import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js';
 import { initNotifications, initHelpPanel } from './notifications.js';
 import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest } from './friends.js';
+import { renderSocialIconsHTML } from './social.js';
 
 let _currentCategory = 'all';
 // Feed view mode — 'catalysts' (flat hex flow) or 'alchemists' (grouped
@@ -140,6 +141,16 @@ function showProfileBar(user, catalystCount, isOwn) {
   document.getElementById('profile-bar-hex-label').textContent = '#' + (user.hexCode || '5aaa72');
   document.getElementById('profile-bar-count').textContent =
     catalystCount + (catalystCount === 1 ? ' catalyst' : ' catalysts');
+
+  // Social links row — empty array renders nothing at all (renderSocialIconsHTML
+  // returns '' for 0-length input), which keeps the profile bar tight
+  // when the user hasn't added any links yet.
+  const socialEl = document.getElementById('profile-bar-socials');
+  if (socialEl) {
+    const html = renderSocialIconsHTML(user.socialLinks || []);
+    socialEl.innerHTML = html;
+    socialEl.classList.toggle('visible', !!html);
+  }
 
   // Bio: show only if set. Empty bios render no placeholder at all
   // so the grid sits flush under the profile bar.
@@ -357,6 +368,7 @@ function _groupCatalystsByCreator(catalysts) {
         hexCode: (cat.ownerHex || '5aaa72').toLowerCase(),
         photoURL: cat.ownerPhoto || '',
         isAdmin: !!cat.ownerIsAdmin,
+        socialLinks: Array.isArray(cat.ownerSocialLinks) ? cat.ownerSocialLinks : [],
         catalysts: [],
         latestCreatedAt: 0,
       };
@@ -428,6 +440,17 @@ function _buildCommunityCard(group) {
   hexRow.innerHTML = `<span class="community-card-hex-dot"></span><span class="community-card-hex">#${escapeHtml(hex)}</span>`;
   meta.appendChild(nameEl);
   meta.appendChild(hexRow);
+  // Social icons — rendered below the hex row, smaller than the
+  // profile-bar variant. Clicks are stopped from bubbling to the
+  // header so opening a link doesn't also navigate to the profile.
+  const socialHTML = renderSocialIconsHTML(group.socialLinks, { extraClass: 'social-icons--sm' });
+  if (socialHTML) {
+    const socialWrap = document.createElement('div');
+    socialWrap.className = 'community-card-socials';
+    socialWrap.innerHTML = socialHTML;
+    socialWrap.addEventListener('click', (e) => e.stopPropagation());
+    meta.appendChild(socialWrap);
+  }
   hdr.appendChild(meta);
 
   const count = document.createElement('span');
@@ -995,8 +1018,10 @@ document.addEventListener('DOMContentLoaded', () => {
       _profileCache.clear();
 
       // Propagate profile changes to denormalized catalyst fields so
-      // existing tiles reflect the new username/hex/photo immediately.
-      if (updates.displayName || updates.hexCode || updates.photoURL) {
+      // existing tiles reflect the new username/hex/photo/socialLinks
+      // immediately. socialLinks trigger a refresh too because the
+      // community cards render them from the denormalized copy.
+      if (updates.displayName || updates.hexCode || updates.photoURL || Array.isArray(updates.socialLinks)) {
         await refreshOwnerOnAllCatalysts();
       }
 

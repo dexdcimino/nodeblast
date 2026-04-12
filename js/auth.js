@@ -19,6 +19,7 @@ import {
 import State from './state.js';
 import { normalizeUsername, userLookupKey } from './users.js';
 import { setSigningIn, stripDevSuffix } from './ui-events.js';
+import { sanitizeSocialLinks } from './social.js';
 
 // Hardcoded admin emails. Firestore isAdmin field is the source of
 // truth, but any user whose auth email is in this list gets isAdmin
@@ -83,6 +84,11 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
   // Bio: DexNote subdoc wins, top-level doc is the fallback. Either
   // undefined → empty string so the UI can treat "no bio" uniformly.
   const bio = (prefsData?.bio ?? topData?.bio ?? '').toString();
+  // Social links: same priority (prefs subdoc wins). sanitizeSocialLinks
+  // drops malformed entries + hard-caps the list so downstream code
+  // never has to defend against garbage.
+  const socialLinksRaw = prefsData?.socialLinks ?? topData?.socialLinks ?? [];
+  const socialLinks = sanitizeSocialLinks(socialLinksRaw);
   return {
     displayName,
     hexCode,
@@ -93,6 +99,7 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     logoTopColor: topData?.logoTopColor || null,
     logoBotColor: topData?.logoBotColor || null,
     bio,
+    socialLinks,
   };
 }
 
@@ -325,6 +332,11 @@ export async function saveProfile(updates) {
   if (typeof updates.bio === 'string') {
     updates.bio = updates.bio.slice(0, 150).trim();
   }
+  // Sanitize socialLinks so the stored array is always well-formed:
+  // drops missing URLs, caps at 8 entries, re-detects platform if omitted.
+  if (Array.isArray(updates.socialLinks)) {
+    updates.socialLinks = sanitizeSocialLinks(updates.socialLinks);
+  }
 
   const topRef = doc(db, 'users', State.user.uid);
   const prefsRef = doc(db, 'users', State.user.uid, 'prefs', 'profile');
@@ -336,8 +348,13 @@ export async function saveProfile(updates) {
   if (updates.hexCode) prefsUpdates.hexColor = '#' + updates.hexCode;
   // Bio mirrors directly with the same field name on both docs.
   if (typeof updates.bio === 'string') prefsUpdates.bio = updates.bio;
+  // Social links mirror to the prefs subdoc with the same field name
+  // so DexNote sees the change if it ever reads socialLinks too.
+  if (Array.isArray(updates.socialLinks)) prefsUpdates.socialLinks = updates.socialLinks;
 
-  const writePrefs = updates.displayName || updates.hexCode || typeof updates.bio === 'string';
+  const writePrefs = updates.displayName || updates.hexCode
+    || typeof updates.bio === 'string'
+    || Array.isArray(updates.socialLinks);
   await Promise.all([
     setDoc(topRef, topUpdates, { merge: true }),
     writePrefs ? setDoc(prefsRef, prefsUpdates, { merge: true }) : Promise.resolve(),

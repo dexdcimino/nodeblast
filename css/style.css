@@ -240,6 +240,41 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-bio-input::placeholder{color:var(--tx3);}
 #acct-bio-count{position:absolute;right:8px;bottom:5px;font-size:10px;color:var(--tx3);font-family:var(--fn);pointer-events:none;}
 
+/* Social links editor in the edit profile panel. Each link is a row
+   with a platform dropdown, URL input, and delete button. The Add
+   Link button sits at the bottom. */
+.acct-edit-links-row{align-items:flex-start;}
+.acct-edit-links-row .acct-edit-label{margin-top:6px;}
+#acct-links-wrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+#acct-links-list{display:flex;flex-direction:column;gap:6px;}
+#acct-links-list:empty{display:none;}
+.acct-link-row{display:flex;align-items:center;gap:6px;}
+.acct-link-platform{flex:0 0 auto;width:110px;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:12px;padding:6px 8px;outline:none;cursor:pointer;transition:border-color var(--ease);}
+.acct-link-platform:focus{border-color:var(--tx3);}
+.acct-link-url{flex:1;min-width:0;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:12px;padding:6px 10px;outline:none;transition:border-color var(--ease);}
+.acct-link-url:focus{border-color:var(--tx3);}
+.acct-link-url::placeholder{color:var(--tx3);}
+.acct-link-remove{background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;border-radius:4px;display:flex;align-items:center;transition:color var(--ease),background var(--ease);}
+.acct-link-remove:hover{color:#ff6b6b;background:var(--bg4);}
+.acct-links-add-btn{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px dashed var(--bdr);border-radius:8px;color:var(--tx2);font-family:var(--fn);font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;transition:all var(--ease);}
+.acct-links-add-btn:hover{color:var(--tx);border-color:var(--clr-adj);border-style:solid;}
+.acct-links-add-btn[disabled]{opacity:.5;cursor:not-allowed;}
+
+/* Shared social icon row — renders on the profile bar and on
+   community-card headers. Size is controlled by the modifier class
+   the caller adds (social-icons--sm for community cards). */
+.social-icons{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.social-icons .social-icon{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:color-mix(in srgb,var(--bg3) 80%,transparent);border:1px solid var(--bdr);color:var(--tx2);text-decoration:none;cursor:pointer;transition:color var(--ease),border-color var(--ease),transform var(--ease),background var(--ease);}
+.social-icons .social-icon:hover{color:var(--tx);border-color:var(--clr-adj);background:var(--bg3);transform:translateY(-1px);}
+.social-icons .social-icon svg{width:12px;height:12px;display:block;}
+.social-icons.social-icons--sm .social-icon{width:18px;height:18px;}
+.social-icons.social-icons--sm .social-icon svg{width:10px;height:10px;}
+
+/* Profile bar social row — lives under the hex label, hidden when
+   the user has no links (init.js toggles .visible). */
+#profile-bar-socials{display:none;margin-top:4px;}
+#profile-bar-socials.visible{display:flex;}
+
 /* Status buttons */
 #acct-status-toggle{display:flex;gap:4px;flex:0 1 50%;}
 .status-btn{display:flex;align-items:center;gap:5px;flex:1;padding:6px 10px;border-radius:8px;border:1.5px solid var(--bdr);background:var(--bg3);color:var(--tx2);font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s,color .2s;justify-content:center;}
@@ -524,7 +559,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-hdr:hover .community-card-name{color:var(--clr-adj);}
 .community-card-avatar{width:36px;height:36px;border-radius:50%;border:2px solid var(--card-hex,var(--clr-adj));background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:15px;font-weight:700;}
 .community-card-avatar img{width:100%;height:100%;object-fit:cover;}
-.community-card-meta{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.community-card-meta{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;flex:1;}
+.community-card-socials{margin-top:2px;}
 .community-card-name{font-size:16px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color var(--ease);}
 .community-card-hex-row{display:flex;align-items:center;gap:5px;flex-shrink:0;}
 .community-card-hex-dot{width:8px;height:8px;border-radius:50%;background:var(--card-hex,var(--clr-adj));}

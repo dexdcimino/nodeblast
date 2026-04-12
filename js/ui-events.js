@@ -6,6 +6,7 @@
 import State from './state.js';
 import { openColorPopup, closeColorPopup } from './color.js';
 import { showModal as _showModal } from './modal.js';
+import { SOCIAL_PLATFORMS, detectPlatform, MAX_SOCIAL_LINKS } from './social.js';
 
 // Flag flipped by auth.js around signInWithPopup so the account menu
 // click-outside-to-close handler doesn't fire when the popup opens/blurs.
@@ -150,6 +151,80 @@ function _updateBioCount() {
   count.textContent = (input.value || '').length + '/150';
 }
 
+// Working set of social links while the edit panel is open. Each
+// entry: { platform, url }. Reset on every panel open so Cancel
+// doesn't mutate the source data.
+let _editingLinks = [];
+
+function _renderLinksList() {
+  const list = document.getElementById('acct-links-list');
+  const addBtn = document.getElementById('acct-links-add-btn');
+  if (!list) return;
+  list.innerHTML = '';
+  _editingLinks.forEach((link, idx) => {
+    const row = document.createElement('div');
+    row.className = 'acct-link-row';
+    row.dataset.idx = String(idx);
+    // Platform dropdown
+    const select = document.createElement('select');
+    select.className = 'acct-link-platform';
+    SOCIAL_PLATFORMS.forEach((p) => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.label;
+      if (p.id === link.platform) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => {
+      _editingLinks[idx].platform = select.value;
+    });
+    row.appendChild(select);
+    // URL input
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'acct-link-url';
+    input.spellcheck = false;
+    input.autocomplete = 'off';
+    input.placeholder = 'https://...';
+    input.value = link.url || '';
+    input.addEventListener('input', () => {
+      _editingLinks[idx].url = input.value;
+      // Auto-detect platform on paste/typing — but only if the user
+      // hasn't explicitly picked a non-detected platform yet. We check
+      // by comparing the select's current value against what detect
+      // would say about the old URL; if they match, the dropdown is
+      // "tracking" and we keep updating it.
+      const detected = detectPlatform(input.value);
+      if (detected && detected !== 'website') {
+        select.value = detected;
+        _editingLinks[idx].platform = detected;
+      }
+    });
+    row.appendChild(input);
+    // Remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'acct-link-remove';
+    removeBtn.setAttribute('aria-label', 'Remove link');
+    removeBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    removeBtn.addEventListener('click', () => {
+      _editingLinks.splice(idx, 1);
+      _renderLinksList();
+    });
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+  });
+  if (addBtn) addBtn.disabled = _editingLinks.length >= MAX_SOCIAL_LINKS;
+}
+
+// Read-only view of the current editing list. Exported so the save
+// handler can capture it into the onSaveProfile payload.
+function _collectLinks() {
+  return _editingLinks
+    .map((l) => ({ platform: l.platform || detectPlatform(l.url), url: (l.url || '').trim() }))
+    .filter((l) => l.url);
+}
+
 function _openEditPanel() {
   const p = document.getElementById('acct-edit-panel');
   const editBtn = document.getElementById('acct-edit-btn');
@@ -166,6 +241,12 @@ function _openEditPanel() {
   if (nameIn) { nameIn.value = stripDevSuffix(State.profile?.displayName || ''); nameIn.focus(); }
   if (hexIn) hexIn.value = '#' + (State.profile?.hexCode || '5AAA72').toUpperCase();
   if (bioIn) bioIn.value = State.profile?.bio || '';
+  // Seed the working social links list from State. Clone objects so
+  // the editing loop can mutate them without touching State.profile.
+  _editingLinks = Array.isArray(State.profile?.socialLinks)
+    ? State.profile.socialLinks.map((l) => ({ ...l }))
+    : [];
+  _renderLinksList();
   _updateEditColorPreview();
   _updateBioCount();
 }
@@ -268,9 +349,10 @@ export function initAccountMenu(handlers) {
     const name = document.getElementById('acct-username-input').value.trim();
     const hex = document.getElementById('acct-edit-hex-input').value.replace('#', '').toLowerCase();
     const bio = (document.getElementById('acct-bio-input')?.value || '').trim().slice(0, 150);
+    const socialLinks = _collectLinks();
     if (!/^[0-9a-f]{6}$/.test(hex)) { toast('Invalid hex color'); return; }
     try {
-      await onSaveProfile?.({ displayName: name || 'anon', hexCode: hex, bio });
+      await onSaveProfile?.({ displayName: name || 'anon', hexCode: hex, bio, socialLinks });
       _closeEditPanel();
       toast('Profile saved');
     } catch (err) {
@@ -279,6 +361,16 @@ export function initAccountMenu(handlers) {
   });
   // Live character counter for the bio textarea
   document.getElementById('acct-bio-input')?.addEventListener('input', _updateBioCount);
+  // Add Link button — appends a fresh row to the working set.
+  document.getElementById('acct-links-add-btn')?.addEventListener('click', () => {
+    if (_editingLinks.length >= MAX_SOCIAL_LINKS) return;
+    _editingLinks.push({ platform: 'website', url: '' });
+    _renderLinksList();
+    // Focus the new input so the user can start typing immediately.
+    const rows = document.querySelectorAll('#acct-links-list .acct-link-row');
+    const lastRow = rows[rows.length - 1];
+    lastRow?.querySelector('.acct-link-url')?.focus();
+  });
   // Enter in username input → save
   document.getElementById('acct-username-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); document.getElementById('acct-edit-save-btn')?.click(); }
