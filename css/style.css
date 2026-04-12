@@ -328,7 +328,32 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .notif-item-text .notif-btn-secondary{background:transparent;color:var(--tx2);}
 .notif-item-text .notif-btn-secondary:hover{background:var(--bg3);}
 
-#acct-catalysts-list{padding:4px 0;font-size:13px;color:var(--tx3);text-align:center;}
+/* MD14: mini catalyst grid inside the profile dropdown. The
+   container is a relative-positioned staggered honeycomb that the
+   renderMiniHexGrid function paints absolute-positioned .hex-tile
+   children into. Empty state falls through to .mini-hex-empty. */
+#acct-catalysts-list{position:relative;padding:4px 0;font-size:13px;color:var(--tx3);text-align:center;min-height:20px;}
+.mini-hex-empty{padding:14px 10px;color:var(--tx3);font-size:12px;text-align:center;}
+
+/* Mini tiles inherit everything from .hex-tile (clip-path, thumb
+   background via --thumb, hover transitions) and override the bits
+   that don't fit at 60px. MD5 hover layer elements (title, domain,
+   status, creator avatar) aren't rendered into mini tiles at all
+   — the template just leaves innerHTML empty. */
+.hex-tile.mini-hex-tile{cursor:pointer;}
+.hex-tile.mini-hex-tile:hover{transform:scale(1.08);z-index:15;}
+.hex-tile.mini-hex-tile::before{opacity:1;}
+/* Hide any residual overlay layers that might get injected later. */
+.hex-tile.mini-hex-tile .hex-fade,
+.hex-tile.mini-hex-tile .hex-info,
+.hex-tile.mini-hex-tile .hex-creator-avatar,
+.hex-tile.mini-hex-tile .hex-status,
+.hex-tile.mini-hex-tile .hex-collab-badge,
+.hex-tile.mini-hex-tile .hex-vote{display:none;}
+/* Small "+" tile in the mini grid — scales the plus glyph down
+   from the main grid's 48px to something that fits a 60px hex. */
+.hex-tile.mini-hex-tile.add-tile .add-tile-plus span.plus{font-size:26px;margin-bottom:0;}
+.hex-tile.mini-hex-tile.add-tile .add-tile-plus span.label{display:none;}
 
 /* Settings view */
 #acct-settings-view{display:none;border-top:1px solid var(--bdr);flex-direction:column;flex:1;min-height:0;}

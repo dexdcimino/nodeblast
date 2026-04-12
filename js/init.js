@@ -24,7 +24,7 @@ import {
   escapeHtml,
   toast,
 } from './ui-events.js';
-import { renderHexGrid, createCatalystTileElement } from './hex-grid.js';
+import { renderHexGrid, createCatalystTileElement, renderMiniHexGrid } from './hex-grid.js';
 import {
   openCatalystModal,
   openCatalystDetail,
@@ -57,6 +57,12 @@ let _currentEmptyMessage = '';
 let _firstRender = true;
 let _profileCache = new Map(); // "name#hex" or "name" -> { user, catalysts }
 let _viewingOther = null;       // { uid, displayName, hexCode } for the profile currently shown
+
+// MD14: mini catalyst grid in the profile dropdown. Persistent
+// subscription to the current user's catalysts so the dropdown is
+// always fresh, independent of which route they're viewing.
+let _myCatalysts = [];
+let _myCatalystsUnsub = null;
 
 function profileCacheKey(username, hex) {
   const lower = (username || '').toLowerCase();
@@ -400,6 +406,69 @@ function _handleAddCatalystClick() {
     return;
   }
   openCatalystModal(null);
+}
+
+/* ══════════════════════════════════════
+   MD14: mini catalyst grid in the profile dropdown
+══════════════════════════════════════ */
+
+// Subscription lifecycle for "my catalysts". Fires on sign-in, tears
+// down on sign-out. Independent of route — the dropdown is always
+// fresh regardless of whether the user is on the feed, their own
+// profile, or someone else's.
+function _startMyCatalystsSub(uid) {
+  _stopMyCatalystsSub();
+  if (!uid) return;
+  _myCatalystsUnsub = subscribeUserCatalysts(uid, (catalysts) => {
+    _myCatalysts = catalysts || [];
+    // Update the count next to the "Catalysts" label.
+    const countEl = document.getElementById('acct-catalysts-count');
+    if (countEl) countEl.textContent = String(_myCatalysts.length);
+    // Re-render the mini grid. If the section is currently closed,
+    // the container has clientWidth=0 and renderMiniHexGrid bails —
+    // we'll re-fire on the next section-open event.
+    _renderMyCatalystsMini();
+  });
+}
+
+function _stopMyCatalystsSub() {
+  if (_myCatalystsUnsub) {
+    try { _myCatalystsUnsub(); } catch {}
+    _myCatalystsUnsub = null;
+  }
+  _myCatalysts = [];
+}
+
+// Paints the mini grid into #acct-catalysts-list. Guest state is
+// handled at the dropdown level (MD13 grays the whole section), so
+// this function assumes we're signed in when called.
+function _renderMyCatalystsMini() {
+  const container = document.getElementById('acct-catalysts-list');
+  if (!container) return;
+  if (!State.user) {
+    container.innerHTML = '<div class="mini-hex-empty">Sign in to create catalysts</div>';
+    container.style.height = '';
+    return;
+  }
+  renderMiniHexGrid({
+    container,
+    tiles: _myCatalysts,
+    showAdd: true,
+    onTileClick: (cat) => {
+      // Close the account menu so the edit modal isn't obscured by
+      // the dropdown, then open the edit modal.
+      closeAccountMenu();
+      setTimeout(() => openCatalystModal(cat), 80);
+    },
+    onAddClick: () => {
+      closeAccountMenu();
+      setTimeout(() => _handleAddCatalystClick(), 80);
+    },
+    // Drag reorder — writes to the same sortOrder field the main
+    // profile grid reads. Both grids re-render from the shared
+    // subscription tick so mini ↔ main stay in sync.
+    onReorder: handleReorder,
+  });
 }
 
 function renderSkeleton() {
@@ -915,6 +984,11 @@ function updateAuthUI(user, profile) {
     _profileCache.clear();
     _viewingOther = null;
     setFriendsCurrentUser(null);
+    // MD14: tear down the my-catalysts subscription + reset count.
+    _stopMyCatalystsSub();
+    const countEl = document.getElementById('acct-catalysts-count');
+    if (countEl) countEl.textContent = '0';
+    _renderMyCatalystsMini();
     renderRoute();
     return;
   }
@@ -923,6 +997,10 @@ function updateAuthUI(user, profile) {
   // on every auth resolution — setFriendsCurrentUser tears down the
   // previous subscription before starting a new one.
   setFriendsCurrentUser(user.uid);
+
+  // MD14: persistent subscription to the signed-in user's catalysts
+  // so the dropdown mini grid + count stay fresh across routes.
+  _startMyCatalystsSub(user.uid);
 
   // Sync the saved logo colors across devices. If the signed-in
   // user has stored values in their profile doc, adopt them.
@@ -1318,6 +1396,20 @@ document.addEventListener('DOMContentLoaded', () => {
   initNotifications();
   initHelpPanel();
   initFriends();
+
+  // MD14: re-render the mini catalyst grid AFTER the default toggle
+  // handler (registered inside initAccountMenu above) has flipped
+  // .open on the section. rAF gives the body a tick to become
+  // display:block so clientWidth is non-zero when renderMiniHexGrid
+  // reads it.
+  document.querySelector('#acct-catalysts-section .acct-dropdown-toggle')
+    ?.addEventListener('click', () => {
+      if (!State.user) return;
+      requestAnimationFrame(() => {
+        const section = document.getElementById('acct-catalysts-section');
+        if (section?.classList.contains('open')) _renderMyCatalystsMini();
+      });
+    });
 
   // Brand + logo → home
   document.getElementById('hdr-brand')?.addEventListener('click', () => navigate('/'));

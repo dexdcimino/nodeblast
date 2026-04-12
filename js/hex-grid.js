@@ -597,3 +597,110 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
 
   return el;
 }
+
+/* ══════════════════════════════════════
+   MD14: Mini hex grid for the account-menu dropdown
+══════════════════════════════════════ */
+
+// Thumb-only staggered honeycomb for the profile dropdown. Reuses
+// the same layoutRows + drag-reorder helpers as the main grid, but
+// skips the .hex-info overlay (title/url/creator) because the tiles
+// are too small to fit text legibly. Container must be `position:
+// relative` (set inline below). Tiles are .hex-tile so they inherit
+// clip-path + thumb background, with `.mini-hex-tile` added for
+// mini-specific overrides.
+//
+// Layout constants tuned for the 330px account menu:
+//   - 4 columns
+//   - GAP 4px
+//   - No top padding (the surrounding .acct-dropdown-body handles it)
+const MINI_COLS = 4;
+const MINI_GAP = 4;
+
+export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileClick, onAddClick, onReorder }) {
+  if (!container) return;
+  ensureClipPath();
+  container.innerHTML = '';
+  container.classList.remove('reordering'); // safety — in case drag state leaked
+
+  const containerW = container.clientWidth;
+  // Account-menu body is display:none until its section is .open.
+  // clientWidth is 0 in that case — bail and let the caller re-fire
+  // this render once the section expands.
+  if (containerW <= 0) return;
+
+  const totalTiles = (tiles?.length || 0) + (showAdd ? 1 : 0);
+  if (totalTiles === 0) {
+    container.innerHTML = '<div class="mini-hex-empty">No catalysts yet</div>';
+    container.style.height = '';
+    return;
+  }
+
+  const hexW = (containerW - MINI_GAP * (MINI_COLS + 1)) / (MINI_COLS + 0.5);
+  const hexH = hexW * 1.1547;
+  const stepX = hexW + MINI_GAP;
+  const stepY = hexH * 0.75 + MINI_GAP;
+
+  const rowCounts = layoutRows(totalTiles, MINI_COLS);
+  const slots = [];
+  const tileEls = new Array(tiles.length);
+
+  container.style.position = 'relative';
+
+  let idx = 0;
+  for (let row = 0; row < rowCounts.length; row++) {
+    const rowCount = rowCounts[row];
+    const rowWidth = rowCount * hexW + (rowCount - 1) * MINI_GAP;
+    const rowLeft = (containerW - rowWidth) / 2;
+    const top = row * stepY;
+
+    for (let col = 0; col < rowCount; col++) {
+      const left = rowLeft + col * stepX;
+      const el = document.createElement('div');
+      el.className = 'hex-tile mini-hex-tile';
+      el.style.width = hexW + 'px';
+      el.style.height = hexH + 'px';
+      el.style.left = left + 'px';
+      el.style.top = top + 'px';
+      slots.push({ left, top, width: hexW, height: hexH });
+
+      const isAdd = showAdd && idx === tiles.length;
+      if (isAdd) {
+        el.classList.add('add-tile');
+        el.innerHTML = '<div class="add-tile-bg"></div><div class="add-tile-plus"><span class="plus">+</span></div>';
+        el.addEventListener('click', () => {
+          if (_suppressNextClick) { _suppressNextClick = false; return; }
+          onAddClick?.();
+        });
+      } else {
+        const tile = tiles[idx];
+        tileEls[idx] = el;
+        const accent = tile.accentColor || '#5AAA72';
+        el.style.setProperty('--accent', accent);
+        if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
+        if (tile.status === 'placeholder') el.classList.add('wip');
+        // No inner HTML — the `.hex-tile::before` pseudo-element paints
+        // the thumbnail via `--thumb`. Tooltip surfaces the title since
+        // there's no room for text on a 60px tile.
+        el.setAttribute('data-tip', tile.title || 'Catalyst');
+        el.addEventListener('click', () => {
+          if (_suppressNextClick) { _suppressNextClick = false; return; }
+          onTileClick?.(tile);
+        });
+      }
+      container.appendChild(el);
+      idx++;
+    }
+  }
+
+  const totalH = rowCounts.length * stepY + MINI_GAP;
+  container.style.height = totalH + 'px';
+
+  // Drag to reorder — same _attachDragReorder as the main grid, so
+  // behavior is identical (hold-to-drag, shift-on-hover, snap-to-slot).
+  // Only attached when there's more than one real tile AND a callback
+  // was provided (the mini grid is read-only when onReorder is null).
+  if (onReorder && tiles.length > 1) {
+    _attachDragReorder(container, tileEls, tiles, slots.slice(0, tiles.length), onReorder);
+  }
+}
