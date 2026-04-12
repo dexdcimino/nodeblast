@@ -62,12 +62,14 @@ let _currentCategory = 'all';
 let _feedViewMode = 'alchemists';
 function _feedModeKey(uid) { return 'nb-feed-mode-' + uid; }
 // Feed sort mode — 'popular' (fireCount desc), 'latest' (createdAt
-// desc), 'oldest' (createdAt asc). Persisted sitewide so reloads keep
-// the user's choice. Default 'popular' per MD17 spec.
+// desc), 'oldest' (createdAt asc). MD20 flipped this from sitewide
+// persistence to per-account persistence, mirroring the feed-mode
+// pattern: guests always land on Popular (no memory), signed-in
+// users restore their last choice via `nb-feed-sort-{uid}` on
+// sign-in. Module-load default is always 'popular'.
 const _FEED_SORT_MODES = new Set(['popular', 'latest', 'oldest']);
-let _feedSortMode = _FEED_SORT_MODES.has(localStorage.getItem('nb-feed-sort'))
-  ? localStorage.getItem('nb-feed-sort')
-  : 'popular';
+let _feedSortMode = 'popular';
+function _feedSortKey(uid) { return 'nb-feed-sort-' + uid; }
 let _currentFeedSnapshot = [];
 let _currentRoute = null;
 let _currentTiles = [];
@@ -1487,9 +1489,14 @@ function updateAuthUI(user, profile) {
     _renderMyPinnedMini();
     // MD17: guests always land on Alchemists. Force-reset so a
     // previously signed-in session's choice doesn't leak across.
+    // MD20: same for the sort — guests always see Popular.
     _feedViewMode = 'alchemists';
+    _feedSortMode = 'popular';
     document.querySelectorAll('.feed-mode-btn').forEach((b) => {
       b.classList.toggle('selected', b.dataset.mode === _feedViewMode);
+    });
+    document.querySelectorAll('.feed-sort-btn').forEach((b) => {
+      b.classList.toggle('selected', b.dataset.sort === _feedSortMode);
     });
     renderRoute();
     return;
@@ -1504,6 +1511,17 @@ function updateAuthUI(user, profile) {
     _feedViewMode = nextMode;
     document.querySelectorAll('.feed-mode-btn').forEach((b) => {
       b.classList.toggle('selected', b.dataset.mode === _feedViewMode);
+    });
+  }
+
+  // MD20: restore per-account sort. Missing/invalid key → Popular.
+  let storedSort = null;
+  try { storedSort = localStorage.getItem(_feedSortKey(user.uid)); } catch {}
+  const nextSort = _FEED_SORT_MODES.has(storedSort) ? storedSort : 'popular';
+  if (nextSort !== _feedSortMode) {
+    _feedSortMode = nextSort;
+    document.querySelectorAll('.feed-sort-btn').forEach((b) => {
+      b.classList.toggle('selected', b.dataset.sort === _feedSortMode);
     });
   }
 
@@ -2018,7 +2036,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!_FEED_SORT_MODES.has(sort)) return;
       if (sort === _feedSortMode) return;
       _feedSortMode = sort;
-      try { localStorage.setItem('nb-feed-sort', sort); } catch {}
+      // MD20: per-account persistence. Guests get no memory so their
+      // next visit always reverts to Popular.
+      if (State.user?.uid) {
+        try { localStorage.setItem(_feedSortKey(State.user.uid), sort); } catch {}
+      }
       document.querySelectorAll('.feed-sort-btn').forEach((b) => {
         b.classList.toggle('selected', b.dataset.sort === sort);
       });
