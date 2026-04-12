@@ -1333,7 +1333,7 @@ function initUnlockModal() {
   });
 }
 
-function _paintCatalystDetail(catalyst) {
+async function _paintCatalystDetail(catalyst) {
   const pop = document.getElementById('cat-detail-popup');
   if (!pop || !catalyst) return;
   _detailCatalyst = catalyst;
