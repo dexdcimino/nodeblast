@@ -33,12 +33,11 @@ export const LOGO_PALETTE = [
   { hex: '#9AA5B4', name: 'Cool Gray' },        // 10
 ];
 
-// MD33: defaults from assets/nodeblast_logo_v2.svg.
-// .st0 (#127596 teal) fills nodeblast_logo_left; .st1 (#7ac74f green)
-// fills nodeblast_logo_right. "Top" (left column) maps to the left
-// half; "Bot" (right column) maps to the right half.
-export const DEFAULT_LOGO_TOP = '#127596';   // SVG .st0 teal (left)
-export const DEFAULT_LOGO_BOT = '#7ac74f';   // SVG .st1 green (right)
+// Defaults from assets/nodeblast_logo_v2.svg.
+// .st1 (#7ac74f green) fills nodeblast_logo_left; .st0 (#127596 teal)
+// fills nodeblast_logo_right. "Top" = left column, "Bot" = right column.
+export const DEFAULT_LOGO_TOP = '#7ac74f';   // SVG .st1 green (left)
+export const DEFAULT_LOGO_BOT = '#127596';   // SVG .st0 teal (right)
 
 let _transTimer = null;
 let _currentAccent = null;
@@ -155,13 +154,12 @@ export function applyAccent(hex) {
 let _faviconBlobUrl = null;
 
 function buildLogoSvg(topColor, botColor) {
-  // Mirrored V2: SVG "logo_right" is visually on the LEFT (gets
-  // topColor = left column), SVG "logo_eft" is visually on the
-  // RIGHT (gets botColor = right column). Circles omitted — the
-  // compound paths cut the holes via even-odd fill.
+  // V2 paths — pre-rotated, IDs match visual sides. topColor =
+  // left half (logo_left), botColor = right half (logo_right).
+  // Circles omitted — compound paths cut the holes.
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 234.6">`
-    + `<path fill="${topColor}" d="M0,117.3s.7,28.6,19,46,45.1,18.1,45.1,18.1c35.3,0,64-28.7,64-64,0-35.3,28.6-64,64-64h.6c15.1,0,24.6-16.1,17.1-29.2C201.1,9.2,185.2,0,167.9,0h-79.7c-17.3,0-33.3,9.2-41.9,24.2,0,0-22.5,38.9-27.8,48.1C13.2,81.5,0,99.7,0,117.3ZM40,115.8c.8-12,10.5-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5Z"/>`
-    + `<path fill="${botColor}" d="M46.2,210.4c8.7,15,24.6,24.2,41.9,24.2h79.7c17.3,0,33.3-9.2,41.9-24.2,0,0,22.5-38.9,27.8-48.1,5.3-9.2,18.5-27.4,18.5-45,0,0,.2-28.5-19.8-46.7-20-18.2-44.3-17.4-44.3-17.4-35.3,0-64,28.7-64,64s-28.6,64-64,64h-.6c-15.1,0-24.6,16.1-17.1,29.2ZM168.1,115.7c.8-12,10.5-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5Z"/>`
+    + `<path fill="${topColor}" d="M0,117.3s.7,28.6,19,46c18.3,17.4,45.1,18.1,45.1,18.1,35.3,0,64-28.7,64-64s28.6-64,64-64h.6c15.1,0,24.6-16.1,17.1-29.2C201.1,9.2,185.2,0,167.9,0h-79.7c-17.3,0-33.3,9.2-41.9,24.2,0,0-22.5,38.9-27.8,48.1C13.2,81.5,0,99.7,0,117.3ZM40,115.8c.8-12,10.5-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5Z"/>`
+    + `<path fill="${botColor}" d="M46.2,210.4c8.7,15,24.6,24.2,41.9,24.2h79.7c17.3,0,33.3-9.2,41.9-24.2,0,0,22.5-38.9,27.8-48.1,5.3-9.2,18.5-27.4,18.5-45,0,0,.2-28.5-19.8-46.7-20-18.2-44.3-17.4-44.3-17.4-35.3,0-64,28.7-64,64s-28.6,64-64,64h-.6c-15.1,0-24.6,16.1-17.1,29.2h0ZM168.1,115.7c.8-12,10.5-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5Z"/>`
     + `</svg>`;
 }
 

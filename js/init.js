@@ -1664,43 +1664,28 @@ let _logoTop = DEFAULT_LOGO_TOP;
 let _logoBot = DEFAULT_LOGO_BOT;
 
 function paintLogo(top, bot) {
-  // The logo was mirrored in the V2 SVG export, so the SVG element
-  // named "left" is visually on the RIGHT side of the screen and
-  // vice-versa. The picker's left column (top) drives the visual
-  // left = SVG "right", and the picker's right column (bot) drives
-  // the visual right = SVG "left".
-  //
-  // Light-mode adjustment: getThemeAdjustedLogoColor() mixes the raw
-  // picker color with ~22% black so the logo and wordmark keep enough
-  // contrast against the light background. In dark mode it returns
-  // the raw hex unchanged, so this is a no-op there.
+  // V2 IDs match visual sides: logo_left = visual left, logo_right =
+  // visual right. top = left column picker color, bot = right column.
   const topAdj = getThemeAdjustedLogoColor(top);
   const botAdj = getThemeAdjustedLogoColor(bot);
 
-  // Left column (top color) → SVG "right" element + "node" wordmark.
-  const svgRight = document.getElementById('nodeblast_logo_right');
+  // Left column (top) → left half + "node" wordmark.
+  const leftHalf = document.getElementById('nodeblast_logo_left');
   const nodeEl = document.getElementById('brand-node');
-  if (svgRight) svgRight.setAttribute('fill', topAdj);
+  if (leftHalf) leftHalf.setAttribute('fill', topAdj);
   if (nodeEl) nodeEl.style.color = topAdj;
 
-  // Right column (bot color) → SVG "left" element + "blast" wordmark.
-  const svgLeft = document.getElementById('nodeblast_logo_left');
+  // Right column (bot) → right half + "blast" wordmark.
+  const rightHalf = document.getElementById('nodeblast_logo_right');
   const blastEl = document.getElementById('brand-blast');
-  if (svgLeft) svgLeft.setAttribute('fill', botAdj);
+  if (rightHalf) rightHalf.setAttribute('fill', botAdj);
   if (blastEl) blastEl.style.color = botAdj;
 
-  // Circles → transparent (already hole-punched by the compound
-  // paths, but explicitly clear in case a prior paint wrote a color).
+  // Circles → transparent (hole-punched by compound paths).
   const circL = document.getElementById('nodeblast_circle_left');
   const circR = document.getElementById('nodeblast_circle_right');
   if (circL) circL.setAttribute('fill', 'transparent');
   if (circR) circR.setAttribute('fill', 'transparent');
-
-  console.log('[logo] paintLogo applied', {
-    top, bot, topAdj, botAdj,
-    svgRightFound: !!svgRight, svgLeftFound: !!svgLeft,
-    nodeFound: !!nodeEl, blastFound: !!blastEl,
-  });
 }
 
 function markSelectedSwatches() {
