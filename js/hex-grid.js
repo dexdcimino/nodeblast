@@ -93,6 +93,18 @@ function statusBadgeHTML(status) {
 // currentColor stroke — no network fetch, works in any theme.
 const GLOBE_MINI_SVG = '<svg class="hex-globe-mini" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
 
+// MD21: gray yin-yang logo placeholder shown on catalyst tiles that
+// have no uploaded thumbnail. Matches the 90°-rotated header logo so
+// the whole mark is pointy-top-aligned with the hex clip. Every path
+// uses `fill="currentColor"` so CSS can drive the tint from a single
+// `color` rule (keeps dark/light theme adaptation automatic).
+export const PLACEHOLDER_LOGO_SVG = `<svg class="hex-placeholder-logo" xmlns="http://www.w3.org/2000/svg" viewBox="-10.65 10.65 256 234.7" aria-hidden="true">
+  <g transform="rotate(90 117.35 128)" fill="currentColor">
+    <path d="M162.3,18.5C150.8,7.1,134.9,0,117.3,0s-33.4,7.1-45,18.5l-48.1,27.8C9.2,54.9,0,70.9,0,88.2v79.7c0,17.3,9.2,33.2,24.2,41.9h0c13.1,7.5,29.3-2,29.2-17.1v-.6c0-35.4,28.7-64,64-64s64-28.7,64-64-7.3-33.9-19-45.5ZM118.9,87.9c-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4Z"/>
+    <path d="M72.3,237.5c11.6,11.4,27.5,18.5,45,18.5s33.4-7.1,45-18.5l48.1-27.8c15-8.6,24.2-24.6,24.2-41.9v-79.7c0-17.3-9.2-33.2-24.2-41.9h0c-13.1-7.5-29.3,2-29.2,17.1v.6c0,35.3-28.6,64-64,64s-64,28.6-64,64,7.3,33.9,19,45.5h0ZM115.8,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>
+  </g>
+</svg>`;
+
 // Small people icon for the collaborator-count badge. Currently hidden
 // (collaborator data model doesn't exist yet), but the markup renders
 // conditionally so flipping on a future write pushes it live without
@@ -104,6 +116,13 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   const title = escapeHtml(cat.title || '');
   const hex = escapeHtml(cat.ownerHex || '5aaa72');
   const status = cat.status || 'live';
+  // MD21: when there's no uploaded thumbnail, drop in the faded
+  // yin-yang placeholder as a standalone layer. The tile also gets
+  // the `no-thumb` class in the caller so CSS can swap to a lighter
+  // fade gradient (heavy overlay is only needed over a photo).
+  const placeholderHTML = !cat.thumbURL
+    ? `<div class="hex-placeholder">${PLACEHOLDER_LOGO_SVG}</div>`
+    : '';
 
   // Creator avatar on community tiles only. Profile pages show the
   // creator prominently in the profile bar above, so repeating them
@@ -150,6 +169,7 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     : '';
 
   // Layers, top → bottom:
+  //   .hex-placeholder    — faded logo watermark (no-thumb tiles only)
   //   .hex-creator-avatar — top center, community tiles only
   //   .hex-status         — top right corner (see CSS), never conflicts with avatar
   //   .hex-collab-badge   — top left corner (conditional)
@@ -157,6 +177,7 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   //   .hex-fade           — bottom linear gradient for title legibility
   //   .hex-info           — title + (hover) domain, anchored bottom
   return `
+    ${placeholderHTML}
     ${avatarHTML}
     ${statusBadgeHTML(status)}
     ${collabHTML}
@@ -276,6 +297,7 @@ function _renderNow(state) {
       const accent = tile.accentColor || '#5AAA72';
       el.style.setProperty('--accent', accent);
       if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
+      else el.classList.add('no-thumb');
       if (tile.status === 'placeholder') el.classList.add('wip');
       el.innerHTML = catalystTileHTML(tile, { showCreatorAvatar: !!state.showCreatorAvatar });
       el.addEventListener('click', (e) => {
@@ -577,6 +599,7 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
   const accent = cat.accentColor || '#5AAA72';
   el.style.setProperty('--accent', accent);
   if (cat.thumbURL) el.style.setProperty('--thumb', `url("${cat.thumbURL}")`);
+  else el.classList.add('no-thumb');
   if (cat.status === 'placeholder') el.classList.add('wip');
   el.innerHTML = catalystTileHTML(cat, { showCreatorAvatar });
 
@@ -703,11 +726,21 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
         tileEls[idx] = el;
         const accent = tile.accentColor || '#5AAA72';
         el.style.setProperty('--accent', accent);
-        if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
+        if (tile.thumbURL) {
+          el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
+        } else {
+          // MD21: paint the faded logo placeholder directly into the
+          // mini tile so no-thumb catalysts get the same watermark in
+          // the dropdown's small grid. Mini tiles normally have no
+          // inner DOM, so this is the only path that adds it.
+          el.classList.add('no-thumb');
+          el.innerHTML = `<div class="hex-placeholder">${PLACEHOLDER_LOGO_SVG}</div>`;
+        }
         if (tile.status === 'placeholder') el.classList.add('wip');
-        // No inner HTML — the `.hex-tile::before` pseudo-element paints
-        // the thumbnail via `--thumb`. Tooltip surfaces the title since
-        // there's no room for text on a 60px tile.
+        // No inner HTML (other than the placeholder, if any) — the
+        // `.hex-tile::before` pseudo-element paints the thumbnail via
+        // `--thumb`. Tooltip surfaces the title since there's no room
+        // for text on a 60px tile.
         el.setAttribute('data-tip', tile.title || 'Catalyst');
         el.addEventListener('click', () => {
           if (_suppressNextClick) { _suppressNextClick = false; return; }

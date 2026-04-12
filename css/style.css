@@ -752,11 +752,26 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-tile:hover::before{opacity:1;filter:brightness(1.08);}
 .hex-tile:hover{transform:scale(1.04);z-index:10;}
 
-/* Bottom gradient for title legibility. Replaces the MD2 radial dim —
-   nothing is centered anymore, so we only need to darken the bottom
-   third where the title sits. Starts transparent at ~55% and fades
-   to ~85% black at the bottom. */
-.hex-fade{position:absolute;left:0;right:0;bottom:0;top:0;background:linear-gradient(to top,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.58) 22%,rgba(0,0,0,0) 55%);pointer-events:none;}
+/* MD21: faded yin-yang placeholder shown on no-thumb catalyst tiles.
+   Centered with ~20% margin from each edge so the logo stays inside
+   the hex visual bounds at every tile size. `color: var(--tx3)`
+   drives the SVG fill (paths use currentColor) so dark/light themes
+   adapt automatically. Low opacity keeps it in watermark territory.
+   No z-index — placeholder is emitted as the first child in
+   catalystTileHTML so natural paint order puts it behind the fade
+   gradient, badges, and title text. */
+.hex-placeholder{position:absolute;inset:20%;display:flex;align-items:center;justify-content:center;color:var(--tx3);opacity:0.22;pointer-events:none;}
+.hex-placeholder-logo{width:100%;height:100%;display:block;}
+.hex-tile.no-thumb:hover .hex-placeholder{opacity:0.32;}
+
+/* Bottom gradient for title legibility. MD21 dialed the intensity
+   down ~30% — the previous rgba(0,0,0,0.82) at the base was creating
+   a heavy black bar that dominated tiles with bright thumbnails. */
+.hex-fade{position:absolute;left:0;right:0;bottom:0;top:0;background:linear-gradient(to top,rgba(0,0,0,0.58) 0%,rgba(0,0,0,0.38) 22%,rgba(0,0,0,0) 55%);pointer-events:none;}
+/* No-thumb tiles sit over a flat var(--bg3) background — no photo
+   to fight, so the gradient can be even lighter. Just enough dim to
+   keep the title visible over whatever theme surface is behind. */
+.hex-tile.no-thumb .hex-fade{background:linear-gradient(to top,rgba(0,0,0,0.32) 0%,rgba(0,0,0,0.18) 28%,rgba(0,0,0,0) 55%);}
 
 /* Title + hover domain — anchored to the bottom of the hex inside the
    narrowing bottom quadrant. Padding-bottom keeps the text above the
@@ -985,8 +1000,23 @@ body.cat-modal-open{overflow:hidden;}
 #cat-thumb-drop.cat-thumb-hex::after{content:'';position:absolute;inset:0;clip-path:url(#hex-clip);border:none;background:transparent;pointer-events:none;}
 #cat-thumb-drop.cat-thumb-hex:hover,#cat-thumb-drop.cat-thumb-hex.drag{transform:scale(1.02);filter:brightness(1.08);}
 #cat-thumb-drop.cat-thumb-hex.drag{filter:brightness(1.15) saturate(1.1);}
-.cat-thumb-hint{font-size:12px;color:var(--tx2);text-align:center;padding:8px 12px;border-radius:6px;background:rgba(0,0,0,.55);pointer-events:none;font-weight:500;max-width:80%;}
-#cat-thumb-drop.cat-thumb-hex.has-img .cat-thumb-hint{opacity:0;transition:opacity var(--ease);}
+
+/* MD21: faded yin-yang placeholder behind the hint when no image is
+   uploaded. Same centering + currentColor + low opacity as the
+   grid placeholder. Shown only while no image is set. */
+.cat-thumb-placeholder{position:absolute;inset:20%;display:flex;align-items:center;justify-content:center;color:var(--tx3);opacity:0.22;pointer-events:none;}
+.cat-thumb-placeholder-logo{width:100%;height:100%;display:block;}
+#cat-thumb-drop.cat-thumb-hex.has-img .cat-thumb-placeholder{display:none;}
+
+/* MD21: the "Drop image or click to upload" hint used to be a
+   solid dark rectangle. With no image behind it, that read as a
+   harsh block slapped on top of the placeholder. Now it's a soft
+   frosted chip — low alpha + backdrop blur + no border — so the
+   watermark logo shows through and the hint feels like a gentle
+   suggestion. The has-img variant keeps a darker fill for contrast
+   over photos. */
+.cat-thumb-hint{font-size:12px;color:var(--tx2);text-align:center;padding:7px 14px;border-radius:8px;background:rgba(0,0,0,.18);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none;font-weight:500;max-width:80%;position:relative;z-index:1;}
+#cat-thumb-drop.cat-thumb-hex.has-img .cat-thumb-hint{opacity:0;transition:opacity var(--ease);background:rgba(0,0,0,.55);color:#fff;}
 #cat-thumb-drop.cat-thumb-hex.has-img:hover .cat-thumb-hint{opacity:1;}
 
 #cat-accent-btn{width:42px;height:42px;border-radius:10px;border:1.5px solid var(--bdr);background:var(--bg3);cursor:pointer;padding:4px;transition:border-color var(--ease);}

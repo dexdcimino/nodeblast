@@ -571,17 +571,32 @@ function _updateAccentBtn() {
   if (btn) btn.style.background = _accentColor;
 }
 
+// MD21: yin-yang placeholder SVG shown inside the edit modal thumb
+// preview when no image is uploaded. Mirrors the grid placeholder so
+// the two stay visually consistent — same 90° rotation, same
+// currentColor fill, same faded watermark vibe.
+const THUMB_PLACEHOLDER_SVG = `<svg class="cat-thumb-placeholder-logo" xmlns="http://www.w3.org/2000/svg" viewBox="-10.65 10.65 256 234.7" aria-hidden="true">
+  <g transform="rotate(90 117.35 128)" fill="currentColor">
+    <path d="M162.3,18.5C150.8,7.1,134.9,0,117.3,0s-33.4,7.1-45,18.5l-48.1,27.8C9.2,54.9,0,70.9,0,88.2v79.7c0,17.3,9.2,33.2,24.2,41.9h0c13.1,7.5,29.3-2,29.2-17.1v-.6c0-35.4,28.7-64,64-64s64-28.7,64-64-7.3-33.9-19-45.5ZM118.9,87.9c-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4Z"/>
+    <path d="M72.3,237.5c11.6,11.4,27.5,18.5,45,18.5s33.4-7.1,45-18.5l48.1-27.8c15-8.6,24.2-24.6,24.2-41.9v-79.7c0-17.3-9.2-33.2-24.2-41.9h0c-13.1-7.5-29.3,2-29.2,17.1v.6c0,35.3-28.6,64-64,64s-64,28.6-64,64,7.3,33.9,19,45.5h0ZM115.8,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>
+  </g>
+</svg>`;
+
 function _setThumbPreview(src) {
   const drop = document.getElementById('cat-thumb-drop');
   if (!drop) return;
   if (src) {
     drop.classList.add('has-img');
+    drop.classList.remove('no-thumb');
     drop.style.backgroundImage = `url("${src}")`;
     drop.innerHTML = '<div class="cat-thumb-hint">Click to replace</div>';
   } else {
     drop.classList.remove('has-img');
+    drop.classList.add('no-thumb');
     drop.style.backgroundImage = '';
-    drop.innerHTML = '<div class="cat-thumb-hint">Drop image or click to upload</div>';
+    // MD21: faded logo watermark behind the hint text so the "drop
+    // image" area isn't a solid gray blob.
+    drop.innerHTML = '<div class="cat-thumb-placeholder">' + THUMB_PLACEHOLDER_SVG + '</div><div class="cat-thumb-hint">Drop image or click to upload</div>';
   }
 }
 
