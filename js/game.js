@@ -136,7 +136,6 @@ export function initGame(canvas) {
 
   scene.clearColor = new B.Color4(0.04, 0.04, 0.06, 1);
   scene.collisionsEnabled = true;
-  scene.gravity = new B.Vector3(0, -0.15, 0);
 
   // Fog — hides the hard edge of the map boundary
   scene.fogMode = B.Scene.FOGMODE_EXP2;
@@ -158,9 +157,9 @@ export function initGame(canvas) {
   camera.minZ = 0.05;
   camera.fov = 1.309; // 75 degrees
   camera.checkCollisions = true;
-  camera.applyGravity = true;
+  camera.applyGravity = false;
   camera.ellipsoid = new B.Vector3(0.5, 0.9, 0.5);
-  camera.ellipsoidOffset = new B.Vector3(0, 1, 0);
+  camera.ellipsoidOffset = new B.Vector3(0, 0.9, 0);
 
   // Pointer lock
   _pointerLocked = false;
