@@ -106,8 +106,14 @@ function hideAllViews() {
 }
 
 function showFilterBar() {
+  // MD8 fix: add `feed-mode` synchronously here (not asynchronously
+  // inside the subscription callback) so #community-list is
+  // display:flex the moment renderFeedRoute starts setting up the
+  // subscription. Without this, there's a gap between hideAllViews()
+  // stripping the class and the async snapshot callback re-adding it,
+  // which manifested as a "flash then disappear" on feed page loads.
   document.getElementById('cat-filter-bar').classList.add('visible');
-  document.getElementById('grid').classList.add('with-filter');
+  document.getElementById('grid').classList.add('with-filter', 'feed-mode');
 }
 
 function showProfileBar(user, catalystCount, isOwn) {
@@ -458,7 +464,8 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   const list = document.getElementById('community-list');
   if (!grid || !list) return;
 
-  grid.classList.add('feed-mode');
+  // feed-mode class is applied synchronously by showFilterBar() before
+  // the subscription is even set up, so no need to re-add it here.
   list.innerHTML = '';
 
   if (!catalysts || catalysts.length === 0) {
@@ -486,7 +493,8 @@ function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
   const list = document.getElementById('community-list');
   if (!grid || !list) return;
 
-  grid.classList.add('feed-mode');
+  // feed-mode class is applied synchronously by showFilterBar() before
+  // the subscription is even set up, so no need to re-add it here.
   list.innerHTML = '';
 
   if (!catalysts || catalysts.length === 0) {
