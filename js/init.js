@@ -1846,18 +1846,33 @@ function initSigninModal() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // EMERGENCY DEBUG: wrap the whole boot sequence so any thrown
+  // error during initialization surfaces to the console AND paints
+  // the stack trace directly into the page instead of leaving the
+  // user with a silent blank screen. Remove once the site is stable.
+  console.log('[BOOT] DOMContentLoaded fired');
+  try {
   // Palette first, accent second — applyPalette writes --clr, so the
   // logo accent must be applied *after* it to end up as the effective
   // site color.
+  console.log('[BOOT] 1 - applyTheme');
   applyTheme(State.theme, true);
+  console.log('[BOOT] 2 - applyPalette');
   applyPalette(State.palette);
+  console.log('[BOOT] 3 - initLogoPicker');
   initLogoPicker();
 
+  console.log('[BOOT] 4 - initTooltips');
   initTooltips();
+  console.log('[BOOT] 5 - initThemeToggle');
   initThemeToggle();
+  console.log('[BOOT] 6 - initPalettePickers');
   initPalettePickers();
+  console.log('[BOOT] 7 - initColorPicker');
   initColorPicker();
+  console.log('[BOOT] 8 - initAudioSettings');
   initAudioSettings();
+  console.log('[BOOT] 9 - initSigninModal');
   initSigninModal();
 
   // MD13: intercept the account pill click BEFORE initAccountMenu
@@ -1882,6 +1897,7 @@ document.addEventListener('DOMContentLoaded', () => {
       toast('Sign in to create a catalyst');
       openSigninModal();
     });
+  console.log('[BOOT] 10 - initAccountMenu');
   initAccountMenu({
     onSignOut: () => {
       showModal({
@@ -1941,15 +1957,22 @@ document.addEventListener('DOMContentLoaded', () => {
     },
   });
 
+  console.log('[BOOT] 11 - initCatalystModal');
   initCatalystModal(() => {
     _profileCache.clear();
     renderRoute();
   });
+  console.log('[BOOT] 12 - initCatalystDetail');
   initCatalystDetail();
+  console.log('[BOOT] 13 - initRouter');
   initRouter(renderRoute);
+  console.log('[BOOT] 14 - initSearch');
   initSearch();
+  console.log('[BOOT] 15 - initNotifications');
   initNotifications();
+  console.log('[BOOT] 16 - initHelpPanel');
   initHelpPanel();
+  console.log('[BOOT] 17 - initFriends');
   initFriends();
 
   // MD14: re-render the mini catalyst grid AFTER the default toggle
@@ -2008,6 +2031,7 @@ document.addEventListener('DOMContentLoaded', () => {
     signIn('github');
   });
 
+  console.log('[BOOT] 18 - paintGuestProfilePill');
   // Guest mode by default — paint the pill immediately so the account
   // menu is usable before auth resolves (or if the user never signs in).
   paintGuestProfilePill();
@@ -2181,6 +2205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSkeleton();
   }
 
+  console.log('[BOOT] 19 - onAuthReady(updateAuthUI)');
   // Do NOT call renderRoute() directly here. The catalysts collection's
   // Firestore security rules require an authenticated user, so any
   // subscription set up before auth resolves will fail with a permission
@@ -2205,4 +2230,15 @@ document.addEventListener('DOMContentLoaded', () => {
       onReorder: _currentShowAdd ? handleReorder : null,
     });
   });
+  console.log('[BOOT] 20 - boot complete');
+  } catch (err) {
+    // EMERGENCY DEBUG: surface any init-time crash both to the console
+    // and directly in the page so a user with devtools closed still
+    // sees something useful. Stack trace is rendered as plain text so
+    // it survives any styling weirdness the thrown code may have left.
+    console.error('[BOOT] Fatal error during initialization:', err);
+    try {
+      document.body.innerHTML = '<pre style="color:#f66;background:#111;padding:2rem;font:13px/1.5 monospace;white-space:pre-wrap;word-break:break-word;">[BOOT] Fatal error during initialization:\n\n' + ((err && err.stack) || String(err)) + '</pre>';
+    } catch {}
+  }
 });

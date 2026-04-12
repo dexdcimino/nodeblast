@@ -870,6 +870,21 @@
     </div>
   </div>
 
+  <!-- EMERGENCY DEBUG: global error catcher registered BEFORE the
+       module imports so import-time failures (which try/catch inside
+       the module can't see) still surface to the console and the
+       document title. Leaves a visible breadcrumb even when the page
+       would otherwise render blank. Keep in place until the site is
+       stable; remove once the crash is diagnosed. -->
+  <script>
+    window.addEventListener('error', (e) => {
+      console.error('[GLOBAL ERROR]', e.message, e.filename, e.lineno, e.colno);
+      document.title = 'ERROR: ' + e.message;
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      console.error('[UNHANDLED REJECTION]', e.reason);
+    });
+  </script>
   <script type="module" src="js/init.js"></script>
 </body>
 </html>
