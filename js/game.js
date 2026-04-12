@@ -445,3 +445,4 @@ export function destroyGame(engine) {
   _scene = null; _camera = null; _canvas = null; _engine = null;
   if (engine) { engine.stopRenderLoop(); engine.dispose(); }
 }
+
