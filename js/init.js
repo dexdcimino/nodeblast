@@ -642,12 +642,18 @@ async function renderRoute({ force = false } = {}) {
   // Tear down any listeners from the previous route
   clearSubs();
 
+  // Capture whether this is a same-page re-render BEFORE we mutate
+  // _currentRoute below — used to skip the fade-out when force-
+  // re-rendering the same page (e.g. feed → feed on auth resolution).
+  const sameRoute = _currentRoute?.page === route.page;
   _currentRoute = route;
   _updateViewToggle();
   const honey = document.getElementById('honeycomb');
 
-  // Smooth fade between routes (skip the very first render)
-  if (!_firstRender && honey) {
+  // Smooth fade between routes. Skipped on the very first render and
+  // also when we're re-rendering the same route (no visible page change
+  // to fade across — would just flash blank for 150ms).
+  if (!_firstRender && !sameRoute && honey) {
     honey.style.opacity = '0';
     await wait(150);
   }
@@ -775,18 +781,13 @@ function updateAuthUI(user, profile) {
     if (profile.hexCode) _profileCache.delete(lower + '#' + profile.hexCode.toLowerCase());
   }
 
-  // Feed route is auth-independent — the public catalyst feed doesn't
-  // change based on who's signed in. Skip the re-render to prevent the
-  // auth-resolution double-render that causes the hard-refresh blank:
-  // the second call goes through the 150ms fade-out (honey.opacity=0)
-  // + tears down the first subscription, leaving a visible blank window.
-  // Profile/catalyst routes still need the re-render for "+" tile
-  // ownership + isOwn checks in renderProfileRoute.
-  const route = getRoute();
-  if (route.page === 'feed' && _currentRoute?.page === 'feed') {
-    return;
-  }
-  renderRoute();
+  // Always re-render on auth change. The boot block now defers the
+  // first renderRoute call until this point, so the feed route has
+  // never actually rendered yet — only a skeleton placeholder is on
+  // screen. force:true bypasses the renderRoute idempotency guard so
+  // the deferred initial subscription actually fires now that auth has
+  // resolved and Firestore queries can succeed.
+  renderRoute({ force: true });
 }
 
 /* ══════════════════════════════════════
@@ -1119,8 +1120,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Show a skeleton + filter bar for the feed route immediately so the
+  // page isn't blank while auth resolves. Other routes (profile,
+  // catalyst) get nothing here — onAuthReady → updateAuthUI will fire
+  // renderRoute and that handler will paint its own skeleton.
+  // Route-gated to avoid flashing the feed filter bar on a hard-refresh
+  // of /name.hex (profile) or /name.hex/slug (catalyst).
+  if (getRoute().page === 'feed') {
+    showFilterBar();
+    renderSkeleton();
+  }
+
+  // Do NOT call renderRoute() directly here. The catalysts collection's
+  // Firestore security rules require an authenticated user, so any
+  // subscription set up before auth resolves will fail with a permission
+  // error and render an empty state. updateAuthUI fires renderRoute()
+  // once auth resolves — that's the first real render.
   onAuthReady(updateAuthUI);
-  renderRoute();
 
   // MD8 defensive: re-apply the logo paint after the next animation
   // frame. If anything in the boot block (theme/palette/etc.) re-mounts
