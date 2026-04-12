@@ -46,9 +46,19 @@ import { renderSocialIconsHTML } from './social.js';
 
 let _currentCategory = 'all';
 // Feed view mode — 'catalysts' (flat hex flow) or 'alchemists' (grouped
-// per-creator cards). Persisted in localStorage so the toggle survives
-// reloads. 'catalysts' is the spec default.
-let _feedViewMode = (localStorage.getItem('nb-feed-mode') === 'alchemists') ? 'alchemists' : 'catalysts';
+// per-creator cards). MD17 flipped the default to 'alchemists'.
+// Signed-out users always land on Alchemists (no persistence). When a
+// user signs in, updateAuthUI() reads their per-account preference
+// from localStorage (key `nb-feed-mode-{uid}`) and applies it.
+let _feedViewMode = 'alchemists';
+function _feedModeKey(uid) { return 'nb-feed-mode-' + uid; }
+// Feed sort mode — 'popular' (fireCount desc), 'latest' (createdAt
+// desc), 'oldest' (createdAt asc). Persisted sitewide so reloads keep
+// the user's choice. Default 'popular' per MD17 spec.
+const _FEED_SORT_MODES = new Set(['popular', 'latest', 'oldest']);
+let _feedSortMode = _FEED_SORT_MODES.has(localStorage.getItem('nb-feed-sort'))
+  ? localStorage.getItem('nb-feed-sort')
+  : 'popular';
 let _currentFeedSnapshot = [];
 let _currentRoute = null;
 let _currentTiles = [];
@@ -499,14 +509,64 @@ function _groupCatalystsByCreator(catalysts) {
         socialLinks: Array.isArray(cat.ownerSocialLinks) ? cat.ownerSocialLinks : [],
         catalysts: [],
         latestCreatedAt: 0,
+        oldestCreatedAt: Number.POSITIVE_INFINITY,
+        totalFireCount: 0,
       };
       groups.set(ownerId, g);
     }
     g.catalysts.push(cat);
     const ts = cat.createdAt?.toMillis?.() ?? 0;
     if (ts > g.latestCreatedAt) g.latestCreatedAt = ts;
+    if (ts && ts < g.oldestCreatedAt) g.oldestCreatedAt = ts;
+    g.totalFireCount += (cat.fireCount || 0);
+  }
+  // Normalize groups that had no dated catalysts so the oldest sort
+  // doesn't leave +Infinity sentinels in place.
+  for (const g of groups.values()) {
+    if (g.oldestCreatedAt === Number.POSITIVE_INFINITY) g.oldestCreatedAt = 0;
   }
   return groups;
+}
+
+// Sort a flat catalyst snapshot according to the current feed sort
+// mode. Returns a new array — never mutates the input. Used by the
+// Catalysts view directly and also feeds tile ordering inside an
+// Alchemist card.
+function _sortCatalysts(catalysts, mode) {
+  const copy = catalysts.slice();
+  if (mode === 'latest') {
+    copy.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+  } else if (mode === 'oldest') {
+    copy.sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
+  } else {
+    // 'popular' — fireCount desc, createdAt desc as tiebreaker so
+    // newer tiles float above older ones at the same vote count.
+    copy.sort((a, b) => {
+      const diff = (b.fireCount || 0) - (a.fireCount || 0);
+      if (diff !== 0) return diff;
+      return (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0);
+    });
+  }
+  return copy;
+}
+
+// Sort the grouped-creator array used by the Alchemists view. For
+// 'popular' we rank by summed fireCount across each creator's tiles;
+// for 'latest' / 'oldest' we rank by the respective createdAt extreme.
+function _sortCreatorGroups(groups, mode) {
+  const copy = groups.slice();
+  if (mode === 'latest') {
+    copy.sort((a, b) => b.latestCreatedAt - a.latestCreatedAt);
+  } else if (mode === 'oldest') {
+    copy.sort((a, b) => a.oldestCreatedAt - b.oldestCreatedAt);
+  } else {
+    copy.sort((a, b) => {
+      const diff = b.totalFireCount - a.totalFireCount;
+      if (diff !== 0) return diff;
+      return b.latestCreatedAt - a.latestCreatedAt;
+    });
+  }
+  return copy;
 }
 
 // Sort comparator for tiles within a creator card. sortOrder (explicit
@@ -642,12 +702,13 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
     return;
   }
 
-  // Group, then sort creators by most recent activity (biggest
-  // createdAt among their catalysts wins). Within each card, tiles
-  // honor sortOrder → createdAt via _sortCardTiles.
+  // Group creators, then sort according to the current feed sort mode
+  // (popular / latest / oldest). Within each card tiles honor
+  // sortOrder → createdAt via _sortCardTiles regardless of the outer
+  // ranking — tile order inside a card is owner-controlled.
   const groups = Array.from(_groupCatalystsByCreator(catalysts).values());
-  groups.sort((a, b) => b.latestCreatedAt - a.latestCreatedAt);
-  groups.forEach((g) => list.appendChild(_buildCommunityCard(g)));
+  const ranked = _sortCreatorGroups(groups, _feedSortMode);
+  ranked.forEach((g) => list.appendChild(_buildCommunityCard(g)));
 }
 
 // "Catalysts" view: a single flow of hex tiles, sorted by createdAt
@@ -673,11 +734,9 @@ function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
 
   const wrap = document.createElement('div');
   wrap.className = 'community-flat';
-  const sorted = catalysts.slice().sort((a, b) => {
-    const ta = a.createdAt?.toMillis?.() ?? 0;
-    const tb = b.createdAt?.toMillis?.() ?? 0;
-    return tb - ta;
-  });
+  // Sort order comes from the active feed sort mode so flipping
+  // Popular / Latest / Oldest reorders the tile flow live.
+  const sorted = _sortCatalysts(catalysts, _feedSortMode);
   sorted.forEach((cat) => {
     const tile = createCatalystTileElement(
       cat,
@@ -989,8 +1048,26 @@ function updateAuthUI(user, profile) {
     const countEl = document.getElementById('acct-catalysts-count');
     if (countEl) countEl.textContent = '0';
     _renderMyCatalystsMini();
+    // MD17: guests always land on Alchemists. Force-reset so a
+    // previously signed-in session's choice doesn't leak across.
+    _feedViewMode = 'alchemists';
+    document.querySelectorAll('.feed-mode-btn').forEach((b) => {
+      b.classList.toggle('selected', b.dataset.mode === _feedViewMode);
+    });
     renderRoute();
     return;
+  }
+
+  // MD17: load this account's last-selected feed tab. Missing key →
+  // default Alchemists. Only apply if it differs from current state.
+  let stored = null;
+  try { stored = localStorage.getItem(_feedModeKey(user.uid)); } catch {}
+  const nextMode = (stored === 'catalysts' || stored === 'alchemists') ? stored : 'alchemists';
+  if (nextMode !== _feedViewMode) {
+    _feedViewMode = nextMode;
+    document.querySelectorAll('.feed-mode-btn').forEach((b) => {
+      b.classList.toggle('selected', b.dataset.mode === _feedViewMode);
+    });
   }
 
   // Attach the friends/requests listeners to this user. Safe to call
@@ -1477,9 +1554,31 @@ document.addEventListener('DOMContentLoaded', () => {
       if (mode !== 'catalysts' && mode !== 'alchemists') return;
       if (mode === _feedViewMode) return;
       _feedViewMode = mode;
-      try { localStorage.setItem('nb-feed-mode', mode); } catch {}
+      // Per-account persistence — signed-out users get no memory,
+      // so their next visit always reverts to Alchemists (MD17).
+      if (State.user?.uid) {
+        try { localStorage.setItem(_feedModeKey(State.user.uid), mode); } catch {}
+      }
       document.querySelectorAll('.feed-mode-btn').forEach((b) => {
         b.classList.toggle('selected', b.dataset.mode === mode);
+      });
+      if (_currentRoute?.page === 'feed') _repaintFeed();
+    });
+  });
+
+  // Feed sort toggle (Popular / Latest / Oldest). Mirrors the feed
+  // mode pattern — state is persisted in localStorage and changing
+  // the sort repaints from the cached snapshot.
+  document.querySelectorAll('.feed-sort-btn').forEach((btn) => {
+    btn.classList.toggle('selected', btn.dataset.sort === _feedSortMode);
+    btn.addEventListener('click', () => {
+      const sort = btn.dataset.sort;
+      if (!_FEED_SORT_MODES.has(sort)) return;
+      if (sort === _feedSortMode) return;
+      _feedSortMode = sort;
+      try { localStorage.setItem('nb-feed-sort', sort); } catch {}
+      document.querySelectorAll('.feed-sort-btn').forEach((b) => {
+        b.classList.toggle('selected', b.dataset.sort === sort);
       });
       if (_currentRoute?.page === 'feed') _repaintFeed();
     });

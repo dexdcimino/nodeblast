@@ -113,7 +113,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #hdr{position:fixed;top:0;left:0;right:0;height:var(--hdr);background:var(--bg2);border-bottom:1px solid var(--bdr);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 16px;box-shadow:0 2px 8px rgba(0,0,0,.1);z-index:100;}
 #hdr-left{display:flex;align-items:center;gap:14px;min-width:0;height:100%;}
 #hdr-mid{display:flex;align-items:center;justify-content:center;gap:10px;position:relative;}
-#hdr-right{display:flex;align-items:center;justify-content:flex-end;gap:5px;min-width:0;overflow:hidden;}
+#hdr-right{display:flex;align-items:center;justify-content:flex-end;gap:5px;min-width:0;}
 
 #hdr-logo-wrap{position:relative;flex-shrink:0;display:flex;align-items:center;height:100%;}
 #hdr-logo{width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform var(--ease);border-radius:8px;}
@@ -550,8 +550,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* ══════════════════════════════════════
    VIEW TOGGLE — Community vs My Profile
 ══════════════════════════════════════ */
-#view-toggle{display:flex;align-items:center;gap:2px;background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;padding:3px;height:32px;}
-.view-toggle-btn{background:none;border:none;padding:0 14px;height:24px;border-radius:16px;font-family:var(--fn);font-size:12px;font-weight:600;color:var(--tx2);cursor:pointer;white-space:nowrap;transition:background var(--ease),color var(--ease),opacity var(--ease);}
+#view-toggle{display:flex;align-items:center;gap:2px;background:var(--bg3);border:1px solid var(--bdr);border-radius:22px;padding:4px;height:38px;}
+.view-toggle-btn{background:none;border:none;padding:0 18px;height:30px;border-radius:16px;font-family:var(--fn);font-size:14px;font-weight:600;color:var(--tx2);cursor:pointer;white-space:nowrap;transition:background var(--ease),color var(--ease),opacity var(--ease);}
 .view-toggle-btn:hover{color:var(--tx);}
 .view-toggle-btn.selected{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
 .view-toggle-btn[disabled]{opacity:.4;cursor:not-allowed;}
@@ -584,15 +584,23 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* ══════════════════════════════════════
    CATEGORY FILTER BAR + PROFILE HDR BAR (NodeBlast)
 ══════════════════════════════════════ */
-#cat-filter-bar{position:fixed;top:var(--hdr);left:0;right:0;height:48px;background:var(--bg);border-bottom:1px solid var(--bdr);display:none;align-items:center;gap:14px;padding:0 24px;z-index:90;}
+#cat-filter-bar{position:fixed;top:var(--hdr);left:0;right:0;height:56px;background:var(--bg);border-bottom:1px solid var(--bdr);display:none;align-items:center;gap:14px;padding:0 24px;z-index:90;}
 #cat-filter-bar.visible{display:flex;}
 
 /* Two-segment view toggle on the left side of the filter bar — flips
    the feed between flat catalyst tiles and grouped alchemist cards. */
-#feed-mode-toggle{display:flex;align-items:center;gap:2px;background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;padding:3px;flex-shrink:0;height:32px;}
-.feed-mode-btn{background:none;border:none;padding:0 14px;height:24px;border-radius:16px;font-family:var(--fn);font-size:12px;font-weight:600;color:var(--tx2);cursor:pointer;white-space:nowrap;transition:background var(--ease),color var(--ease);}
+#feed-mode-toggle{display:flex;align-items:center;gap:2px;background:var(--bg3);border:1px solid var(--bdr);border-radius:22px;padding:4px;flex-shrink:0;height:38px;}
+.feed-mode-btn{background:none;border:none;padding:0 18px;height:30px;border-radius:16px;font-family:var(--fn);font-size:14px;font-weight:600;color:var(--tx2);cursor:pointer;white-space:nowrap;transition:background var(--ease),color var(--ease);}
 .feed-mode-btn:hover{color:var(--tx);}
 .feed-mode-btn.selected{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
+
+/* Sort-by control on the right side of the filter bar — Popular /
+   Latest / Oldest. Matches the feed-mode toggle visually so the two
+   segmented controls read as a matched pair. */
+#feed-sort{display:flex;align-items:center;gap:2px;background:var(--bg3);border:1px solid var(--bdr);border-radius:22px;padding:4px;flex-shrink:0;height:38px;}
+.feed-sort-btn{background:none;border:none;padding:0 14px;height:30px;border-radius:16px;font-family:var(--fn);font-size:13px;font-weight:600;color:var(--tx2);cursor:pointer;white-space:nowrap;transition:background var(--ease),color var(--ease);}
+.feed-sort-btn:hover{color:var(--tx);}
+.feed-sort-btn.selected{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
 
 /* Category pills now live in their own scrollable subgroup so the
    feed-mode toggle on the left stays pinned. */
@@ -660,7 +668,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    HEX GRID (NodeBlast)
 ══════════════════════════════════════ */
 #grid{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;overflow:auto;background:var(--bg);padding:0 clamp(20px,6vw,120px);}
-#grid.with-filter{top:calc(var(--hdr) + 48px);}
+#grid.with-filter{top:calc(var(--hdr) + 56px);}
 #honeycomb{position:relative;width:100%;min-height:200px;opacity:1;transition:opacity 150ms ease;}
 .hex-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:14px;text-align:center;padding:40px 24px;line-height:1.55;max-width:420px;margin:0 auto;}
 .hex-empty-caption{position:absolute;left:50%;transform:translateX(-50%);margin-top:8px;color:var(--tx3);font-size:14px;font-weight:500;text-align:center;pointer-events:none;}
@@ -1045,8 +1053,12 @@ body.dragging-active{touch-action:none;}
   #profile-bar-avatar{width:42px;height:42px;font-size:18px;}
   #profile-bar-name{font-size:16px;}
   #profile-bar-count{display:none;}
-  #view-toggle{padding:2px;height:30px;}
-  .view-toggle-btn{padding:0 10px;font-size:11px;}
+  #view-toggle{padding:3px;height:34px;}
+  .view-toggle-btn{padding:0 12px;height:26px;font-size:12px;}
+  #feed-mode-toggle{padding:3px;height:34px;}
+  .feed-mode-btn{padding:0 12px;height:26px;font-size:12px;}
+  #feed-sort{padding:3px;height:34px;}
+  .feed-sort-btn{padding:0 10px;height:26px;font-size:11px;}
   #cat-detail-card{max-width:100%;width:92%;}
   #cat-modal-card{max-width:100%;width:94%;padding:20px 18px 16px;}
   .cat-field-row{flex-direction:column;}
