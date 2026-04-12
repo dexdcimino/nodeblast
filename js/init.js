@@ -530,6 +530,7 @@ function _repaintFeed() {
 }
 
 async function renderFeedRoute() {
+  console.log('[feed] renderFeedRoute called', { category: _currentCategory, mode: _feedViewMode });
   hideAllViews();
   showFilterBar();
   setPageTitle([]);
@@ -540,6 +541,7 @@ async function renderFeedRoute() {
   renderSkeleton();
   _currentFeedSnapshot = [];
   const unsub = subscribePublicFeed(_currentCategory, (catalysts) => {
+    console.log('[feed] subscription fired', { count: catalysts?.length ?? 0 });
     _currentFeedSnapshot = catalysts || [];
     _repaintFeed();
   });
@@ -612,11 +614,26 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
   }
 }
 
-async function renderRoute() {
+async function renderRoute({ force = false } = {}) {
+  const route = getRoute();
+  console.log('[route] renderRoute', { from: _currentRoute?.page, to: route.page, force });
+
+  // MD8 idempotency: if we're already on the feed route and a new
+  // renderRoute call comes in (commonly from auth resolution firing
+  // updateAuthUI → renderRoute), don't tear down the live feed
+  // subscription. The public catalyst feed is auth-independent, so
+  // there's nothing to re-render. Just refresh ancillary UI and bail.
+  // Profile/catalyst routes do not get this short-circuit because the
+  // "+ Add" tile depends on whether the viewer is the owner.
+  if (!force && route.page === 'feed' && _currentRoute?.page === 'feed') {
+    _currentRoute = route;
+    _updateViewToggle();
+    return;
+  }
+
   // Tear down any listeners from the previous route
   clearSubs();
 
-  const route = getRoute();
   _currentRoute = route;
   _updateViewToggle();
   const honey = document.getElementById('honeycomb');
@@ -812,6 +829,12 @@ function paintLogo(top, bot) {
   const lowerDot = document.getElementById('nodeblast_logo_top');
   if (upperDot) upperDot.setAttribute('fill', 'transparent');
   if (lowerDot) lowerDot.setAttribute('fill', 'transparent');
+
+  console.log('[logo] paintLogo applied', {
+    top, bot, topAdj, botAdj,
+    bigTopFound: !!bigTop, bigBotFound: !!bigBot,
+    nodeFound: !!nodeEl, blastFound: !!blastEl,
+  });
 }
 
 function markSelectedSwatches() {
@@ -867,8 +890,14 @@ function initLogoPicker() {
 
   // Initial paint — respect any cached values the user picked on a
   // previous visit, else fall back to the defaults.
-  const initialTop = localStorage.getItem(LOGO_TOP_KEY) || DEFAULT_LOGO_TOP;
-  const initialBot = localStorage.getItem(LOGO_BOT_KEY) || DEFAULT_LOGO_BOT;
+  const rawTop = localStorage.getItem(LOGO_TOP_KEY);
+  const rawBot = localStorage.getItem(LOGO_BOT_KEY);
+  const initialTop = rawTop || DEFAULT_LOGO_TOP;
+  const initialBot = rawBot || DEFAULT_LOGO_BOT;
+  console.log('[logo] initLogoPicker', {
+    rawTop, rawBot, initialTop, initialBot,
+    defaultTop: DEFAULT_LOGO_TOP, defaultBot: DEFAULT_LOGO_BOT,
+  });
   setLogoColors(initialTop, initialBot);
 
   // Re-paint the logo whenever the theme toggles so the light-mode
@@ -1072,6 +1101,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   onAuthReady(updateAuthUI);
   renderRoute();
+
+  // MD8 defensive: re-apply the logo paint after the next animation
+  // frame. If anything in the boot block (theme/palette/etc.) re-mounts
+  // the SVG or interferes with the initial paintLogo call, this catches
+  // it. paintLogo is idempotent — calling it again with the same colors
+  // is a no-op visually.
+  requestAnimationFrame(() => paintLogo(_logoTop, _logoBot));
+
   window.addEventListener('resize', () => {
     renderHexGrid({
       tiles: _currentTiles,

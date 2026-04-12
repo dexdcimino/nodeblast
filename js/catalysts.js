@@ -190,16 +190,19 @@ export function subscribeUserCatalysts(uid, callback) {
     where('ownerId', '==', uid),
     orderBy('createdAt', 'desc'),
   );
+  // MD8: same flash-then-empty guard as subscribePublicFeed. Only fire
+  // callback([]) on error if no successful snapshot has landed yet —
+  // otherwise leave the existing tiles in place.
+  let receivedAny = false;
   return onSnapshot(
     q,
-    (snap) => callback(sortUserCatalysts(snap.docs.map((d) => ({ id: d.id, ...d.data() })))),
+    (snap) => {
+      receivedAny = true;
+      callback(sortUserCatalysts(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+    },
     (err) => {
       console.warn('[catalysts] user sub error:', err);
-      // Fire the callback with an empty array so the UI escapes the
-      // skeleton loading state and can render the empty message / + tile.
-      // Without this, a missing composite index leaves the grid stuck on
-      // skeleton placeholders forever.
-      callback([]);
+      if (!receivedAny) callback([]);
     },
   );
 }
@@ -212,6 +215,14 @@ export function subscribeUserCatalysts(uid, callback) {
 // underlying query by createdAt keeps the snapshot representative of
 // "what's new" across the widest set of creators. Limit bumped from
 // 24 → 60 so the hub has enough breadth for meaningful grouping.
+//
+// MD8 fix: track whether we've ever received data and refuse to fire
+// callback([]) on subsequent errors. Firestore's onSnapshot fires the
+// success callback first with cached data, then fires the error
+// callback if the server query fails (e.g. missing composite index
+// after the MD3 query change). Without this guard, a transient error
+// after a successful snapshot wipes the rendered tiles and leaves the
+// user staring at an empty state — the "flash then disappear" bug.
 export function subscribePublicFeed(category, callback, max = 60) {
   const constraints = [
     where('isPublic', '==', true),
@@ -221,12 +232,18 @@ export function subscribePublicFeed(category, callback, max = 60) {
   if (category && category !== 'all') {
     constraints.unshift(where('category', '==', category));
   }
+  let receivedAny = false;
   return onSnapshot(
     query(collection(db, 'catalysts'), ...constraints),
-    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (snap) => {
+      receivedAny = true;
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    },
     (err) => {
       console.warn('[catalysts] feed sub error:', err);
-      callback([]);
+      // Only escape the skeleton state if we never got data — leave a
+      // successful render in place rather than wiping it.
+      if (!receivedAny) callback([]);
     },
   );
 }
