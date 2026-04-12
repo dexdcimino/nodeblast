@@ -1664,10 +1664,11 @@ let _logoTop = DEFAULT_LOGO_TOP;
 let _logoBot = DEFAULT_LOGO_BOT;
 
 function paintLogo(top, bot) {
-  // MD33: V2 IDs are left/right (no more confusing top/bottom).
-  //   nodeblast_logo_left  → left half, painted with `top` (left column)
-  //   nodeblast_logo_right → right half, painted with `bot` (right column)
-  //   nodeblast_circle_left / _right → transparent negative space
+  // The logo was mirrored in the V2 SVG export, so the SVG element
+  // named "left" is visually on the RIGHT side of the screen and
+  // vice-versa. The picker's left column (top) drives the visual
+  // left = SVG "right", and the picker's right column (bot) drives
+  // the visual right = SVG "left".
   //
   // Light-mode adjustment: getThemeAdjustedLogoColor() mixes the raw
   // picker color with ~22% black so the logo and wordmark keep enough
@@ -1676,16 +1677,16 @@ function paintLogo(top, bot) {
   const topAdj = getThemeAdjustedLogoColor(top);
   const botAdj = getThemeAdjustedLogoColor(bot);
 
-  // Left column (top color) → left half + "node" wordmark.
-  const leftHalf = document.getElementById('nodeblast_logo_left');
+  // Left column (top color) → SVG "right" element + "node" wordmark.
+  const svgRight = document.getElementById('nodeblast_logo_right');
   const nodeEl = document.getElementById('brand-node');
-  if (leftHalf) leftHalf.setAttribute('fill', topAdj);
+  if (svgRight) svgRight.setAttribute('fill', topAdj);
   if (nodeEl) nodeEl.style.color = topAdj;
 
-  // Right column (bot color) → right half + "blast" wordmark.
-  const rightHalf = document.getElementById('nodeblast_logo_right');
+  // Right column (bot color) → SVG "left" element + "blast" wordmark.
+  const svgLeft = document.getElementById('nodeblast_logo_left');
   const blastEl = document.getElementById('brand-blast');
-  if (rightHalf) rightHalf.setAttribute('fill', botAdj);
+  if (svgLeft) svgLeft.setAttribute('fill', botAdj);
   if (blastEl) blastEl.style.color = botAdj;
 
   // Circles → transparent (already hole-punched by the compound
@@ -1697,7 +1698,7 @@ function paintLogo(top, bot) {
 
   console.log('[logo] paintLogo applied', {
     top, bot, topAdj, botAdj,
-    leftFound: !!leftHalf, rightFound: !!rightHalf,
+    svgRightFound: !!svgRight, svgLeftFound: !!svgLeft,
     nodeFound: !!nodeEl, blastFound: !!blastEl,
   });
 }
