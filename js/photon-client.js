@@ -70,7 +70,7 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
 
   _client.onEvent = (code, content, actorNr) => {
     if (code === 1 && actorNr !== _myId && _onPlayerUpdate) {
-      _onPlayerUpdate(actorNr, content.x, content.y, content.z, content.rotY);
+      _onPlayerUpdate(actorNr, content.x, content.y, content.z, content.rotY, content.pitch, content.username, content.hex);
     }
   };
 
@@ -91,9 +91,9 @@ function _updatePlayerCount() {
   } catch {}
 }
 
-export function photonSendState(x, y, z, rotY) {
+export function photonSendState(x, y, z, rotY, pitch, username, hex) {
   if (!_connected || !_client) return;
-  _client.raiseEvent(1, { x, y, z, rotY });
+  _client.raiseEvent(1, { x, y, z, rotY, pitch, username, hex });
 }
 
 function _startSendLoop() {
@@ -101,7 +101,7 @@ function _startSendLoop() {
   _sendTimer = setInterval(() => {
     if (window._nbGetPlayerState) {
       const s = window._nbGetPlayerState();
-      if (s) photonSendState(s.x, s.y, s.z, s.rotY);
+      if (s) photonSendState(s.x, s.y, s.z, s.rotY, s.pitch, s.username, s.hex);
     }
   }, SEND_RATE_MS);
 }

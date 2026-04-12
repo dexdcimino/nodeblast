@@ -4,6 +4,7 @@
 //  scene with multiplayer sync, tears down cleanly on route change.
 // ══════════════════════════════════════
 
+import State from './state.js';
 import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer } from './game.js';
 import { initPhoton, destroyPhoton } from './photon-client.js';
 import { navigate } from './router.js';
@@ -56,13 +57,21 @@ export async function renderPlayRoute() {
     _engine = result.engine;
 
     // Load Photon SDK and connect — non-blocking relative to Babylon
+    // Identity HUD
+    const identEl = document.getElementById('play-identity');
+    if (identEl) {
+      const name = State.profile?.displayName || 'player';
+      const hex = State.profile?.hexCode || '5aaa72';
+      identEl.innerHTML = `<span style="color:#${hex}">\u25a0</span> ${name}`;
+    }
+
     await _ensurePhoton();
     initPhoton({
       onConnected: (myId) => {
         console.log('[play] photon connected, actor:', myId);
       },
-      onPlayerUpdate: (id, x, y, z, rotY) => {
-        addOrUpdateRemotePlayer(id, x, y, z, rotY);
+      onPlayerUpdate: (id, x, y, z, rotY, pitch, username, hex) => {
+        addOrUpdateRemotePlayer(id, x, y, z, rotY, username, hex);
       },
       onPlayerLeave: (id) => {
         removeRemotePlayer(id);
