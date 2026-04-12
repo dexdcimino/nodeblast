@@ -1308,7 +1308,11 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
   const cached = _profileCache.get(cacheKey);
   if (cached) {
     const cachedMatch = openSlug ? cached.catalysts.find((c) => c.slug === openSlug) : null;
-    if (cachedMatch && _routeInternalIfNeeded(cached.user, cachedMatch)) {
+    if (openSlug && !cachedMatch) {
+      // Slug requested but not in cache — don't render the profile,
+      // fall through to the live lookup below which will show 404 if
+      // the slug genuinely doesn't exist.
+    } else if (cachedMatch && _routeInternalIfNeeded(cached.user, cachedMatch)) {
       // Internal view is now painted from cache. Still continue below
       // to resolve the live user + subscription so the page updates if
       // something changes server-side.
@@ -1392,11 +1396,14 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
 
   // If the subscription can't find the slug (possibly an old link to a
   // deleted catalyst or a fresh fetch race), fall back to a direct lookup.
+  // If that also fails, the catalyst genuinely doesn't exist — show 404.
   if (openSlug) {
     const direct = await getCatalystBySlug(user.uid, openSlug);
     if (direct) {
       setPageTitle([direct.title, user.displayName || username]);
       if (!_routeInternalIfNeeded(user, direct)) openCatalystDetail(direct);
+    } else {
+      show404();
     }
   }
 }
