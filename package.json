@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "photon-realtime": "^4.4.0"
+  }
+}
