@@ -51,9 +51,12 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
     setPhotonStatus('finding room...');
     _client.joinOrCreateRoom('nodeblast-main', {
       maxPlayers: MAX_PLAYERS_PER_ROOM,
-      isVisible: true,
-      isOpen: true,
-    });
+    }, {});
+  };
+
+  _client.onJoinRoomFailed = (code, msg) => {
+    console.warn('[photon] join room failed:', code, msg);
+    setPhotonStatus('room error: ' + code);
   };
 
   _client.onJoinRoom = () => {
