@@ -1,21 +1,56 @@
 // ══════════════════════════════════════
-//  NodeBlast — GAME (MD01 + MD02 + MD03)
-//  Babylon.js 3D scene: FPS camera, labeled remote players,
-//  structural blocks, fog, invisible boundary walls.
+//  NodeBlast — GAME ENGINE
+//  Manual FPS controller — proper physics,
+//  sprint, jump, air control, smooth feel.
 // ══════════════════════════════════════
 
 import State from './state.js';
 
-let _resizeHandler = null;
-let _scene = null;
-let _camera = null;
+// ── Module state ──
+let _engine        = null;
+let _scene         = null;
+let _camera        = null;
+let _canvas        = null;
 let _pointerLocked = false;
+let _resizeHandler = null;
+let _obsHandler    = null;
+
 let _playerUsername = 'player';
-let _playerHex = '5aaa72';
+let _playerHex      = '5aaa72';
+
+// ── Physics constants ──
+const WALK_SPEED    = 0.18;
+const SPRINT_MULT   = 2.6;
+const JUMP_FORCE    = 0.28;
+const GRAVITY       = 0.022;
+const GROUND_Y      = 1.8;
+const AIR_CONTROL   = 0.4;
+const FRICTION      = 0.82;
+const INERTIA       = 0.14;
+
+// ── Player physics state ──
+let _velX     = 0;
+let _velZ     = 0;
+let _velY     = 0;
+let _onGround = true;
+let _sprinting = false;
+
+// ── Input state ──
+const _keys = {};
 let _keyDownHandler = null;
-let _keyUpHandler = null;
-let _jumpHandler = null;
+let _keyUpHandler   = null;
+
+// ── Remote players ──
 const _remotePlayers = new Map();
+
+// ────────────────────────────────────────
+//  Identity
+// ────────────────────────────────────────
+
+export function refreshPlayerIdentity() {
+  _playerUsername = State.profile?.displayName || State.user?.displayName || 'player';
+  _playerHex      = State.profile?.hexCode || '5aaa72';
+}
 
 export function getPlayerState() {
   if (!_camera) return null;
@@ -23,22 +58,19 @@ export function getPlayerState() {
     x: _camera.position.x,
     y: _camera.position.y,
     z: _camera.position.z,
-    rotY: _camera.rotation.y,
+    rotY:  _camera.rotation.y,
     pitch: _camera.rotation.x,
     username: _playerUsername,
-    hex: _playerHex,
+    hex:      _playerHex,
   };
 }
 
-export function refreshPlayerIdentity() {
-  _playerUsername = State.profile?.displayName || State.user?.displayName || 'player';
-  _playerHex = State.profile?.hexCode || '5aaa72';
-}
-
-// ── Remote player mesh factory ──
+// ────────────────────────────────────────
+//  Remote players
+// ────────────────────────────────────────
 
 function _createRemotePlayerMesh(id, hex, username) {
-  const B = window.BABYLON;
+  const B    = window.BABYLON;
   const root = new B.TransformNode('remote_root_' + id, _scene);
 
   const body = B.MeshBuilder.CreateCapsule(
@@ -46,15 +78,15 @@ function _createRemotePlayerMesh(id, hex, username) {
     { height: 1.8, radius: 0.35, tessellation: 8 },
     _scene,
   );
-  body.parent = root;
+  body.parent     = root;
   body.position.y = 0.9;
 
-  const r = parseInt(hex.slice(0, 2), 16) / 255;
-  const g = parseInt(hex.slice(2, 4), 16) / 255;
-  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  const r   = parseInt(hex.slice(0, 2), 16) / 255;
+  const g   = parseInt(hex.slice(2, 4), 16) / 255;
+  const b   = parseInt(hex.slice(4, 6), 16) / 255;
   const mat = new B.StandardMaterial('remote_mat_' + id, _scene);
-  mat.diffuseColor = new B.Color3(r, g, b);
-  mat.emissiveColor = new B.Color3(r * 0.2, g * 0.2, b * 0.2);
+  mat.diffuseColor  = new B.Color3(r, g, b);
+  mat.emissiveColor = new B.Color3(r * 0.25, g * 0.25, b * 0.25);
   body.material = mat;
 
   const labelPlane = B.MeshBuilder.CreatePlane(
@@ -62,8 +94,8 @@ function _createRemotePlayerMesh(id, hex, username) {
     { width: 2, height: 0.45 },
     _scene,
   );
-  labelPlane.parent = root;
-  labelPlane.position.y = 2.2;
+  labelPlane.parent        = root;
+  labelPlane.position.y    = 2.3;
   labelPlane.billboardMode = B.Mesh.BILLBOARDMODE_ALL;
 
   const labelTex = new B.DynamicTexture(
@@ -71,14 +103,15 @@ function _createRemotePlayerMesh(id, hex, username) {
     { width: 256, height: 64 },
     _scene,
   );
-  labelTex.drawText(username, null, 46, 'bold 28px Outfit, Arial', '#ffffff', 'transparent', true);
+  labelTex.drawText(username, null, 46, 'bold 28px Outfit,Arial', '#ffffff', 'transparent', true);
+
   const labelMat = new B.StandardMaterial('remote_label_mat_' + id, _scene);
-  labelMat.diffuseTexture = labelTex;
+  labelMat.diffuseTexture  = labelTex;
   labelMat.emissiveTexture = labelTex;
-  labelMat.opacityTexture = labelTex;
+  labelMat.opacityTexture  = labelTex;
   labelMat.backFaceCulling = false;
   labelMat.disableLighting = true;
-  labelPlane.material = labelMat;
+  labelPlane.material      = labelMat;
 
   return { root, body, labelPlane, labelTex };
 }
@@ -86,23 +119,21 @@ function _createRemotePlayerMesh(id, hex, username) {
 export function addOrUpdateRemotePlayer(id, x, y, z, rotY, username, hex) {
   let p = _remotePlayers.get(id);
   if (!p) {
-    const safeHex = (hex || '5aaa72').replace('#', '');
+    const safeHex  = (hex || '5aaa72').replace('#', '');
     const safeName = username || 'player';
-    const meshes = _createRemotePlayerMesh(id, safeHex, safeName);
+    const meshes   = _createRemotePlayerMesh(id, safeHex, safeName);
     p = {
-      root: meshes.root,
-      body: meshes.body,
-      labelPlane: meshes.labelPlane,
-      labelTex: meshes.labelTex,
+      ...meshes,
       targetX: x, targetY: y, targetZ: z, targetRotY: rotY,
       renderX: x, renderY: y, renderZ: z, renderRotY: rotY,
       lastUpdate: Date.now(),
     };
     _remotePlayers.set(id, p);
+    console.log('[game] remote player added:', id, username);
   } else {
-    p.targetX = x;
-    p.targetY = y;
-    p.targetZ = z;
+    p.targetX    = x;
+    p.targetY    = y - 1.8;
+    p.targetZ    = z;
     p.targetRotY = rotY;
     p.lastUpdate = Date.now();
   }
@@ -114,91 +145,127 @@ export function getRemotePlayerIds() {
 
 export function removeRemotePlayer(id) {
   const p = _remotePlayers.get(id);
-  if (p) {
-    p.labelTex.dispose();
-    p.labelPlane.dispose();
-    p.body.dispose();
-    p.root.dispose();
-    _remotePlayers.delete(id);
-  }
+  if (!p) return;
+  try { p.labelTex.dispose(); }   catch {}
+  try { p.labelPlane.dispose(); } catch {}
+  try { p.body.dispose(); }       catch {}
+  try { p.root.dispose(); }       catch {}
+  _remotePlayers.delete(id);
+  console.log('[game] remote player removed:', id);
 }
 
-// ── Scene init ──
+// ────────────────────────────────────────
+//  FPS physics tick — runs every frame
+// ────────────────────────────────────────
+
+function _physicsTick() {
+  if (!_camera || !_scene) return;
+
+  const B = window.BABYLON;
+
+  const forward = _keys['KeyW'] || _keys['ArrowUp'];
+  const back    = _keys['KeyS'] || _keys['ArrowDown'];
+  const left    = _keys['KeyA'] || _keys['ArrowLeft'];
+  const right   = _keys['KeyD'] || _keys['ArrowRight'];
+  const jumping = _keys['Space'];
+
+  const camForward = _camera.getDirection(B.Vector3.Forward());
+  camForward.y = 0;
+  camForward.normalize();
+  const camRight = _camera.getDirection(B.Vector3.Right());
+  camRight.y = 0;
+  camRight.normalize();
+
+  let moveX = 0;
+  let moveZ = 0;
+  if (forward) { moveX += camForward.x; moveZ += camForward.z; }
+  if (back)    { moveX -= camForward.x; moveZ -= camForward.z; }
+  if (right)   { moveX += camRight.x;   moveZ += camRight.z;   }
+  if (left)    { moveX -= camRight.x;   moveZ -= camRight.z;   }
+
+  const moveLen = Math.sqrt(moveX * moveX + moveZ * moveZ);
+  if (moveLen > 0) { moveX /= moveLen; moveZ /= moveLen; }
+
+  const speed   = WALK_SPEED * (_sprinting ? SPRINT_MULT : 1.0);
+  const control = _onGround ? 1.0 : AIR_CONTROL;
+
+  const targetVX = moveX * speed;
+  const targetVZ = moveZ * speed;
+  _velX += (targetVX - _velX) * INERTIA * control;
+  _velZ += (targetVZ - _velZ) * INERTIA * control;
+
+  if (moveLen === 0) {
+    _velX *= FRICTION;
+    _velZ *= FRICTION;
+  }
+
+  _velY -= GRAVITY;
+
+  if (jumping && _onGround) {
+    _velY     = JUMP_FORCE;
+    _onGround = false;
+  }
+
+  _camera.position.x += _velX;
+  _camera.position.z += _velZ;
+  _camera.position.y += _velY;
+
+  if (_camera.position.y <= GROUND_Y) {
+    _camera.position.y = GROUND_Y;
+    _velY              = 0;
+    _onGround          = true;
+  }
+
+  const BOUND = 38;
+  _camera.position.x = Math.max(-BOUND, Math.min(BOUND, _camera.position.x));
+  _camera.position.z = Math.max(-BOUND, Math.min(BOUND, _camera.position.z));
+
+  const now        = Date.now();
+  const lerpFactor = 0.2;
+  _remotePlayers.forEach((p) => {
+    p.renderX    += (p.targetX    - p.renderX)    * lerpFactor;
+    p.renderY    += (p.targetY    - p.renderY)    * lerpFactor;
+    p.renderZ    += (p.targetZ    - p.renderZ)    * lerpFactor;
+    p.renderRotY += (p.targetRotY - p.renderRotY) * lerpFactor;
+    p.root.position.set(p.renderX, p.renderY, p.renderZ);
+    p.root.rotation.y = p.renderRotY;
+    p.root.setEnabled(now - p.lastUpdate <= 5000);
+  });
+}
+
+// ────────────────────────────────────────
+//  initGame
+// ────────────────────────────────────────
 
 export function initGame(canvas) {
   const B = window.BABYLON;
   if (!B) throw new Error('Babylon.js not loaded');
 
-  // Pull identity from the existing auth state
-  _playerUsername = State.profile?.displayName || State.user?.displayName || 'player';
-  _playerHex = State.profile?.hexCode || '5aaa72';
+  _canvas = canvas;
+  refreshPlayerIdentity();
 
-  const engine = new B.Engine(canvas, true, { adaptToDeviceRatio: true });
-  const scene = new B.Scene(engine);
-  _scene = scene;
+  _engine = new B.Engine(canvas, true, { adaptToDeviceRatio: true });
+  _scene  = new B.Scene(_engine);
 
-  scene.clearColor = new B.Color4(0.04, 0.04, 0.06, 1);
-  scene.collisionsEnabled = true;
+  _scene.clearColor        = new B.Color4(0.04, 0.04, 0.06, 1);
+  _scene.collisionsEnabled = false;
 
-  // Fog — hides the hard edge of the map boundary
-  scene.fogMode = B.Scene.FOGMODE_EXP2;
-  scene.fogColor = new B.Color3(0.05, 0.05, 0.08);
-  scene.fogDensity = 0.018;
+  _scene.fogMode    = B.Scene.FOGMODE_EXP2;
+  _scene.fogColor   = new B.Color3(0.05, 0.05, 0.08);
+  _scene.fogDensity = 0.016;
 
-  // Camera — FPS-tuned UniversalCamera
-  const camera = new B.UniversalCamera('cam', new B.Vector3(0, 1.8, -5), scene);
-  _camera = camera;
-  camera.setTarget(B.Vector3.Zero());
-  camera.attachControl(canvas, true);
-  camera.keysUp = [87, 38];
-  camera.keysDown = [83, 40];
-  camera.keysLeft = [65, 37];
-  camera.keysRight = [68, 39];
-  camera.speed = 0.5;
-  camera.angularSensibility = 800;
-  camera.inertia = 0.3;
-  camera.minZ = 0.05;
-  camera.fov = 1.309; // 75 degrees
-  camera.checkCollisions = true;
-  camera.applyGravity = true;
-  camera.ellipsoid = new B.Vector3(0.5, 0.9, 0.5);
-  camera.ellipsoidOffset = new B.Vector3(0, 0.9, 0);
-  scene.gravity = new B.Vector3(0, -0.5, 0);
-
-  // Sprint (Shift) + Jump (Space)
-  let _sprinting = false;
-  let _canJump = true;
-  _keyDownHandler = (e) => {
-    if (e.key === 'Shift' && !_sprinting) {
-      _sprinting = true;
-      camera.speed = 1.4;
-    }
-  };
-  _keyUpHandler = (e) => {
-    if (e.key === 'Shift') {
-      _sprinting = false;
-      camera.speed = 0.5;
-    }
-  };
-  _jumpHandler = (e) => {
-    if (e.code === 'Space' && _canJump) {
-      e.preventDefault();
-      _canJump = false;
-      let jumpVel = 0.22;
-      const jumpInt = setInterval(() => {
-        if (!_camera) { clearInterval(jumpInt); return; }
-        _camera.position.y += jumpVel;
-        jumpVel -= 0.018;
-        if (jumpVel < -0.1) {
-          clearInterval(jumpInt);
-          setTimeout(() => { _canJump = true; }, 200);
-        }
-      }, 16);
-    }
-  };
-  document.addEventListener('keydown', _keyDownHandler);
-  document.addEventListener('keyup', _keyUpHandler);
-  document.addEventListener('keydown', _jumpHandler);
+  // Camera — mouse look only, NO built-in key movement
+  _camera = new B.UniversalCamera('cam', new B.Vector3(0, GROUND_Y, -5), _scene);
+  _camera.setTarget(B.Vector3.Zero());
+  _camera.attachControl(canvas, true);
+  _camera.keysUp    = [];
+  _camera.keysDown  = [];
+  _camera.keysLeft  = [];
+  _camera.keysRight = [];
+  _camera.angularSensibility = 700;
+  _camera.inertia            = 0.05;
+  _camera.minZ               = 0.05;
+  _camera.fov                = 1.309;
 
   // Pointer lock
   _pointerLocked = false;
@@ -207,101 +274,106 @@ export function initGame(canvas) {
   });
   document.addEventListener('pointerlockchange', () => {
     _pointerLocked = document.pointerLockElement === canvas;
-    const crosshair = document.getElementById('play-crosshair');
-    if (crosshair) crosshair.style.opacity = _pointerLocked ? '1' : '0.3';
+    const ch = document.getElementById('play-crosshair');
+    if (ch) ch.style.opacity = _pointerLocked ? '1' : '0.35';
   });
+
+  // Input
+  _keyDownHandler = (e) => {
+    _keys[e.code] = true;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') _sprinting = true;
+    if (e.code === 'Space') e.preventDefault();
+  };
+  _keyUpHandler = (e) => {
+    _keys[e.code] = false;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') _sprinting = false;
+  };
+  document.addEventListener('keydown', _keyDownHandler);
+  document.addEventListener('keyup',   _keyUpHandler);
 
   // Lighting
-  const hemi = new B.HemisphericLight('hemi', new B.Vector3(0, 1, 0), scene);
-  hemi.intensity = 0.6;
-  const dir = new B.DirectionalLight('dir', new B.Vector3(-1, -2, -1), scene);
-  dir.intensity = 0.8;
+  const hemi     = new B.HemisphericLight('hemi', new B.Vector3(0, 1, 0), _scene);
+  hemi.intensity = 0.55;
+  const dir      = new B.DirectionalLight('dir', new B.Vector3(-1, -2, -1), _scene);
+  dir.intensity  = 0.9;
+  dir.position   = new B.Vector3(20, 40, 20);
 
   // Ground
-  const ground = B.MeshBuilder.CreateGround('ground', { width: 80, height: 80, subdivisions: 40 }, scene);
-  const groundMat = new B.StandardMaterial('groundMat', scene);
-  groundMat.diffuseColor = new B.Color3(0.08, 0.08, 0.12);
-  groundMat.specularColor = new B.Color3(0.05, 0.05, 0.05);
-  ground.material = groundMat;
-  ground.position.y = 0;
-  ground.checkCollisions = true;
+  const ground = B.MeshBuilder.CreateGround('ground', { width: 80, height: 80, subdivisions: 2 }, _scene);
+  const gMat   = new B.StandardMaterial('groundMat', _scene);
+  gMat.diffuseColor  = new B.Color3(0.08, 0.09, 0.13);
+  gMat.specularColor = new B.Color3(0.03, 0.03, 0.05);
+  ground.material    = gMat;
 
-  // Invisible boundary walls
-  const wallH = 20, wallD = 1, wallL = 80;
-  [{ x: 0, z: 40 }, { x: 0, z: -40 }, { x: 40, z: 0 }, { x: -40, z: 0 }].forEach((pos, i) => {
-    const wall = B.MeshBuilder.CreateBox(
-      'wall_' + i,
-      { width: pos.x === 0 ? wallL : wallD, height: wallH, depth: pos.z === 0 ? wallL : wallD },
-      scene,
-    );
-    wall.position.set(pos.x, wallH / 2, pos.z);
-    wall.isVisible = false;
-    wall.checkCollisions = true;
-  });
-
-  // Structural blocks — platforms/cover
-  const blockDefs = [
-    { x: 8, z: 5, w: 3, h: 2, d: 3 },
-    { x: -8, z: 5, w: 3, h: 2, d: 3 },
-    { x: 0, z: 12, w: 6, h: 1, d: 2 },
-    { x: 15, z: -8, w: 2, h: 4, d: 2 },
-    { x: -15, z: -8, w: 2, h: 4, d: 2 },
-    { x: 0, z: -15, w: 8, h: 3, d: 3 },
+  // Cover blocks
+  const blocks = [
+    { x:  0,  z:  0, w: 2, h: 1.2, d: 6   },
+    { x:  5,  z:  3, w: 3, h: 2,   d: 1.5 },
+    { x: -5,  z:  3, w: 3, h: 2,   d: 1.5 },
+    { x:  0,  z:  8, w: 8, h: 0.8, d: 2   },
+    { x: 12,  z: -4, w: 2, h: 4,   d: 2   },
+    { x:-12,  z: -4, w: 2, h: 4,   d: 2   },
+    { x:  7,  z:-10, w: 4, h: 1.5, d: 4   },
+    { x: -7,  z:-10, w: 4, h: 1.5, d: 4   },
+    { x:  0,  z:-18, w:10, h: 3,   d: 3   },
+    { x: 18,  z:  8, w: 2, h: 6,   d: 2   },
+    { x:-18,  z:  8, w: 2, h: 6,   d: 2   },
+    { x:  0,  z: 18, w: 6, h: 2,   d: 2   },
   ];
-  blockDefs.forEach((b, i) => {
-    const box = B.MeshBuilder.CreateBox('block_' + i, { width: b.w, height: b.h, depth: b.d }, scene);
+  blocks.forEach((b, i) => {
+    const box = B.MeshBuilder.CreateBox('block_' + i, { width: b.w, height: b.h, depth: b.d }, _scene);
     box.position.set(b.x, b.h / 2, b.z);
-    box.checkCollisions = true;
-    const mat = new B.StandardMaterial('blockMat_' + i, scene);
-    mat.diffuseColor = new B.Color3(0.2, 0.22, 0.28);
-    mat.specularColor = new B.Color3(0.05, 0.05, 0.08);
-    box.material = mat;
+    const mat = new B.StandardMaterial('bMat_' + i, _scene);
+    const shade = 0.18 + (i % 3) * 0.03;
+    mat.diffuseColor  = new B.Color3(shade, shade + 0.02, shade + 0.06);
+    mat.specularColor = new B.Color3(0.04, 0.04, 0.06);
+    box.material      = mat;
   });
 
-  // State bridge for photon-client.js send loop
-  window._nbGetPlayerState = getPlayerState;
+  // Physics tick on scene observer
+  _obsHandler = _scene.onBeforeRenderObservable.add(_physicsTick);
 
-  // Render loop + remote player interpolation
-  engine.runRenderLoop(() => {
-    scene.render();
-    const now = Date.now();
-    const lerpFactor = 0.18;
-    _remotePlayers.forEach((p) => {
-      p.renderX += (p.targetX - p.renderX) * lerpFactor;
-      p.renderY += (p.targetY - p.renderY) * lerpFactor;
-      p.renderZ += (p.targetZ - p.renderZ) * lerpFactor;
-      p.renderRotY += (p.targetRotY - p.renderRotY) * lerpFactor;
-      p.root.position.set(p.renderX, p.renderY, p.renderZ);
-      p.root.rotation.y = p.renderRotY;
-      p.root.setEnabled(now - p.lastUpdate <= 5000);
-    });
-  });
+  // Render loop
+  _engine.runRenderLoop(() => _scene.render());
 
-  _resizeHandler = () => engine.resize();
+  // Resize
+  _resizeHandler = () => _engine.resize();
   window.addEventListener('resize', _resizeHandler);
 
-  return { engine, scene };
+  // State bridge
+  window._nbGetPlayerState = getPlayerState;
+
+  return { engine: _engine, scene: _scene };
 }
 
+// ────────────────────────────────────────
+//  destroyGame
+// ────────────────────────────────────────
+
 export function destroyGame(engine) {
-  if (_resizeHandler) {
-    window.removeEventListener('resize', _resizeHandler);
-    _resizeHandler = null;
-  }
   if (_keyDownHandler) { document.removeEventListener('keydown', _keyDownHandler); _keyDownHandler = null; }
-  if (_keyUpHandler) { document.removeEventListener('keyup', _keyUpHandler); _keyUpHandler = null; }
-  if (_jumpHandler) { document.removeEventListener('keydown', _jumpHandler); _jumpHandler = null; }
-  _remotePlayers.forEach((p) => {
-    try { p.labelTex.dispose(); } catch {}
-    try { p.labelPlane.dispose(); } catch {}
-    try { p.body.dispose(); } catch {}
-    try { p.root.dispose(); } catch {}
-  });
+  if (_keyUpHandler)   { document.removeEventListener('keyup',   _keyUpHandler);   _keyUpHandler   = null; }
+
+  if (_scene && _obsHandler) {
+    _scene.onBeforeRenderObservable.remove(_obsHandler);
+    _obsHandler = null;
+  }
+
+  if (_resizeHandler) { window.removeEventListener('resize', _resizeHandler); _resizeHandler = null; }
+
+  _remotePlayers.forEach((_, id) => removeRemotePlayer(id));
   _remotePlayers.clear();
+
   window._nbGetPlayerState = null;
-  _scene = null;
+
+  _velX = 0; _velZ = 0; _velY = 0;
+  _onGround = true; _sprinting = false;
+  Object.keys(_keys).forEach(k => delete _keys[k]);
+
+  _scene  = null;
   _camera = null;
-  _pointerLocked = false;
+  _canvas = null;
+  _engine = null;
   if (engine) {
     engine.stopRenderLoop();
     engine.dispose();
