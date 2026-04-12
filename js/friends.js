@@ -44,6 +44,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   addDoc,
   deleteDoc,
@@ -242,13 +243,19 @@ function _stopFriendsSub() {
 function _startRequestsSub(uid) {
   _stopRequestsSub();
   _seenRequestIds = new Set();
+  // MD16: match DexNote's _listenForFriendRequests — filter pending
+  // server-side via where() so an accepted/declined request removes
+  // itself from the listener view instead of lingering as a modified
+  // doc we have to filter client-side.
   _requestsUnsub = onSnapshot(
-    collection(db, 'users', uid, 'friend_requests'),
+    query(
+      collection(db, 'users', uid, 'friend_requests'),
+      where('status', '==', 'pending'),
+    ),
     (snap) => {
       snap.docChanges().forEach((change) => {
         if (change.type !== 'added') return;
         const req = change.doc.data() || {};
-        if (req.status && req.status !== 'pending') return;
         const id = change.doc.id;
         if (_seenRequestIds.has(id)) return;
         _seenRequestIds.add(id);
@@ -483,6 +490,41 @@ export async function removeFriend(friendUid) {
     toast('Removed friend');
   } catch (err) {
     console.warn('[friends] removeFriend failed:', err);
+  }
+}
+
+// MD16: propagate my own username/hexColor changes into every
+// friend's `users/{friendUid}/friends/{myUid}` doc so their People
+// panel shows my updated profile without a page refresh. Mirrors
+// DexNote's _setAccountHex which does the same thing for hex.
+// We also propagate `username` here because DexNote doesn't —
+// shared bug fix, NB→any direction only.
+//
+// Caller passes the already-normalized values (hexColor WITH '#',
+// username as stored). Reads the current user's friend list from
+// Firestore directly so it works even when the live friends
+// subscription hasn't populated yet (e.g. immediately after sign-in).
+export async function propagateProfileToFriends({ username, hexColor } = {}) {
+  if (!State.user) return;
+  const patch = {};
+  if (typeof username === 'string' && username) patch.username = username;
+  if (typeof hexColor === 'string' && hexColor) patch.hexColor = _withHash(hexColor);
+  if (Object.keys(patch).length === 0) return;
+  try {
+    const snap = await getDocs(collection(db, 'users', State.user.uid, 'friends'));
+    const myUid = State.user.uid;
+    const writes = [];
+    snap.forEach((d) => {
+      const friendUid = d.id;
+      if (!friendUid) return;
+      writes.push(
+        setDoc(doc(db, 'users', friendUid, 'friends', myUid), patch, { merge: true })
+          .catch((err) => console.warn('[friends] propagate failed for', friendUid, err)),
+      );
+    });
+    await Promise.all(writes);
+  } catch (err) {
+    console.warn('[friends] propagateProfileToFriends failed:', err);
   }
 }
 

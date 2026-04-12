@@ -20,6 +20,7 @@ import State from './state.js';
 import { normalizeUsername, userLookupKey } from './users.js';
 import { setSigningIn, stripDevSuffix } from './ui-events.js';
 import { sanitizeSocialLinks } from './social.js';
+import { propagateProfileToFriends } from './friends.js';
 
 // Hardcoded admin emails. Firestore isAdmin field is the source of
 // truth, but any user whose auth email is in this list gets isAdmin
@@ -366,6 +367,21 @@ export async function saveProfile(updates) {
   if (comboChanged && nextName && nextHex) {
     const oldKey = userLookupKey(prevName, prevHex);
     writeUserLookup(State.user.uid, nextName, nextHex, oldKey || null);
+  }
+
+  // MD16: propagate my new username / hex into every friend's
+  // `friends/{myUid}` doc so their People panel updates without a
+  // refresh. DexNote does this for hex via _setAccountHex — we
+  // mirror that here AND also propagate username (DexNote doesn't,
+  // so username sync is NB→any only until DexNote is patched).
+  // Fire-and-forget so the UI save path stays fast.
+  const nameActuallyChanged = updates.displayName && updates.displayName !== prevName;
+  const hexActuallyChanged = updates.hexCode && updates.hexCode !== prevHex;
+  if (nameActuallyChanged || hexActuallyChanged) {
+    const patch = {};
+    if (nameActuallyChanged) patch.username = updates.displayName;
+    if (hexActuallyChanged) patch.hexColor = '#' + updates.hexCode;
+    propagateProfileToFriends(patch).catch(() => {});
   }
 }
 
