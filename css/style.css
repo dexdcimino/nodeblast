@@ -521,11 +521,17 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .clr-hex-icon:hover{color:#fff;transform:scale(1.1);}
 #clr-swatch{width:22px;height:22px;border-radius:50%;flex-shrink:0;overflow:hidden;}
 #clr-presets-wrap{display:flex;flex-direction:column;gap:8px;}
-#clr-presets{display:flex;flex-wrap:wrap;gap:5px;}
-#clr-custom-slots{display:flex;flex-wrap:wrap;gap:5px;padding-top:6px;border-top:1px solid #2e2f38;}
+/* MD26: preset row hidden — the JS _renderPresets() returns empty
+   and sets display:none, but belt-and-braces here so old cached
+   markup can't resurface it. */
+#clr-presets{display:none !important;}
+/* MD26: 16 custom slots laid out as a strict 2x8 grid. DexNote's
+   shared `dexnotes_custom_slots` localStorage key means a color
+   saved in either app shows up in the other. */
+#clr-custom-slots{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding-top:0;border-top:none;}
 .clr-preset{width:22px;height:22px;border-radius:50%;cursor:pointer;border:none;padding:0;transition:transform var(--ease);}
 .clr-preset:hover{transform:scale(1.08);}
-.clr-custom-slot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:none;padding:0;background:#1e1f26;display:flex;align-items:center;justify-content:center;color:#555;flex-shrink:0;transition:transform var(--ease);}
+.clr-custom-slot{width:100%;aspect-ratio:1;min-width:22px;border-radius:50%;cursor:pointer;border:none;padding:0;background:#1e1f26;display:flex;align-items:center;justify-content:center;color:#555;flex-shrink:0;transition:transform var(--ease);}
 .clr-custom-slot:hover{transform:scale(1.08);color:#aaa;}
 [data-theme="light"] #clr-custom-slots{border-top-color:#AEB5BE;}
 [data-theme="light"] .clr-custom-slot{background:#C0C6CD;color:#8A90A0;}
@@ -760,7 +766,11 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #honeycomb{position:relative;width:100%;min-height:200px;opacity:1;transition:opacity 150ms ease;}
 .hex-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:14px;text-align:center;padding:40px 24px;line-height:1.55;max-width:420px;margin:0 auto;}
 .hex-empty-caption{position:absolute;left:50%;transform:translateX(-50%);margin-top:8px;color:var(--tx3);font-size:14px;font-weight:500;text-align:center;pointer-events:none;}
-.hex-tile{position:absolute;background:var(--bg3);clip-path:url(#hex-clip);overflow:hidden;cursor:pointer;transition:transform .2s ease;}
+/* MD26: accent color fills the hex by default. With a thumb, the
+   ::before image layers over the accent at 0.88 opacity, so ~12%
+   of the accent color bleeds through as a subtle tint. Without a
+   thumb, the accent is the full hex fill behind the placeholder. */
+.hex-tile{position:absolute;background:var(--accent,var(--bg3));clip-path:url(#hex-clip);overflow:hidden;cursor:pointer;transition:transform .2s ease;}
 /* Flow modifier: lets a .hex-tile sit inside a normal flex/grid
    container instead of the absolutely-positioned honeycomb. Used by
    the community hub cards to drop tiles into a simple flex-wrap row. */
@@ -771,17 +781,25 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-tile:hover::before{opacity:1;filter:brightness(1.08);}
 .hex-tile:hover{transform:scale(1.04);z-index:10;}
 
-/* MD21: faded yin-yang placeholder shown on no-thumb catalyst tiles.
-   Centered with ~20% margin from each edge so the logo stays inside
-   the hex visual bounds at every tile size. `color: var(--tx3)`
-   drives the SVG fill (paths use currentColor) so dark/light themes
-   adapt automatically. Low opacity keeps it in watermark territory.
-   No z-index — placeholder is emitted as the first child in
-   catalystTileHTML so natural paint order puts it behind the fade
-   gradient, badges, and title text. */
-.hex-placeholder{position:absolute;inset:20%;display:flex;align-items:center;justify-content:center;color:var(--tx3);opacity:0.22;pointer-events:none;}
+/* MD21+MD26: faded yin-yang placeholder shown on no-thumb catalyst
+   tiles. Centered with ~20% margin from each edge so the logo stays
+   inside the hex visual bounds at every tile size.
+
+   MD26 split the tint in two based on the catalyst's accent color
+   luminance (class set by hex-grid.js):
+     .accent-dark  → dark background, light logo (white)
+     .accent-light → light background, dark logo (black)
+   Opacity sits around 30% per the spec — readable watermark, not
+   a featured element. Bottom half of the mark is already rendered
+   at 50% fill-opacity in PLACEHOLDER_LOGO_SVG for the two-tone
+   yin-yang look. No z-index — placeholder is emitted as the first
+   child in catalystTileHTML so natural paint order puts it behind
+   the fade gradient, badges, and title text. */
+.hex-placeholder{position:absolute;inset:20%;display:flex;align-items:center;justify-content:center;color:var(--tx3);opacity:0.3;pointer-events:none;}
+.hex-tile.accent-dark .hex-placeholder{color:#fff;}
+.hex-tile.accent-light .hex-placeholder{color:#000;}
 .hex-placeholder-logo{width:100%;height:100%;display:block;}
-.hex-tile.no-thumb:hover .hex-placeholder{opacity:0.32;}
+.hex-tile.no-thumb:hover .hex-placeholder{opacity:0.42;}
 
 /* Bottom gradient for title legibility. MD21 dialed the intensity
    down ~30% — the previous rgba(0,0,0,0.82) at the base was creating

@@ -1,32 +1,49 @@
 // ══════════════════════════════════════
 //  NodeBlast — COLOR PICKER
-//  HSB canvas + presets + 8 custom slots
-//  Drawing approach mirrors DexNote's color.js drawColorBox()
+//  HSB canvas + 16 custom slots (no presets row)
+//  Drawing approach mirrors DexNote's color.js drawColorBox().
+//
+//  MD26: matches DexNote byte-for-byte on the saved-color side —
+//  16 slots persisted to localStorage under the SHARED key
+//  `dexnotes_custom_slots`, so colors saved in either app show up
+//  in the other. The preset swatch row is gone per MD26 spec; the
+//  picker shows custom slots only.
 // ══════════════════════════════════════
 
 let _h = 140, _s = 47, _b = 67;
 let _onChange = null;
 let _anchor = null;
 
-// Preset swatches shown at the bottom of the picker. Same spread as DexNote:
-// red → orange → yellow → green → cyan → blue → purple → pink, plus
-// neutrals at the end.
-const PRESETS = [
-  '#e05c5c', '#e8853a', '#e8c34d', '#5AAA72',
-  '#4db6ac', '#378ADD', '#825FC2', '#e05c9c',
-  '#ffffff', '#c0c4cc', '#52535e', '#0f1012',
-];
-
-// 8 custom slots, persisted to localStorage.
-const CSLOTS_KEY = 'nb-custom-slots';
-let _customSlots = Array(8).fill(null);
+// Shared key with DexNote so saved colors round-trip across both
+// apps. Old NodeBlast users had slots under `nb-custom-slots`; we
+// migrate them lazily below if the shared key isn't set yet.
+const CSLOTS_KEY = 'dexnotes_custom_slots';
+const LEGACY_CSLOTS_KEY = 'nb-custom-slots';
+const SLOT_COUNT = 16;
+let _customSlots = Array(SLOT_COUNT).fill(null);
 try {
-  const raw = localStorage.getItem(CSLOTS_KEY);
+  let raw = localStorage.getItem(CSLOTS_KEY);
+  // Lazy migration from the pre-MD26 NodeBlast key. Only runs once
+  // and never overwrites an existing DexNote saved list.
+  if (!raw) {
+    const legacy = localStorage.getItem(LEGACY_CSLOTS_KEY);
+    if (legacy) {
+      try {
+        const parsed = JSON.parse(legacy);
+        if (Array.isArray(parsed)) {
+          const migrated = parsed.slice(0, SLOT_COUNT);
+          while (migrated.length < SLOT_COUNT) migrated.push(null);
+          localStorage.setItem(CSLOTS_KEY, JSON.stringify(migrated));
+          raw = JSON.stringify(migrated);
+        }
+      } catch {}
+    }
+  }
   if (raw) {
     const p = JSON.parse(raw);
     if (Array.isArray(p)) {
-      while (p.length < 8) p.push(null);
-      _customSlots = p.slice(0, 8);
+      while (p.length < SLOT_COUNT) p.push(null);
+      _customSlots = p.slice(0, SLOT_COUNT);
     }
   }
 } catch {}
@@ -136,22 +153,13 @@ function _push() {
 }
 
 function _renderPresets() {
+  // MD26: no preset palette row. Kept as an empty function +
+  // hidden #clr-presets element so existing layout CSS still has
+  // a valid hook without the scaffold rendering anything.
   const row = document.getElementById('clr-presets');
   if (!row) return;
   row.innerHTML = '';
-  row.style.display = 'flex';
-  PRESETS.forEach((c) => {
-    const btn = document.createElement('button');
-    btn.className = 'clr-preset';
-    btn.style.background = c;
-    btn.dataset.tip = c.toUpperCase();
-    btn.type = 'button';
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _applyHex(c);
-    });
-    row.appendChild(btn);
-  });
+  row.style.display = 'none';
 }
 
 function _renderCustomSlots() {

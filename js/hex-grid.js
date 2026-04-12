@@ -93,15 +93,16 @@ function statusBadgeHTML(status) {
 // currentColor stroke — no network fetch, works in any theme.
 const GLOBE_MINI_SVG = '<svg class="hex-globe-mini" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
 
-// MD21: gray yin-yang logo placeholder shown on catalyst tiles that
-// have no uploaded thumbnail. Matches the 90°-rotated header logo so
-// the whole mark is pointy-top-aligned with the hex clip. Every path
-// uses `fill="currentColor"` so CSS can drive the tint from a single
-// `color` rule (keeps dark/light theme adaptation automatic).
+// MD21+MD26: two-tone yin-yang placeholder. Top half fills at 100%,
+// bottom half at 50% (via fill-opacity) so the mark reads as two
+// halves — not a solid blob — even when both paths share one color.
+// Both paths still use `fill="currentColor"` so CSS controls the
+// overall tint (light logo on dark accents, dark logo on light
+// accents — see .hex-tile.accent-* rules in style.css).
 export const PLACEHOLDER_LOGO_SVG = `<svg class="hex-placeholder-logo" xmlns="http://www.w3.org/2000/svg" viewBox="-10.65 10.65 256 234.7" aria-hidden="true">
   <g transform="rotate(90 117.35 128)" fill="currentColor">
     <path d="M162.3,18.5C150.8,7.1,134.9,0,117.3,0s-33.4,7.1-45,18.5l-48.1,27.8C9.2,54.9,0,70.9,0,88.2v79.7c0,17.3,9.2,33.2,24.2,41.9h0c13.1,7.5,29.3-2,29.2-17.1v-.6c0-35.4,28.7-64,64-64s64-28.7,64-64-7.3-33.9-19-45.5ZM118.9,87.9c-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4Z"/>
-    <path d="M72.3,237.5c11.6,11.4,27.5,18.5,45,18.5s33.4-7.1,45-18.5l48.1-27.8c15-8.6,24.2-24.6,24.2-41.9v-79.7c0-17.3-9.2-33.2-24.2-41.9h0c-13.1-7.5-29.3,2-29.2,17.1v.6c0,35.3-28.6,64-64,64s-64,28.6-64,64,7.3,33.9,19,45.5h0ZM115.8,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>
+    <path fill-opacity="0.5" d="M72.3,237.5c11.6,11.4,27.5,18.5,45,18.5s33.4-7.1,45-18.5l48.1-27.8c15-8.6,24.2-24.6,24.2-41.9v-79.7c0-17.3-9.2-33.2-24.2-41.9h0c-13.1-7.5-29.3,2-29.2,17.1v.6c0,35.3-28.6,64-64,64s-64,28.6-64,64,7.3,33.9,19,45.5h0ZM115.8,168.1c14.5-.9,26.4,11,25.5,25.5-.8,11.9-10.4,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-11.9,10.4-21.6,22.4-22.4Z"/>
   </g>
 </svg>`;
 
@@ -109,6 +110,25 @@ export const PLACEHOLDER_LOGO_SVG = `<svg class="hex-placeholder-logo" xmlns="ht
 // currentColor pattern so CSS can tint it. Non-rotated because a
 // padlock on its side looks weird.
 const LOCK_OVERLAY_SVG = '<svg class="hex-lock-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+
+// MD26: luminance check for the catalyst's accent color. Returns
+// 'accent-light' for bright backgrounds (use dark logo) or
+// 'accent-dark' for everything else (use light logo). Uses the
+// standard weighted RGB formula from MD26 spec: ((r*299 + g*587
+// + b*114) / 1000) > 128 → light. Accepts any valid 3/6-digit
+// hex string, with or without a leading '#'. Falls back to the
+// dark branch on malformed input so the placeholder stays visible.
+function _accentBrightnessClass(hex) {
+  if (!hex) return 'accent-dark';
+  let h = hex.toString().replace('#', '').trim();
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (!/^[0-9a-f]{6}$/i.test(h)) return 'accent-dark';
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const luma = (r * 299 + g * 587 + b * 114) / 1000;
+  return luma > 128 ? 'accent-light' : 'accent-dark';
+}
 
 // Small people icon for the collaborator-count badge. Currently hidden
 // (collaborator data model doesn't exist yet), but the markup renders
@@ -311,6 +331,8 @@ function _renderNow(state) {
       tileEls[i] = el;
       const accent = tile.accentColor || '#5AAA72';
       el.style.setProperty('--accent', accent);
+      // MD26: brightness-based class drives placeholder tint.
+      el.classList.add(_accentBrightnessClass(accent));
       if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
       else el.classList.add('no-thumb');
       if (tile.status === 'placeholder') el.classList.add('wip');
@@ -626,6 +648,7 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
 
   const accent = cat.accentColor || '#5AAA72';
   el.style.setProperty('--accent', accent);
+  el.classList.add(_accentBrightnessClass(accent));
   if (cat.thumbURL) el.style.setProperty('--thumb', `url("${cat.thumbURL}")`);
   else el.classList.add('no-thumb');
   if (cat.status === 'placeholder') el.classList.add('wip');
@@ -760,6 +783,7 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
         tileEls[idx] = el;
         const accent = tile.accentColor || '#5AAA72';
         el.style.setProperty('--accent', accent);
+        el.classList.add(_accentBrightnessClass(accent));
         if (tile.thumbURL) {
           el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
         } else {
