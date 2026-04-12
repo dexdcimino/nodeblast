@@ -386,8 +386,19 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* MD14: mini catalyst grid inside the profile dropdown. The
    container is a relative-positioned staggered honeycomb that the
    renderMiniHexGrid function paints absolute-positioned .hex-tile
-   children into. Empty state falls through to .mini-hex-empty. */
-#acct-catalysts-list{position:relative;padding:4px 0;font-size:13px;color:var(--tx3);text-align:center;min-height:20px;}
+   children into. Empty state falls through to .mini-hex-empty.
+   MD22: cap the visible area at ~8 honeycomb rows and scroll
+   internally beyond that. renderMiniHexGrid still sets an exact
+   content height on the element; max-height clamps it and
+   overflow-y:auto reveals the scrollbar when content exceeds.
+   The "+" tile lives at the end of the tile array, so scrolling
+   down always reaches it. scrollbar-width:thin + a custom
+   webkit thumb keeps the scroller subtle in both themes. */
+#acct-catalysts-list{position:relative;padding:4px 0;font-size:13px;color:var(--tx3);text-align:center;min-height:20px;max-height:520px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;}
+#acct-catalysts-list::-webkit-scrollbar{width:6px;}
+#acct-catalysts-list::-webkit-scrollbar-track{background:transparent;}
+#acct-catalysts-list::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px;}
+#acct-catalysts-list::-webkit-scrollbar-thumb:hover{background:var(--tx3);}
 .mini-hex-empty{padding:14px 10px;color:var(--tx3);font-size:12px;text-align:center;}
 
 /* Mini tiles inherit everything from .hex-tile (clip-path, thumb

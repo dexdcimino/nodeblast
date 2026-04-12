@@ -265,6 +265,16 @@ function _resetMenuView() {
   document.querySelectorAll('.acct-dropdown-section.open').forEach((s) => s.classList.remove('open'));
 }
 
+// MD22: true if any site-level modal is currently showing. Used by
+// the account-dropdown outside-click + Escape handlers so that
+// interacting with a modal doesn't also dismiss the dropdown
+// sitting behind it.
+function _isAnyModalOpen() {
+  return !!document.querySelector(
+    '#cat-modal.open, #signin-modal.open, #dex-modal.open, #cat-detail-popup.open'
+  );
+}
+
 export function openAccountMenu() {
   const menu = document.getElementById('acct-menu');
   const btn = document.getElementById('acct-btn');
@@ -307,11 +317,21 @@ export function initAccountMenu(handlers) {
     if (menu.contains(e.target)) return;
     if (document.getElementById('acct-btn')?.contains(e.target)) return;
     if (document.getElementById('clr-popup')?.contains(e.target)) return;
+    // MD22: when any modal is up (edit catalyst, sign-in, confirm,
+    // detail popup), clicks elsewhere on the page are the user
+    // interacting with the modal — not a dismissal gesture for the
+    // dropdown. Leave the dropdown alone so it's still there when
+    // the modal closes.
+    if (_isAnyModalOpen()) return;
     closeAccountMenu();
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && document.getElementById('acct-menu')?.classList.contains('open')) {
+      // MD22: Escape with a modal showing belongs to the modal. Let
+      // the modal handle it first — next Escape will fall through
+      // to us and close the dropdown.
+      if (_isAnyModalOpen()) return;
       closeAccountMenu();
     }
   });

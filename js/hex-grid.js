@@ -752,7 +752,12 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
     }
   }
 
-  const totalH = rowCounts.length * stepY + MINI_GAP;
+  // MD22: the previous formula `rowCounts.length * stepY + MINI_GAP`
+  // undercounted by roughly hexH*0.25 because stepY is the overlap
+  // pitch, not the full tile height. That left the last row
+  // (typically the "+" add tile) bleeding past the container's
+  // bottom edge. Correct math: top of last row + hexH + bottom pad.
+  const totalH = (rowCounts.length - 1) * stepY + hexH + MINI_GAP * 2;
   container.style.height = totalH + 'px';
 
   // Drag to reorder — same _attachDragReorder as the main grid, so
