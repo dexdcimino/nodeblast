@@ -1,14 +1,16 @@
 // ══════════════════════════════════════
-//  NodeBlast — PLAY MODE (MD01)
-//  Route UI layer: loads Babylon CDN, launches the 3D scene,
-//  tears down cleanly on route change.
+//  NodeBlast — PLAY MODE (MD01 + MD02)
+//  Route UI layer: loads Babylon + Photon CDNs, launches the 3D
+//  scene with multiplayer sync, tears down cleanly on route change.
 // ══════════════════════════════════════
 
-import { initGame, destroyGame } from './game.js';
+import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer } from './game.js';
+import { initPhoton, destroyPhoton } from './photon-client.js';
 import { navigate } from './router.js';
 
 const BABYLON_CDN = 'https://cdn.babylonjs.com/babylon.js';
 const BABYLON_LOADERS_CDN = 'https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js';
+const PHOTON_CDN = 'https://cdn.jsdelivr.net/npm/photon-javascript-sdk@4.8.0/photon-javascript-sdk.min.js';
 
 let _engine = null;
 let _exitWired = false;
@@ -30,6 +32,11 @@ async function _ensureBabylon() {
   await _loadScript(BABYLON_LOADERS_CDN);
 }
 
+async function _ensurePhoton() {
+  if (window.Photon) return;
+  await _loadScript(PHOTON_CDN);
+}
+
 export async function renderPlayRoute() {
   const view = document.getElementById('play-view');
   const canvas = document.getElementById('play-canvas');
@@ -38,7 +45,6 @@ export async function renderPlayRoute() {
   document.title = 'play — nodeblast';
   view.classList.add('visible');
 
-  // Wire exit button once
   if (!_exitWired) {
     document.getElementById('play-exit-btn')?.addEventListener('click', () => navigate('/'));
     _exitWired = true;
@@ -48,13 +54,28 @@ export async function renderPlayRoute() {
     await _ensureBabylon();
     const result = initGame(canvas);
     _engine = result.engine;
+
+    // Load Photon SDK and connect — non-blocking relative to Babylon
+    await _ensurePhoton();
+    initPhoton({
+      onConnected: (myId) => {
+        console.log('[play] photon connected, actor:', myId);
+      },
+      onPlayerUpdate: (id, x, y, z, rotY) => {
+        addOrUpdateRemotePlayer(id, x, y, z, rotY);
+      },
+      onPlayerLeave: (id) => {
+        removeRemotePlayer(id);
+      },
+    });
   } catch (err) {
-    console.error('[play] failed to init game:', err);
-    view.innerHTML = '<div style="color:#f66;padding:2rem;font:14px monospace">Failed to load 3D engine: ' + (err.message || err) + '</div>';
+    console.error('[play] failed to init:', err);
+    view.innerHTML = '<div style="color:#f66;padding:2rem;font:14px monospace">Failed to load: ' + (err.message || err) + '</div>';
   }
 }
 
 export function destroyPlayRoute() {
+  destroyPhoton();
   if (_engine) {
     destroyGame(_engine);
     _engine = null;
