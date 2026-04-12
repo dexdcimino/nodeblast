@@ -774,6 +774,18 @@ function updateAuthUI(user, profile) {
     _profileCache.delete(lower);
     if (profile.hexCode) _profileCache.delete(lower + '#' + profile.hexCode.toLowerCase());
   }
+
+  // Feed route is auth-independent — the public catalyst feed doesn't
+  // change based on who's signed in. Skip the re-render to prevent the
+  // auth-resolution double-render that causes the hard-refresh blank:
+  // the second call goes through the 150ms fade-out (honey.opacity=0)
+  // + tears down the first subscription, leaving a visible blank window.
+  // Profile/catalyst routes still need the re-render for "+" tile
+  // ownership + isOwn checks in renderProfileRoute.
+  const route = getRoute();
+  if (route.page === 'feed' && _currentRoute?.page === 'feed') {
+    return;
+  }
   renderRoute();
 }
 
