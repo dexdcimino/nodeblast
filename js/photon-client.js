@@ -43,6 +43,11 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
   _client.onConnectedToMaster = () => {
     console.log('[photon] connected to master');
     _connected = true;
+    setPhotonStatus('joining lobby...');
+  };
+
+  _client.onJoinedLobby = () => {
+    console.log('[photon] joined lobby');
     setPhotonStatus('finding room...');
     _client.joinOrCreateRoom('nodeblast-main', {
       maxPlayers: MAX_PLAYERS_PER_ROOM,
