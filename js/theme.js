@@ -31,6 +31,8 @@ export const LOGO_PALETTE = [
   { hex: '#8B5CF6', name: 'Electric Violet' },  //  8
   { hex: '#D946A8', name: 'Magenta Pink' },     //  9
   { hex: '#9AA5B4', name: 'Cool Gray' },        // 10
+  { hex: '#ffffff', name: 'White' },            // 11
+  { hex: '#1a1a1a', name: 'Near Black' },       // 12
 ];
 
 // Defaults from assets/nodeblast_logo_v2.svg.

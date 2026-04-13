@@ -36,6 +36,16 @@ export const GAME_REGISTRY = [
     launchMode: 'modal',
     modalFn: 'openDotSim',
   },
+  {
+    id: 'consensus',
+    name: 'Consensus',
+    description: 'A community game about collective decision-making. What does NodeBlast think? Coming soon.',
+    badge: '⬡',
+    color: '#f59e0b',
+    status: 'coming_soon',
+    launchMode: 'modal',
+    modalFn: null,
+  },
 ];
 
 export function getGame(id) {
