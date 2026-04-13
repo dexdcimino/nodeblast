@@ -42,14 +42,8 @@ export function initEnemyNodes(scene, camera, onHitPlayer) {
   }
 }
 
-function _spawnEnemy(i) {
-  const B    = BABYLON;
-  const sp   = SPAWN_POS[i];
-  const name = NODE_NAMES[i];
-
-  const root = new B.TransformNode('enemy_root_' + i, _scene);
-  root.position.set(sp.x, FLOAT_HEIGHT, sp.z);
-
+function _spawnEnemyBodyProc(i, root) {
+  const B = BABYLON;
   const body = B.MeshBuilder.CreateSphere('enemy_body_' + i,
     { diameter: 0.7, segments: 8 }, _scene);
   body.parent = root;
@@ -57,7 +51,6 @@ function _spawnEnemy(i) {
   mat.diffuseColor  = new B.Color3(0.6, 0.0, 0.0);
   mat.emissiveColor = new B.Color3(0.8, 0.0, 0.0);
   body.material     = mat;
-
   const ring = B.MeshBuilder.CreateTorus('enemy_ring_' + i,
     { diameter: 1.1, thickness: 0.06, tessellation: 20 }, _scene);
   ring.parent     = root;
@@ -66,6 +59,33 @@ function _spawnEnemy(i) {
   rm.emissiveColor   = new B.Color3(1.0, 0.1, 0.1);
   rm.disableLighting = true;
   ring.material      = rm;
+  return { body, ring };
+}
+
+function _tryLoadEnemyGLB(path, scene, onSuccess, onFallback) {
+  BABYLON.SceneLoader.ImportMeshAsync('', '', path, scene)
+    .then(result => {
+      if (!result.meshes || result.meshes.length === 0) { onFallback(); }
+      else { onSuccess(result.meshes); }
+    })
+    .catch(() => { onFallback(); });
+}
+
+function _spawnEnemy(i) {
+  const B    = BABYLON;
+  const sp   = SPAWN_POS[i];
+  const name = NODE_NAMES[i];
+
+  const root = new B.TransformNode('enemy_root_' + i, _scene);
+  root.position.set(sp.x, FLOAT_HEIGHT, sp.z);
+
+  let body = null, ring = null;
+  _tryLoadEnemyGLB('./games/Arena_1/models/nodeblast_enemy1_node.glb', _scene,
+    (meshes) => {
+      meshes.forEach(m => { if (m.name === '__root__') return; m.parent = root; });
+    },
+    () => { const proc = _spawnEnemyBodyProc(i, root); body = proc.body; ring = proc.ring; }
+  );
 
   const light       = new B.PointLight('enemy_light_' + i,
     new B.Vector3(0, 0, 0), _scene);

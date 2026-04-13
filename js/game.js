@@ -15,6 +15,22 @@ import { initAudio, playShoot, playHit, playJump, playJetpack,
          playFootstep, playGooImpact, playEnemyDeath, playPickup,
          setAudioEnabled, destroyAudio } from './audio.js';
 
+function _tryLoadGLB(path, scene, onSuccess, onFallback) {
+  window.BABYLON.SceneLoader.ImportMeshAsync('', '', path, scene)
+    .then(result => {
+      if (!result.meshes || result.meshes.length === 0) {
+        console.warn('[assets] GLB empty, using fallback:', path);
+        onFallback();
+      } else {
+        onSuccess(result.meshes);
+      }
+    })
+    .catch(err => {
+      console.warn('[assets] GLB load failed, using fallback:', path, err.message);
+      onFallback();
+    });
+}
+
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
 let _playerUsername='player',_playerHex='5aaa72';
 let _gunRoot=null,_muzzleOffset=null;
@@ -75,8 +91,8 @@ let _fpsValue=60;
 export function refreshPlayerIdentity(){_playerUsername=State.profile?.displayName||State.user?.displayName||'player';_playerHex=State.profile?.hexCode||'5aaa72';}
 export function getPlayerState(){if(!_camera)return null;return{x:_camera.position.x,y:_camera.position.y,z:_camera.position.z,rotY:_camera.rotation.y,pitch:_camera.rotation.x,username:_playerUsername,hex:_playerHex};}
 
-function _createRemotePlayerMesh(id,hex,username){
-  const B=window.BABYLON,root=new B.TransformNode('rr_'+id,_scene);
+function _createRemotePlayerMeshProc(id,hex,root){
+  const B=window.BABYLON;
   const body=B.MeshBuilder.CreateCapsule('rb_'+id,{height:1.8,radius:0.35,tessellation:10},_scene);
   body.parent=root;body.position.y=0.9;
   const r=parseInt(hex.slice(0,2),16)/255,g=parseInt(hex.slice(2,4),16)/255,b=parseInt(hex.slice(4,6),16)/255;
@@ -84,7 +100,11 @@ function _createRemotePlayerMesh(id,hex,username){
   const ring=B.MeshBuilder.CreateTorus('rg_'+id,{diameter:0.9,thickness:0.06,tessellation:24},_scene);
   ring.parent=root;ring.position.y=0.05;ring.rotation.x=Math.PI/2;
   const rm=new B.StandardMaterial('rgm_'+id,_scene);rm.emissiveColor=new B.Color3(r,g,b);rm.disableLighting=true;ring.material=rm;
-  // ── Pill label ──
+  return{body,ring};
+}
+
+function _attachPlayerLabel(id,hex,username,root){
+  const B=window.BABYLON;
   const LABEL_W=300,LABEL_H=72;
   const labelPlane=B.MeshBuilder.CreatePlane('rl_'+id,{width:2.6,height:0.62},_scene);
   labelPlane.parent=root;labelPlane.position.y=2.5;labelPlane.billboardMode=B.Mesh.BILLBOARDMODE_ALL;
@@ -94,37 +114,47 @@ function _createRemotePlayerMesh(id,hex,username){
   const radius=LABEL_H/2;
   ctx.clearRect(0,0,LABEL_W,LABEL_H);
   ctx.beginPath();
-  ctx.moveTo(radius,0);
-  ctx.lineTo(LABEL_W-radius,0);
-  ctx.arcTo(LABEL_W,0,LABEL_W,LABEL_H,radius);
-  ctx.lineTo(LABEL_W,LABEL_H-radius);
-  ctx.arcTo(LABEL_W,LABEL_H,LABEL_W-radius,LABEL_H,radius);
-  ctx.lineTo(radius,LABEL_H);
-  ctx.arcTo(0,LABEL_H,0,LABEL_H-radius,radius);
-  ctx.lineTo(0,radius);
-  ctx.arcTo(0,0,radius,0,radius);
-  ctx.closePath();
-  ctx.fillStyle='rgba(8,8,14,0.82)';
-  ctx.fill();
-  ctx.strokeStyle=borderColor;
-  ctx.lineWidth=4;
-  ctx.stroke();
-  ctx.fillStyle='#ffffff';
-  ctx.font='bold 28px Outfit,Arial';
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
+  ctx.moveTo(radius,0);ctx.lineTo(LABEL_W-radius,0);
+  ctx.arcTo(LABEL_W,0,LABEL_W,LABEL_H,radius);ctx.lineTo(LABEL_W,LABEL_H-radius);
+  ctx.arcTo(LABEL_W,LABEL_H,LABEL_W-radius,LABEL_H,radius);ctx.lineTo(radius,LABEL_H);
+  ctx.arcTo(0,LABEL_H,0,LABEL_H-radius,radius);ctx.lineTo(0,radius);
+  ctx.arcTo(0,0,radius,0,radius);ctx.closePath();
+  ctx.fillStyle='rgba(8,8,14,0.82)';ctx.fill();
+  ctx.strokeStyle=borderColor;ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle='#ffffff';ctx.font='bold 28px Outfit,Arial';
+  ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(username,LABEL_W/2,LABEL_H/2);
   lt.update();
   const lm=new B.StandardMaterial('rlm_'+id,_scene);
   lm.diffuseTexture=lt;lm.emissiveTexture=lt;lm.opacityTexture=lt;lm.backFaceCulling=false;lm.disableLighting=true;labelPlane.material=lm;
-  // Health bar
+  return{labelPlane,labelTex:lt};
+}
+
+function _attachPlayerHealthBar(id,root){
+  const B=window.BABYLON;
   const hbBg=B.MeshBuilder.CreatePlane('rhb_bg_'+id,{width:1.2,height:0.1},_scene);
   hbBg.parent=root;hbBg.position.y=2.75;hbBg.billboardMode=B.Mesh.BILLBOARDMODE_ALL;
   const hbBgM=new B.StandardMaterial('rhbgm_'+id,_scene);hbBgM.diffuseColor=new B.Color3(0.08,0.0,0.0);hbBgM.disableLighting=true;hbBg.material=hbBgM;
   const hbFill=B.MeshBuilder.CreatePlane('rhb_fill_'+id,{width:1.2,height:0.08},_scene);
   hbFill.parent=root;hbFill.position.y=2.75;hbFill.position.z=-0.001;hbFill.billboardMode=B.Mesh.BILLBOARDMODE_ALL;
   const hbFillM=new B.StandardMaterial('rhbfm_'+id,_scene);hbFillM.emissiveColor=new B.Color3(0.9,0.1,0.1);hbFillM.disableLighting=true;hbFill.material=hbFillM;
-  return{root,body,ring,labelPlane,labelTex:lt,hbBg,hbFill};
+  return{hbBg,hbFill};
+}
+
+function _createRemotePlayerMesh(id,hex,username){
+  const B=window.BABYLON;
+  const root=new B.TransformNode('rr_'+id,_scene);
+  let body=null,ring=null;
+  _tryLoadGLB('./games/Arena_1/models/nodeblast_player1.glb',_scene,
+    (meshes)=>{
+      const r=parseInt(hex.slice(0,2),16)/255,g=parseInt(hex.slice(2,4),16)/255,b=parseInt(hex.slice(4,6),16)/255;
+      meshes.forEach(m=>{if(m.name==='__root__')return;m.parent=root;if(m.material)m.material.emissiveColor=new B.Color3(r*0.3,g*0.3,b*0.3);});
+    },
+    ()=>{const proc=_createRemotePlayerMeshProc(id,hex,root);body=proc.body;ring=proc.ring;}
+  );
+  const lbl=_attachPlayerLabel(id,hex,username,root);
+  const hb=_attachPlayerHealthBar(id,root);
+  return{root,body,ring,labelPlane:lbl.labelPlane,labelTex:lbl.labelTex,hbBg:hb.hbBg,hbFill:hb.hbFill};
 }
 
 export function addOrUpdateRemotePlayer(id,x,y,z,rotY,username,hex){
@@ -266,9 +296,9 @@ function _updateJetpackParticles(active) {
   _jetpackPS.emitRate = active ? 60 : 0;
 }
 
-function _buildGun(){
+function _buildGunProc(){
   const B=window.BABYLON;
-  _gunRoot=new B.TransformNode('gun_root',_scene);
+  if(!_gunRoot)_gunRoot=new B.TransformNode('gun_root',_scene);
   const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.055,height:0.13,depth:0.09},_scene);
   grip.parent=_gunRoot;grip.position.set(0,-0.06,0);
   const gm=new B.StandardMaterial('gun_grip_mat',_scene);gm.diffuseColor=new B.Color3(0.12,0.12,0.15);gm.emissiveColor=new B.Color3(0.02,0.02,0.03);grip.material=gm;
@@ -284,6 +314,20 @@ function _buildGun(){
   const ol=new B.PointLight('gun_orb_light',new B.Vector3(0,0,0),_scene);ol.parent=_gunRoot;ol.position=new B.Vector3(0,0,0.20);ol.diffuse=new B.Color3(0.1,1.0,0.4);ol.intensity=0.3;ol.range=2.5;
   const cell=B.MeshBuilder.CreateBox('gun_cell',{width:0.025,height:0.06,depth:0.055},_scene);cell.parent=_gunRoot;cell.position.set(0.04,-0.02,0.04);
   const cm=new B.StandardMaterial('gun_cell_mat',_scene);cm.diffuseColor=new B.Color3(0.05,0.3,0.15);cm.emissiveColor=new B.Color3(0,0.18,0.07);cell.material=cm;
+}
+
+function _buildGun(){
+  const B=window.BABYLON;
+  const gunId=getActiveGun().id;
+  const path='./games/Arena_1/models/nodeblast_gun_'+gunId+'.glb';
+  _tryLoadGLB(path,_scene,
+    (meshes)=>{
+      if(!_gunRoot)_gunRoot=new B.TransformNode('gun_root',_scene);
+      meshes.forEach(m=>{if(m.name==='__root__')return;m.parent=_gunRoot;});
+      console.log('[assets] Gun GLB loaded:',gunId);
+    },
+    ()=>{_buildGunProc();console.log('[assets] Gun using procedural fallback');}
+  );
 }
 
 function _shoot(){
@@ -761,28 +805,63 @@ function _createSkybox(){
   mat.backFaceCulling=false;sky.material=mat;sky.infiniteDistance=true;
 }
 
-function _buildArena(){
+function _buildArenaCollision(){
+  const B=window.BABYLON;
+  // Center
+  _addCol(0,0,18,18,0.7);_addCol(0,0,8,8,1.4);_addCol(0,0,2,2,5);
+  // Towers
+  [{x:28,z:28},{x:-28,z:28},{x:28,z:-28},{x:-28,z:-28}].forEach((t,i)=>{
+    _addCol(t.x,t.z,5,5,10);_addCol(t.x,t.z,7,7,0.5);
+    const pt=new B.PointLight('twp_'+i,new B.Vector3(t.x,1.5,t.z),_scene);pt.diffuse=new B.Color3(0.1,1,0.4);pt.intensity=1.4;pt.range=16;
+  });
+  // Low walls
+  [{x:14,z:14,w:1,d:6},{x:19,z:11,w:6,d:1},{x:-14,z:14,w:1,d:6},{x:-19,z:11,w:6,d:1},
+   {x:14,z:-14,w:1,d:6},{x:19,z:-11,w:6,d:1},{x:-14,z:-14,w:1,d:6},{x:-19,z:-11,w:6,d:1}].forEach(w=>_addCol(w.x,w.z,w.w,w.d,2.5));
+  // Bunkers
+  [{x:0,z:38},{x:0,z:-38},{x:38,z:0},{x:-38,z:0}].forEach(b=>{
+    const ns=b.x===0;
+    _addCol(b.x,b.z,ns?10:2,ns?2:10,1.4);
+    _addCol(b.x+(ns?-6:0),b.z+(ns?0:-6),ns?1:2,ns?2:1,2.5);
+    _addCol(b.x+(ns?6:0),b.z+(ns?0:6),ns?1:2,ns?2:1,2.5);
+  });
+  // Catwalks
+  _addCol(0,44,20,4,0.4);_addCol(-9,44,0.5,0.5,5);_addCol(9,44,0.5,0.5,5);
+  _addCol(0,-44,20,4,0.4);_addCol(-9,-44,0.5,0.5,5);_addCol(9,-44,0.5,0.5,5);
+  // Ramps
+  [1,2,3].forEach(s=>{_addCol(0,20+s*3,4,2,s*0.5);_addCol(0,-20-s*3,4,2,s*0.5);});
+  // Pillars
+  [{x:8,z:22},{x:-8,z:22},{x:8,z:-22},{x:-8,z:-22},{x:22,z:8},{x:22,z:-8},{x:-22,z:8},{x:-22,z:-8}].forEach(p=>_addCol(p.x,p.z,2,2,4));
+  // Fence walls
+  const W=60,FH=3.5,FW=W*2;
+  [{x:0,z:W,rotY:0},{x:0,z:-W,rotY:0},{x:W,z:0,rotY:Math.PI/2},{x:-W,z:0,rotY:Math.PI/2}].forEach((fd,fi)=>{
+    _addCol(fd.x,fd.z,fd.rotY===0?FW:0.3,fd.rotY===0?0.3:FW,FH);
+    for(let pl=0;pl<Math.floor(FW/24);pl++){
+      const offset=-FW/2+pl*24+12;
+      const ptPos=fd.rotY===0?new B.Vector3(fd.x+offset,2,fd.z):new B.Vector3(fd.x,2,fd.z+offset);
+      const fpt=new B.PointLight('fence_pt_'+fi+'_'+pl,ptPos,_scene);fpt.diffuse=new B.Color3(0.0,0.8,0.3);fpt.intensity=0.5;fpt.range=10;
+    }
+  });
+  const spot=new B.SpotLight('spot',new B.Vector3(0,30,0),new B.Vector3(0,-1,0),Math.PI/5,10,_scene);spot.intensity=0.55;spot.diffuse=new B.Color3(0.85,0.95,1.0);
+}
+
+function _buildArenaProc(){
   const B=window.BABYLON;
   function mkMat(n,r,g,b,er,eg,eb){const m=new B.StandardMaterial(n,_scene);m.diffuseColor=new B.Color3(r,g,b);m.emissiveColor=new B.Color3(er||0,eg||0,eb||0);m.specularColor=new B.Color3(0.08,0.08,0.12);m.specularPower=48;return m;}
   const MC=mkMat('mc',0.16,0.17,0.21),MD=mkMat('md',0.10,0.11,0.14),MG=mkMat('mg',0.03,0.18,0.09,0,0.6,0.25),MGD=mkMat('mgd',0.02,0.10,0.05,0,0.2,0.08);
   const gnd=B.MeshBuilder.CreateGround('ground',{width:130,height:130,subdivisions:2},_scene);gnd.material=mkMat('gnd',0.06,0.07,0.09);
   function box(n,w,h,d,x,z,mat,nc){const m=B.MeshBuilder.CreateBox(n,{width:w,height:h,depth:d},_scene);m.position.set(x,h/2,z);m.material=mat;if(!nc)_addCol(x,z,w,d,h);return m;}
   function strip(n,w,h,d,x,y,z){const m=B.MeshBuilder.CreateBox(n,{width:w,height:h,depth:d},_scene);m.position.set(x,y,z);m.material=MG;return m;}
-
   box('ctr_base',18,0.7,18,0,0,MD);box('ctr_inner',8,1.4,8,0,0,MC);box('ctr_pillar',2,5,2,0,0,MD);
   strip('ctr_n',18,0.1,0.15,0,0.76,9);strip('ctr_s',18,0.1,0.15,0,0.76,-9);
   strip('ctr_e',0.15,0.1,18,9,0.76,0);strip('ctr_w',0.15,0.1,18,-9,0.76,0);
   strip('ctr_pn',2.1,0.08,0.1,0,5.1,1);strip('ctr_ps',2.1,0.08,0.1,0,5.1,-1);
-
   [{x:28,z:28},{x:-28,z:28},{x:28,z:-28},{x:-28,z:-28}].forEach((t,i)=>{
     box('tw_'+i,5,10,5,t.x,t.z,MD);box('twt_'+i,7,0.5,7,t.x,t.z,MC);
     strip('twg_'+i,7,0.14,7,t.x,10.33,t.z);
     const pt=new B.PointLight('twp_'+i,new B.Vector3(t.x,1.5,t.z),_scene);pt.diffuse=new B.Color3(0.1,1,0.4);pt.intensity=1.4;pt.range=16;
   });
-
   [{x:14,z:14,w:1,d:6},{x:19,z:11,w:6,d:1},{x:-14,z:14,w:1,d:6},{x:-19,z:11,w:6,d:1},
    {x:14,z:-14,w:1,d:6},{x:19,z:-11,w:6,d:1},{x:-14,z:-14,w:1,d:6},{x:-19,z:-11,w:6,d:1}].forEach((w,i)=>box('lw_'+i,w.w,2.5,w.d,w.x,w.z,MC));
-
   [{x:0,z:38},{x:0,z:-38},{x:38,z:0},{x:-38,z:0}].forEach((b,i)=>{
     const ns=b.x===0;
     box('bk_'+i,ns?10:2,1.4,ns?2:10,b.x,b.z,MD);
@@ -790,22 +869,17 @@ function _buildArena(){
     box('bkr_'+i,ns?1:2,2.5,ns?2:1,b.x+(ns?6:0),b.z+(ns?0:6),MC);
     strip('bkg_'+i,ns?10:2,0.08,ns?2:10,b.x,1.46,b.z);
   });
-
   box('cat_n',20,0.4,4,0,44,MD);box('cnl',0.5,5,0.5,-9,44,MC);box('cnr',0.5,5,0.5,9,44,MC);
   strip('cng',20,0.1,0.12,0,0.46,44);
   box('cat_s',20,0.4,4,0,-44,MD);box('csl',0.5,5,0.5,-9,-44,MC);box('csr',0.5,5,0.5,9,-44,MC);
   strip('csg',20,0.1,0.12,0,0.46,-44);
-
   [1,2,3].forEach(s=>{box('rn_'+s,4,s*0.5,2,0,20+s*3,MC);box('rs_'+s,4,s*0.5,2,0,-20-s*3,MC);});
-
   [{x:8,z:22},{x:-8,z:22},{x:8,z:-22},{x:-8,z:-22},{x:22,z:8},{x:22,z:-8},{x:-22,z:8},{x:-22,z:-8}].forEach((p,i)=>{
     box('pl_'+i,2,4,2,p.x,p.z,MD);strip('plg_'+i,2,0.08,2,p.x,4.1,p.z);
   });
-
   [{x:0,z:-50},{x:0,z:50},{x:50,z:0},{x:-50,z:0}].forEach((s,i)=>{
     const pad=B.MeshBuilder.CreateGround('sp_'+i,{width:4,height:4},_scene);pad.position.set(s.x,0.02,s.z);pad.material=MGD;
   });
-
   const W=60,FH=3.5,FP=8,FW=W*2;
   const fenceMat=new B.StandardMaterial('fence_mat',_scene);
   fenceMat.diffuseColor=new B.Color3(0.08,0.10,0.08);fenceMat.emissiveColor=new B.Color3(0.0,0.18,0.06);
@@ -837,8 +911,18 @@ function _buildArena(){
       fpt.diffuse=new B.Color3(0.0,0.8,0.3);fpt.intensity=0.5;fpt.range=10;
     }
   });
-
   const spot=new B.SpotLight('spot',new B.Vector3(0,30,0),new B.Vector3(0,-1,0),Math.PI/5,10,_scene);spot.intensity=0.55;spot.diffuse=new B.Color3(0.85,0.95,1.0);
+}
+
+function _buildArena(){
+  _tryLoadGLB('./games/Arena_1/models/nodeblast_game_arena_1.glb',_scene,
+    (meshes)=>{
+      meshes.forEach(m=>{if(m.name==='__root__')return;m.isPickable=false;});
+      console.log('[assets] Arena GLB loaded');
+      _buildArenaCollision();
+    },
+    ()=>{_buildArenaProc();console.log('[assets] Arena using procedural fallback');}
+  );
 }
 
 function _buildColorNodes(){
