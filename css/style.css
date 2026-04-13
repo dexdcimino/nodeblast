@@ -1268,6 +1268,11 @@ body.cat-modal-open{overflow:hidden;}
 #play-identity{position:absolute;top:20px;right:20px;background:rgba(0,0,0,0.6);border:1.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.9);font-family:'Outfit',sans-serif;font-size:16px;font-weight:600;padding:8px 16px;border-radius:999px;pointer-events:none;letter-spacing:0.02em;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
 #play-status{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.5);color:rgba(255,255,255,0.6);font-family:var(--fn);font-size:12px;padding:4px 12px;border-radius:20px;pointer-events:none;transition:opacity .3s;}
 #play-latency{position:absolute;bottom:16px;right:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#5AAA72;pointer-events:none;opacity:.7;}
+#play-fuel-wrap{position:absolute;bottom:52px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none;}
+#play-fuel-label{color:rgba(100,255,160,0.7);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:0.12em;}
+#play-fuel-track{width:120px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);}
+#play-fuel-bar{height:100%;width:100%;background:linear-gradient(90deg,#00ff88,#00ffcc);border-radius:3px;transition:width 0.05s linear,background 0.2s;}
+#play-fuel-bar.low{background:linear-gradient(90deg,#ff4444,#ff8800);}
 /* Play button uses --clr-adj (light-mode adjusted) for bg and
    --clr-adj-on for text so contrast adapts to both themes. */
 .hdr-play-btn{background:var(--clr-adj);color:var(--clr-adj-on,#fff);border:none;border-radius:8px;padding:6px 16px;font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;}

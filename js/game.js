@@ -8,10 +8,33 @@ import State from './state.js';
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
 let _playerUsername='player',_playerHex='5aaa72';
 let _gunRoot=null,_muzzleOffset=null;
+let _jetpackPS=null,_jetpackNode=null;
 
-const WALK_SPEED=0.09,SPRINT_MULT=1.85,JUMP_FORCE=0.22,JUMP2_FORCE=0.18,GRAVITY=0.008,FALL_MULT=2.2,GROUND_Y=1.8,AIR_CONTROL=0.28,FRICTION=0.76,INERTIA=0.16;
+const WALK_SPEED  = 0.09;
+const SPRINT_MULT = 1.85;
+const JUMP_FORCE  = 0.28;
+const JUMP2_FORCE = 0.22;
+const GRAVITY     = 0.006;
+const FALL_MULT   = 1.8;
+const GROUND_Y    = 1.8;
+const AIR_CONTROL = 0.32;
+const FRICTION    = 0.76;
+const INERTIA     = 0.16;
 
-let _velX=0,_velZ=0,_velY=0,_onGround=true,_sprinting=false,_jumpHeld=false,_jumpsLeft=2;
+const JP_FORCE    = 0.012;
+const JP_MAX_FUEL = 180;
+const JP_MAX_Y    = 11.8;
+const JP_RECHARGE = 0.8;
+
+let _velX      = 0;
+let _velZ      = 0;
+let _velY      = 0;
+let _onGround  = true;
+let _sprinting = false;
+let _jumpHeld  = false;
+let _jumpsLeft = 2;
+let _jpFuel    = JP_MAX_FUEL;
+let _jpActive  = false;
 const _colBlocks=[];
 const _keys={};
 let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null;
@@ -110,6 +133,49 @@ function _spawnGooSplat(pos){
   if(_gooSplats.length>300){const old=_gooSplats.splice(0,20);old.forEach(m=>{try{m.dispose();}catch{}});}
 }
 
+function _updateFuelBar() {
+  const bar = document.getElementById('play-fuel-bar');
+  if (!bar) return;
+  const pct = (_jpFuel / JP_MAX_FUEL) * 100;
+  bar.style.width = pct + '%';
+  if (pct < 25) bar.classList.add('low');
+  else          bar.classList.remove('low');
+}
+
+function _buildJetpackFX() {
+  const B = window.BABYLON;
+  _jetpackNode = new B.TransformNode('jp_node', _scene);
+  _jetpackPS                 = new B.ParticleSystem('jp_ps', 80, _scene);
+  _jetpackPS.emitter         = _jetpackNode;
+  _jetpackPS.minEmitBox      = new B.Vector3(-0.15, -0.3, -0.05);
+  _jetpackPS.maxEmitBox      = new B.Vector3( 0.15, -0.3,  0.05);
+  _jetpackPS.direction1      = new B.Vector3(-0.3, -1, -0.3);
+  _jetpackPS.direction2      = new B.Vector3( 0.3, -1,  0.3);
+  _jetpackPS.minLifeTime     = 0.18;
+  _jetpackPS.maxLifeTime     = 0.45;
+  _jetpackPS.minSize         = 0.06;
+  _jetpackPS.maxSize         = 0.18;
+  _jetpackPS.minEmitPower    = 2;
+  _jetpackPS.maxEmitPower    = 5;
+  _jetpackPS.updateSpeed     = 0.02;
+  _jetpackPS.emitRate        = 0;
+  _jetpackPS.color1          = new B.Color4(0.2, 1.0, 0.4, 1.0);
+  _jetpackPS.color2          = new B.Color4(0.8, 1.0, 0.8, 0.6);
+  _jetpackPS.colorDead       = new B.Color4(1.0, 1.0, 1.0, 0.0);
+  _jetpackPS.start();
+}
+
+function _updateJetpackParticles(active) {
+  if (!_jetpackPS || !_jetpackNode || !_camera) return;
+  const B = window.BABYLON;
+  const back = _camera.getDirection(B.Vector3.Forward()).negate();
+  const up   = _camera.getDirection(B.Vector3.Up());
+  _jetpackNode.position = _camera.position
+    .add(back.scale(0.2))
+    .add(up.scale(-0.5));
+  _jetpackPS.emitRate = active ? 60 : 0;
+}
+
 function _buildGun(){
   const B=window.BABYLON;
   _gunRoot=new B.TransformNode('gun_root',_scene);
@@ -165,38 +231,141 @@ function _updateProjectiles(){
   for(let i=dead.length-1;i>=0;i--)_projectiles.splice(dead[i],1);
 }
 
-function _physicsTick(){
-  if(!_camera||!_scene)return;const B=window.BABYLON;
-  const fwd=_camera.getDirection(B.Vector3.Forward());fwd.y=0;fwd.normalize();
-  const rgt=_camera.getDirection(B.Vector3.Right());rgt.y=0;rgt.normalize();
-  let mx=0,mz=0;
-  if(_keys['KeyW']||_keys['ArrowUp']){mx+=fwd.x;mz+=fwd.z;}
-  if(_keys['KeyS']||_keys['ArrowDown']){mx-=fwd.x;mz-=fwd.z;}
-  if(_keys['KeyD']||_keys['ArrowRight']){mx+=rgt.x;mz+=rgt.z;}
-  if(_keys['KeyA']||_keys['ArrowLeft']){mx-=rgt.x;mz-=rgt.z;}
-  const ml=Math.sqrt(mx*mx+mz*mz);if(ml>0){mx/=ml;mz/=ml;}
-  const spd=WALK_SPEED*(_sprinting?SPRINT_MULT:1),ctrl=_onGround?1:AIR_CONTROL;
-  _velX+=((mx*spd)-_velX)*INERTIA*ctrl;_velZ+=((mz*spd)-_velZ)*INERTIA*ctrl;
-  if(ml===0&&_onGround){_velX*=FRICTION;_velZ*=FRICTION;}
-  _velY-=GRAVITY*(_velY<0?FALL_MULT:1);
-  const jumping=_keys['Space'];
-  if(jumping&&!_jumpHeld&&_jumpsLeft>0){_velY=_jumpsLeft===2?JUMP_FORCE:JUMP2_FORCE;_jumpsLeft--;_jumpHeld=true;_onGround=false;}
-  if(!jumping)_jumpHeld=false;
-  const res=_resolveCollision(_camera.position.x+_velX,_camera.position.z+_velZ,_camera.position.y);
-  _camera.position.x=res.x;_camera.position.z=res.z;_camera.position.y+=_velY;
-  if(_camera.position.y<=GROUND_Y){_camera.position.y=GROUND_Y;_velY=0;_onGround=true;_jumpsLeft=2;}
-  _camera.position.x=Math.max(-58,Math.min(58,_camera.position.x));
-  _camera.position.z=Math.max(-58,Math.min(58,_camera.position.z));
+function _updateEnemyNodes(){}
+
+function _physicsTick() {
+  if (!_camera || !_scene) return;
+  const B = window.BABYLON;
+
+  const forward = _keys['KeyW']    || _keys['ArrowUp'];
+  const back    = _keys['KeyS']    || _keys['ArrowDown'];
+  const left    = _keys['KeyA']    || _keys['ArrowLeft'];
+  const right   = _keys['KeyD']    || _keys['ArrowRight'];
+  const jumping = _keys['Space'];
+
+  const fwd = _camera.getDirection(B.Vector3.Forward()); fwd.y = 0; fwd.normalize();
+  const rgt = _camera.getDirection(B.Vector3.Right());   rgt.y = 0; rgt.normalize();
+
+  let mx = 0, mz = 0;
+  if (forward) { mx += fwd.x; mz += fwd.z; }
+  if (back)    { mx -= fwd.x; mz -= fwd.z; }
+  if (right)   { mx += rgt.x; mz += rgt.z; }
+  if (left)    { mx -= rgt.x; mz -= rgt.z; }
+
+  const ml = Math.sqrt(mx*mx + mz*mz);
+  if (ml > 0) { mx /= ml; mz /= ml; }
+
+  const spd  = WALK_SPEED * (_sprinting ? SPRINT_MULT : 1);
+  const ctrl = _onGround ? 1.0 : AIR_CONTROL;
+
+  _velX += ((mx * spd) - _velX) * INERTIA * ctrl;
+  _velZ += ((mz * spd) - _velZ) * INERTIA * ctrl;
+  if (ml === 0 && _onGround) { _velX *= FRICTION; _velZ *= FRICTION; }
+
+  _velY -= GRAVITY * (_velY < 0 ? FALL_MULT : 1.0);
+
+  if (jumping && !_jumpHeld && _jumpsLeft > 0) {
+    _velY      = _jumpsLeft === 2 ? JUMP_FORCE : JUMP2_FORCE;
+    _jumpsLeft--;
+    _jumpHeld  = true;
+    _onGround  = false;
+    _jpActive  = false;
+  }
+  if (!jumping) _jumpHeld = false;
+
+  _jpActive = jumping && _jumpsLeft === 0 && _jpFuel > 0 && !_onGround;
+
+  if (_jpActive) {
+    if (_camera.position.y < JP_MAX_Y) {
+      _velY += JP_FORCE;
+      if (_velY < 0) _velY *= 0.7;
+    }
+    _jpFuel = Math.max(0, _jpFuel - 1);
+    _updateJetpackParticles(true);
+  } else {
+    _updateJetpackParticles(false);
+  }
+
+  if (_onGround && _jpFuel < JP_MAX_FUEL) {
+    _jpFuel = Math.min(JP_MAX_FUEL, _jpFuel + JP_RECHARGE);
+  }
+
+  _updateFuelBar();
+
+  const res = _resolveCollision(
+    _camera.position.x + _velX,
+    _camera.position.z + _velZ,
+    _camera.position.y,
+  );
+  _camera.position.x = res.x;
+  _camera.position.z = res.z;
+  _camera.position.y += _velY;
+
+  let landed     = false;
+  let landHeight = GROUND_Y;
+
+  if (_velY <= 0) {
+    for (const b of _colBlocks) {
+      const PR = 0.45;
+      const cx = _camera.position.x;
+      const cz = _camera.position.z;
+      if (cx > b.minX - PR && cx < b.maxX + PR &&
+          cz > b.minZ - PR && cz < b.maxZ + PR) {
+        const feetY     = _camera.position.y - GROUND_Y;
+        const prevFeetY = feetY - _velY;
+        if (prevFeetY >= b.maxY - 0.1 && feetY <= b.maxY + 0.3) {
+          landHeight = b.maxY + GROUND_Y;
+          landed     = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if (_camera.position.y <= GROUND_Y) {
+    landHeight = GROUND_Y;
+    landed     = true;
+  }
+
+  if (landed) {
+    _camera.position.y = landHeight;
+    _velY              = 0;
+    _onGround          = true;
+    _jumpsLeft         = 2;
+    _jpActive          = false;
+  }
+
+  const BOUND = 58;
+  _camera.position.x = Math.max(-BOUND, Math.min(BOUND, _camera.position.x));
+  _camera.position.z = Math.max(-BOUND, Math.min(BOUND, _camera.position.z));
+
   _updateProjectiles();
-  // Gun viewmodel follow camera
-  if(_gunRoot&&_camera){const B=window.BABYLON;const r=_camera.getDirection(B.Vector3.Right()),u=_camera.getDirection(B.Vector3.Up()),f=_camera.getDirection(B.Vector3.Forward());_gunRoot.position=_camera.position.add(r.scale(0.22)).add(u.scale(-0.18)).add(f.scale(0.35));_gunRoot.rotation.copyFrom(_camera.rotation);_muzzleOffset=_gunRoot.position.add(f.scale(0.22));}
-  const now=Date.now();
-  _remotePlayers.forEach(p=>{
-    p.renderX+=(p.targetX-p.renderX)*0.2;p.renderY+=(p.targetY-p.renderY)*0.2;
-    p.renderZ+=(p.targetZ-p.renderZ)*0.2;p.renderRotY+=(p.targetRotY-p.renderRotY)*0.2;
-    p.root.position.set(p.renderX,p.renderY,p.renderZ);p.root.rotation.y=p.renderRotY;
-    p.root.setEnabled(now-p.lastUpdate<=5000);
+
+  if (_gunRoot && _camera) {
+    const r = _camera.getDirection(B.Vector3.Right());
+    const u = _camera.getDirection(B.Vector3.Up());
+    const f = _camera.getDirection(B.Vector3.Forward());
+    const jpBob = _jpActive ? Math.sin(Date.now() * 0.02) * 0.008 : 0;
+    _gunRoot.position = _camera.position
+      .add(r.scale(0.22))
+      .add(u.scale(-0.18 + jpBob))
+      .add(f.scale(0.35));
+    _gunRoot.rotation.copyFrom(_camera.rotation);
+    _muzzleOffset = _gunRoot.position.add(f.scale(0.22));
+  }
+
+  const now = Date.now();
+  _remotePlayers.forEach(p => {
+    p.renderX    += (p.targetX    - p.renderX)    * 0.2;
+    p.renderY    += (p.targetY    - p.renderY)    * 0.2;
+    p.renderZ    += (p.targetZ    - p.renderZ)    * 0.2;
+    p.renderRotY += (p.targetRotY - p.renderRotY) * 0.2;
+    p.root.position.set(p.renderX, p.renderY, p.renderZ);
+    p.root.rotation.y = p.renderRotY;
+    p.root.setEnabled(now - p.lastUpdate <= 5000);
   });
+
+  _updateEnemyNodes();
 }
 
 function _createSkybox(){
@@ -289,6 +458,7 @@ export function initGame(canvas){
   document.addEventListener('mousedown',_mouseDownHandler);
   _buildArena();
   _buildGun();
+  _buildJetpackFX();
   _obsHandler=_scene.onBeforeRenderObservable.add(_physicsTick);
   _engine.runRenderLoop(()=>_scene.render());
   _resizeHandler=()=>_engine.resize();window.addEventListener('resize',_resizeHandler);
@@ -306,9 +476,11 @@ export function destroyGame(engine){
   _gooSplats.forEach(m=>{try{m.dispose();}catch{}});_gooSplats.length=0;
   _remotePlayers.forEach((_,id)=>removeRemotePlayer(id));_remotePlayers.clear();
   if(_gunRoot){try{_gunRoot.getChildMeshes().forEach(m=>m.dispose());_gunRoot.dispose();}catch{}_gunRoot=null;}
+  if(_jetpackPS){try{_jetpackPS.dispose();}catch{}_jetpackPS=null;}
+  if(_jetpackNode){try{_jetpackNode.dispose();}catch{}_jetpackNode=null;}
   _muzzleOffset=null;
   window._nbGetPlayerState=null;
-  _velX=0;_velZ=0;_velY=0;_onGround=true;_sprinting=false;_jumpHeld=false;_jumpsLeft=2;
+  _velX=0;_velZ=0;_velY=0;_onGround=true;_sprinting=false;_jumpHeld=false;_jumpsLeft=2;_jpFuel=JP_MAX_FUEL;_jpActive=false;
   _colBlocks.length=0;Object.keys(_keys).forEach(k=>delete _keys[k]);
   _scene=null;_camera=null;_canvas=null;_engine=null;
   if(engine){engine.stopRenderLoop();engine.dispose();}
