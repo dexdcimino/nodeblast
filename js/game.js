@@ -6,6 +6,7 @@
 import State from './state.js';
 import { getActiveGun, getActiveSlot, setActiveSlot,
          getProjectileColor, initGunHUD, resetGuns, GUNS } from './guns.js';
+import { initPlasma, updatePlasma, destroyPlasma } from './plasma.js';
 
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
 let _playerUsername='player',_playerHex='5aaa72';
@@ -45,7 +46,8 @@ let _nearPickup=null;
 let _eHeld=false;
 let _eHoldTimer=0;
 const E_HOLD_TIME=30;
-let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null;
+let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandler=null;
+let _mouseHeld=false;
 let _lastShot=0;const SHOT_COOLDOWN=220;const _projectiles=[];const _gooSplats=[];
 const _remotePlayers=new Map();
 
@@ -398,6 +400,17 @@ function _physicsTick() {
 
   _updateProjectiles();
 
+  // Plasma cannon continuous fire + machine gun auto-fire
+  const activeGun = getActiveGun();
+  if (activeGun.id === 'plasma') {
+    updatePlasma(_mouseHeld && _pointerLocked);
+  } else {
+    updatePlasma(false);
+    if (activeGun.id === 'machinegun' && _mouseHeld && _pointerLocked) {
+      _shoot();
+    }
+  }
+
   // ── Gun pickup check ──
   _nearPickup = null;
   for (const pu of _gunPickups) {
@@ -556,13 +569,22 @@ export function initGame(canvas){
   _keyDownHandler=e=>{_keys[e.code]=true;if(e.code==='ShiftLeft'||e.code==='ShiftRight')_sprinting=true;if(e.code==='Space')e.preventDefault();};
   _keyUpHandler=e=>{_keys[e.code]=false;if(e.code==='ShiftLeft'||e.code==='ShiftRight')_sprinting=false;};
   document.addEventListener('keydown',_keyDownHandler);document.addEventListener('keyup',_keyUpHandler);
-  _mouseDownHandler=e=>{if(e.button===0&&_pointerLocked)_shoot();};
+  _mouseDownHandler=e=>{
+    if(e.button===0&&_pointerLocked){
+      _mouseHeld=true;
+      const gun=getActiveGun();
+      if(gun.id!=='plasma')_shoot();
+    }
+  };
   document.addEventListener('mousedown',_mouseDownHandler);
+  _mouseUpHandler=e=>{if(e.button===0)_mouseHeld=false;};
+  document.addEventListener('mouseup',_mouseUpHandler);
   _buildArena();
   _buildGun();
   _buildJetpackFX();
   _buildGunPickups();
   initGunHUD();
+  initPlasma(_scene, _camera, _colBlocks);
   window._nbSetGunColor = (r, g, b) => {
     const orb = _scene?.getMeshByName('gun_orb');
     if (orb?.material) orb.material.emissiveColor = new B.Color3(r, g, b);
@@ -583,6 +605,8 @@ export function destroyGame(engine){
   if(_keyDownHandler){document.removeEventListener('keydown',_keyDownHandler);_keyDownHandler=null;}
   if(_keyUpHandler){document.removeEventListener('keyup',_keyUpHandler);_keyUpHandler=null;}
   if(_mouseDownHandler){document.removeEventListener('mousedown',_mouseDownHandler);_mouseDownHandler=null;}
+  if(_mouseUpHandler){document.removeEventListener('mouseup',_mouseUpHandler);_mouseUpHandler=null;}
+  _mouseHeld=false;
   if(_scene&&_obsHandler){_scene.onBeforeRenderObservable.remove(_obsHandler);_obsHandler=null;}
   if(_resizeHandler){window.removeEventListener('resize',_resizeHandler);_resizeHandler=null;}
   _projectiles.forEach(p=>{try{p.mesh.dispose();}catch{}});_projectiles.length=0;
@@ -595,6 +619,7 @@ export function destroyGame(engine){
   _gunPickups.length=0;_nearPickup=null;
   window._nbSetGunColor=null;
   resetGuns();
+  destroyPlasma();
   _muzzleOffset=null;
   window._nbGetPlayerState=null;
   _velX=0;_velZ=0;_velY=0;_onGround=true;_sprinting=false;_jumpHeld=false;_jumpsLeft=2;_jpFuel=JP_MAX_FUEL;_jpActive=false;
