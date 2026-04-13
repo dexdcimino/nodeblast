@@ -111,6 +111,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    HEADER
 ══════════════════════════════════════ */
 #hdr{position:fixed;top:0;left:0;right:0;height:var(--hdr);background:var(--bg2);border-bottom:1px solid var(--bdr);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 16px;box-shadow:0 2px 8px rgba(0,0,0,.1);z-index:100;}
+/* Light mode: lighter header to match DexNote's text-box feel */
+[data-theme="light"] #hdr{background:var(--bg4);border-bottom-color:var(--bdr);box-shadow:0 2px 8px rgba(0,0,0,.06);}
 #hdr-left{display:flex;align-items:center;gap:14px;min-width:0;height:100%;}
 #hdr-mid{display:flex;align-items:center;justify-content:center;gap:10px;position:relative;}
 #hdr-right{display:flex;align-items:center;justify-content:flex-end;gap:5px;min-width:0;}
@@ -1266,7 +1268,9 @@ body.cat-modal-open{overflow:hidden;}
 #play-identity{position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.5);color:rgba(255,255,255,0.75);font-family:var(--fn);font-size:12px;padding:5px 12px;border-radius:20px;pointer-events:none;}
 #play-status{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.5);color:rgba(255,255,255,0.6);font-family:var(--fn);font-size:12px;padding:4px 12px;border-radius:20px;pointer-events:none;transition:opacity .3s;}
 #play-latency{position:absolute;bottom:16px;right:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#5AAA72;pointer-events:none;opacity:.7;}
-.hdr-play-btn{background:var(--clr);color:#fff;border:none;border-radius:8px;padding:6px 16px;font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;}
+/* Play button uses --clr-adj (light-mode adjusted) for bg and
+   --clr-adj-on for text so contrast adapts to both themes. */
+.hdr-play-btn{background:var(--clr-adj);color:var(--clr-adj-on,#fff);border:none;border-radius:8px;padding:6px 16px;font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;}
 .hdr-play-btn:hover{opacity:.85;}
 /* MD04: header hidden in play mode */
 #hdr.play-mode{background:transparent !important;border-bottom:none !important;box-shadow:none !important;visibility:hidden;}
