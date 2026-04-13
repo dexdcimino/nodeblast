@@ -30,6 +30,7 @@ export function getRoute() {
   const path = window.location.pathname;
   if (path === '/' || path === '') return { page: 'feed' };
   if (path === '/play') return { page: 'play' };
+  if (path === '/games') return { page: 'games' };
 
   const parts = path.split('/').filter(Boolean);
 

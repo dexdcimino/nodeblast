@@ -1375,6 +1375,14 @@ body.cat-modal-open{overflow:hidden;}
 .cat-game-card-desc{font-size:11px;color:#666;line-height:1.4;}
 .cat-game-badge-beta{position:absolute;top:6px;right:8px;font-size:9px;font-weight:700;letter-spacing:0.08em;color:#a78bfa;border:1px solid #a78bfa;border-radius:4px;padding:1px 5px;}
 
+/* GAMES-01: game status chips on hex tiles */
+.game-status-chip{position:absolute;top:14%;right:18%;font-size:9px;font-weight:800;letter-spacing:0.1em;padding:2px 6px;border-radius:4px;pointer-events:none;z-index:3;}
+.game-status-chip.live{background:rgba(0,255,140,0.15);color:#00ff8c;border:1px solid #00ff8c;}
+.game-status-chip.beta{background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid #a78bfa;}
+.game-status-chip.coming{background:rgba(255,255,255,0.06);color:#666;border:1px solid #333;}
+/* Game badge emoji placeholder (large centered) */
+.hex-placeholder.hex-game-badge{font-size:clamp(28px,5vw,48px);opacity:0.7;}
+
 #not-found{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:var(--bg);z-index:80;}
 
 /* ══════════════════════════════════════

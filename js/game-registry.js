@@ -4,6 +4,17 @@
 //  To add a new game: add an entry here. Nothing else needs updating.
 // ══════════════════════════════════════
 
+// ── NodeBlast System Account ──────────────────────────────────
+// The "alchemist" that owns all first-party internal games.
+// Virtual account — no real Firestore user doc exists.
+export const SYSTEM_PROFILE = {
+  displayName: 'nodeblast.dev',
+  hexCode: '000000',
+  uid: 'system',
+  isSystem: true,
+  bio: 'Official NodeBlast games. More dropping soon.',
+};
+
 export const GAME_REGISTRY = [
   {
     id: 'arena_1',
@@ -33,6 +44,30 @@ export function getGame(id) {
 
 export function getLiveGames() {
   return GAME_REGISTRY.filter(g => g.status !== 'coming_soon');
+}
+
+export function getGamesAsCatalysts() {
+  return GAME_REGISTRY.map((g, i) => ({
+    id: 'system_' + g.id,
+    title: g.name,
+    description: g.description,
+    type: 'internal',
+    internalSubtype: 'game',
+    gameId: g.id,
+    ownerId: 'system',
+    ownerName: SYSTEM_PROFILE.displayName,
+    ownerHex: SYSTEM_PROFILE.hexCode,
+    slug: g.id,
+    status: g.status,
+    category: 'games',
+    thumbURL: '',
+    accentColor: g.color,
+    sortOrder: i,
+    createdAt: null,
+    _systemGame: true,
+    _gameBadge: g.badge,
+    _gameColor: g.color,
+  }));
 }
 
 // ── Future: Dynamic / User-Hosted Games ──────────────────────────────────────

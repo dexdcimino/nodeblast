@@ -47,7 +47,7 @@ import { initNotifications, initHelpPanel } from './notifications.js';
 import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest } from './friends.js';
 import { renderSocialIconsHTML } from './social.js';
 import { renderPlayRoute, destroyPlayRoute } from './play-mode.js';
-import { getGame } from './game-registry.js';
+import { getGame, SYSTEM_PROFILE, getGamesAsCatalysts, GAME_REGISTRY } from './game-registry.js';
 import { openDotSim } from './dot-sim-modal.js';
 import {
   pinCatalyst,
@@ -203,6 +203,30 @@ async function shareProfileLink({ displayName, hexCode, usernameLower }) {
 function showProfileBar(user, catalystCount, isOwn) {
   const bar = document.getElementById('profile-bar');
   bar.classList.add('visible');
+
+  // ── System account (virtual /games profile) ──
+  if (user.isSystem) {
+    const hexColor = '#' + (user.hexCode || '000000');
+    bar.style.setProperty('--acct-hex', hexColor);
+    const avatar = document.getElementById('profile-bar-avatar');
+    avatar.innerHTML = '<svg width="28" height="26" viewBox="0 0 256 234.6" style="margin:auto"><path fill="var(--clr-adj)" d="M0,117.3s.7,28.6,19,46c18.3,17.4,45.1,18.1,45.1,18.1,35.3,0,64-28.7,64-64s28.6-64,64-64h.6c15.1,0,24.6-16.1,17.1-29.2C201.1,9.2,185.2,0,167.9,0h-79.7c-17.3,0-33.3,9.2-41.9,24.2,0,0-22.5,38.9-27.8,48.1C13.2,81.5,0,99.7,0,117.3Z"/><path fill="var(--clr-adj)" opacity="0.5" d="M46.2,210.4c8.7,15,24.6,24.2,41.9,24.2h79.7c17.3,0,33.3-9.2,41.9-24.2,0,0,22.5-38.9,27.8-48.1,5.3-9.2,18.5-27.4,18.5-45,0,0,.2-28.5-19.8-46.7-20-18.2-44.3-17.4-44.3-17.4-35.3,0-64,28.7-64,64s-28.6,64-64,64h-.6c-15.1,0-24.6,16.1-17.1,29.2h0Z"/></svg>';
+    avatar.style.borderColor = 'var(--clr-adj)';
+    document.getElementById('profile-bar-name').innerHTML = escapeHtml(user.displayName) + ' <span style="color:var(--clr-adj);font-size:14px;vertical-align:middle">⬡</span>';
+    document.getElementById('profile-bar-hex-dot').style.background = hexColor;
+    document.getElementById('profile-bar-hex-label').textContent = '#' + user.hexCode;
+    document.getElementById('profile-bar-count').textContent = catalystCount + (catalystCount === 1 ? ' game' : ' games');
+    const socialEl = document.getElementById('profile-bar-socials');
+    if (socialEl) { socialEl.innerHTML = ''; socialEl.classList.remove('visible'); }
+    const bioEl = document.getElementById('profile-bio');
+    if (bioEl && user.bio) { bioEl.textContent = user.bio; bioEl.classList.add('visible'); }
+    else if (bioEl) { bioEl.textContent = ''; bioEl.classList.remove('visible'); }
+    const actionBtn = document.getElementById('profile-bar-action');
+    if (actionBtn) actionBtn.style.display = 'none';
+    const shareBtn = document.getElementById('profile-bar-share');
+    if (shareBtn) shareBtn.style.display = 'none';
+    _viewingOther = null;
+    return;
+  }
 
   const hexColor = '#' + (user.hexCode || '5aaa72');
   bar.style.setProperty('--acct-hex', hexColor);
@@ -1195,6 +1219,31 @@ function _repaintFeed() {
   }
 }
 
+// ── /games route — system profile showing all internal games ──
+
+function handleGameTileClick(cat) {
+  if (!cat.gameId) return;
+  const gameDef = getGame(cat.gameId);
+  if (!gameDef) return;
+  if (gameDef.status === 'coming_soon') { toast('Coming soon — stay tuned'); return; }
+  if (gameDef.launchMode === 'route') { navigate(gameDef.route); return; }
+  if (gameDef.launchMode === 'modal') { openDotSim(cat.title); return; }
+}
+
+async function renderGamesRoute() {
+  hideAllViews();
+  setPageTitle(['games']);
+  showProfileBar(SYSTEM_PROFILE, GAME_REGISTRY.length, false);
+  const gameCatalysts = getGamesAsCatalysts();
+  renderHexGrid({
+    tiles: gameCatalysts,
+    showAdd: false,
+    emptyMessage: 'No games yet.',
+    onTileClick: handleGameTileClick,
+    showCreatorAvatar: false,
+  });
+}
+
 async function renderFeedRoute() {
   console.log('[feed] renderFeedRoute called', { category: _currentCategory, mode: _feedViewMode });
   hideAllViews();
@@ -1473,6 +1522,8 @@ async function renderRoute({ force = false } = {}) {
       await renderProfileRoute(route.username, route.hex);
     } else if (route.page === 'catalyst') {
       await renderProfileRoute(route.username, route.hex, { openSlug: route.slug });
+    } else if (route.page === 'games') {
+      await renderGamesRoute();
     } else {
       show404();
     }
@@ -2065,7 +2116,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('hdr-logo')?.addEventListener('click', () => navigate('/'));
 
   // MD01: Play button → /play route
-  document.getElementById('play-btn')?.addEventListener('click', () => navigate('/play'));
+  document.getElementById('play-btn')?.addEventListener('click', () => navigate('/games'));
 
   // Community / My Profile view toggle in the header.
   document.getElementById('view-toggle-community')?.addEventListener('click', () => {

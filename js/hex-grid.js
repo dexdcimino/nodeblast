@@ -147,8 +147,17 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   // yin-yang placeholder as a standalone layer. The tile also gets
   // the `no-thumb` class in the caller so CSS can swap to a lighter
   // fade gradient (heavy overlay is only needed over a photo).
-  const placeholderHTML = !cat.thumbURL
-    ? `<div class="hex-placeholder">${PLACEHOLDER_LOGO_SVG}</div>`
+  // System game tiles show a large badge emoji instead of the logo placeholder
+  let placeholderHTML = '';
+  if (cat._systemGame && cat._gameBadge && !cat.thumbURL) {
+    placeholderHTML = `<div class="hex-placeholder hex-game-badge">${cat._gameBadge}</div>`;
+  } else if (!cat.thumbURL) {
+    placeholderHTML = `<div class="hex-placeholder">${PLACEHOLDER_LOGO_SVG}</div>`;
+  }
+
+  // System game status chip
+  const gameStatusHTML = cat._systemGame && cat.status
+    ? `<div class="game-status-chip ${cat.status === 'live' ? 'live' : cat.status === 'beta' ? 'beta' : 'coming'}">${cat.status === 'coming_soon' ? 'COMING SOON' : cat.status.toUpperCase()}</div>`
     : '';
 
   // MD23: padlock overlay for password-protected catalysts. The
@@ -221,6 +230,7 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     ${placeholderHTML}
     ${avatarHTML}
     ${statusBadgeHTML(status)}
+    ${gameStatusHTML}
     ${collabHTML}
     ${fireHTML}
     ${poopHTML}
@@ -345,6 +355,10 @@ function _renderNow(state) {
       if (tile.status === 'placeholder') el.classList.add('wip');
       // MD23: mark locked tiles so the thumb blur + dim kick in.
       if (tile.isLocked && tile.lockPassword) el.classList.add('locked');
+      // GAMES-01: coming_soon tiles at reduced opacity
+      if (tile.status === 'coming_soon') el.style.opacity = '0.45';
+      // GAMES-01: system game border color
+      if (tile._systemGame && tile._gameColor) el.style.borderColor = tile._gameColor;
       el.innerHTML = catalystTileHTML(tile, { showCreatorAvatar: !!state.showCreatorAvatar });
       el.addEventListener('click', (e) => {
         if (_suppressNextClick) { _suppressNextClick = false; return; }
