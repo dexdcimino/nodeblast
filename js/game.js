@@ -58,6 +58,12 @@ const _pendingRemotePlayers=new Map();
 let _playerHp=100;
 let _playerMaxHp=100;
 const _colorNodes=[];
+let _damageFlash=0;
+let _shakeTimer=0;
+let _shakeAmount=0;
+let _isDead=false;
+let _respawnTimer=0;
+const RESPAWN_DELAY=300;
 
 export function refreshPlayerIdentity(){_playerUsername=State.profile?.displayName||State.user?.displayName||'player';_playerHex=State.profile?.hexCode||'5aaa72';}
 export function getPlayerState(){if(!_camera)return null;return{x:_camera.position.x,y:_camera.position.y,z:_camera.position.z,rotY:_camera.rotation.y,pitch:_camera.rotation.x,username:_playerUsername,hex:_playerHex};}
@@ -347,10 +353,63 @@ function _updateHealthHUD() {
   if (bar) {
     const pct = (_playerHp / _playerMaxHp) * 100;
     bar.style.width = pct + '%';
-    if (pct < 30) bar.classList.add('critical');
-    else          bar.classList.remove('critical');
+    bar.classList.toggle('critical', pct < 30);
   }
   if (num) num.textContent = Math.ceil(_playerHp);
+  const vignette = document.getElementById('play-vignette');
+  if (vignette) {
+    const pct = _playerHp / _playerMaxHp;
+    if (pct < 0.3) {
+      vignette.style.opacity = String(0.3 + (1 - pct) * 0.4);
+      vignette.classList.add('pulse');
+    } else {
+      vignette.classList.remove('pulse');
+      vignette.style.opacity = '0';
+    }
+  }
+}
+
+function _onPlayerDamaged(damage) {
+  if (_isDead) return;
+  _playerHp = Math.max(0, _playerHp - damage);
+  _updateHealthHUD();
+  _damageFlash = 12;
+  const vignette = document.getElementById('play-vignette');
+  if (vignette) {
+    vignette.style.opacity = '0.65';
+    vignette.classList.add('hit');
+  }
+  _shakeTimer  = 10;
+  _shakeAmount = damage * 0.001;
+  if (_playerHp <= 0) _onPlayerDeath();
+}
+
+function _onPlayerDeath() {
+  _isDead       = true;
+  _respawnTimer = 0;
+  _velX = 0; _velZ = 0; _velY = 0;
+  const screen = document.getElementById('play-death-screen');
+  if (screen) screen.classList.add('visible');
+  try { document.exitPointerLock(); } catch {}
+}
+
+function _respawn() {
+  _isDead       = false;
+  _playerHp     = _playerMaxHp;
+  _respawnTimer = 0;
+  const screen = document.getElementById('play-death-screen');
+  if (screen) screen.classList.remove('visible');
+  if (window._nbSetSpawn) {
+    const spawnZ = (window._nbMyActorId % 2 === 1) ? -48 : 48;
+    window._nbSetSpawn((Math.random() - 0.5) * 6, spawnZ);
+  } else {
+    _camera.position.set(0, GROUND_Y, -48);
+  }
+  _updateHealthHUD();
+  setTimeout(() => {
+    const canvas = document.getElementById('play-canvas');
+    if (canvas) canvas.requestPointerLock();
+  }, 200);
 }
 
 function _physicsTick() {
@@ -363,6 +422,38 @@ function _physicsTick() {
       addOrUpdateRemotePlayer(id, data.x, data.y, data.z, data.rotY, data.username, data.hex);
     });
     _pendingRemotePlayers.clear();
+  }
+
+  // Damage flash decay
+  if (_damageFlash > 0) {
+    _damageFlash--;
+    if (_damageFlash === 0) {
+      const vignette = document.getElementById('play-vignette');
+      if (vignette) {
+        vignette.classList.remove('hit');
+        _updateHealthHUD();
+      }
+    }
+  }
+
+  // Camera shake
+  if (_shakeTimer > 0) {
+    _shakeTimer--;
+    const shakeX = (Math.random() - 0.5) * _shakeAmount;
+    const shakeY = (Math.random() - 0.5) * _shakeAmount;
+    _camera.position.x += shakeX;
+    _camera.position.y += shakeY;
+    _shakeAmount *= 0.85;
+  }
+
+  // Respawn countdown
+  if (_isDead) {
+    _respawnTimer++;
+    const remaining = Math.ceil((RESPAWN_DELAY - _respawnTimer) / 60);
+    const countEl = document.getElementById('play-death-count');
+    if (countEl) countEl.textContent = remaining > 0 ? remaining : '...';
+    if (_respawnTimer >= RESPAWN_DELAY) _respawn();
+    return;
   }
 
   const forward = _keys['KeyW']    || _keys['ArrowUp'];
@@ -731,10 +822,7 @@ export function initGame(canvas){
   _buildColorNodes();
   initGunHUD();
   initPlasma(_scene, _camera, _colBlocks);
-  initEnemyNodes(_scene, _camera, (damage) => {
-    _playerHp = Math.max(0, _playerHp - damage);
-    _updateHealthHUD();
-  });
+  initEnemyNodes(_scene, _camera, _onPlayerDamaged);
   initNodeBlaster(_scene, _camera);
   window._nbEnemyPositions = null; // set by enemy-nodes.js
   window._nbDamageEnemy = (idx, dmg) => damageEnemyNode(idx, dmg);
@@ -781,7 +869,7 @@ export function destroyGame(engine){
   window._nbEnemyPositions=null;
   window._nbDamageEnemy=null;
   window._nbSetSpawn=null;
-  _playerHp=100;
+  _playerHp=100;_isDead=false;_respawnTimer=0;_damageFlash=0;_shakeTimer=0;
   _muzzleOffset=null;
   window._nbGetPlayerState=null;
   _velX=0;_velZ=0;_velY=0;_onGround=true;_sprinting=false;_jumpHeld=false;_jumpsLeft=2;_jpFuel=JP_MAX_FUEL;_jpActive=false;

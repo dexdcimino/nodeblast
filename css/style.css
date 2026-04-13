@@ -1275,6 +1275,18 @@ body.cat-modal-open{overflow:hidden;}
 #play-health-bar.critical{background:linear-gradient(90deg,#ff0000,#ff4400);animation:health-pulse 0.5s ease-in-out infinite alternate;}
 @keyframes health-pulse{from{opacity:0.7;}to{opacity:1.0;}}
 #play-health-num{color:rgba(255,160,160,0.8);font-family:'JetBrains Mono',monospace;font-size:10px;min-width:28px;}
+/* ── Damage vignette ── */
+#play-vignette{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(200,0,0,0.85) 100%);transition:opacity 0.08s;}
+#play-vignette.hit{opacity:0.65 !important;}
+#play-vignette.pulse{animation:vignette-pulse 0.9s ease-in-out infinite alternate;}
+@keyframes vignette-pulse{from{opacity:var(--vp-min,0.2);}to{opacity:var(--vp-max,0.5);}}
+/* ── Death screen ── */
+#play-death-screen{display:none;position:absolute;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;pointer-events:none;z-index:50;}
+#play-death-screen.visible{display:flex;}
+#play-death-box{display:flex;flex-direction:column;align-items:center;gap:12px;}
+#play-death-title{font-family:'Outfit',sans-serif;font-size:48px;font-weight:800;color:#ff3333;letter-spacing:0.12em;text-shadow:0 0 30px rgba(255,0,0,0.6);}
+#play-death-sub{font-family:'Outfit',sans-serif;font-size:16px;color:rgba(255,255,255,0.55);letter-spacing:0.06em;}
+#play-death-count{font-family:'JetBrains Mono',monospace;font-size:64px;font-weight:700;color:#ffffff;line-height:1;}
 #play-fuel-wrap{position:absolute;bottom:52px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none;}
 #play-fuel-label{color:rgba(100,255,160,0.7);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:0.12em;}
 #play-fuel-track{width:120px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);}

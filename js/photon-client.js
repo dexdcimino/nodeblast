@@ -54,6 +54,7 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
       if (_inRoom) return;
       _inRoom = true;
       _myId = _client.myActor().actorNr;
+      window._nbMyActorId = _myId;
       console.log('[photon] in room, my actor:', _myId);
       _updatePlayerCount();
       if (_onConnected) _onConnected(_myId);
