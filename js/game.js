@@ -16,19 +16,19 @@ import { initAudio, playShoot, playHit, playJump, playJetpack,
          setAudioEnabled, destroyAudio } from './audio.js';
 
 function _tryLoadGLB(path, scene, onSuccess, onFallback) {
-  window.BABYLON.SceneLoader.ImportMeshAsync('', '', path, scene)
+  // Always run fallback first so the game works immediately.
+  // If GLB loads successfully, onSuccess can replace/enhance the scene.
+  onFallback();
+  const lastSlash = path.lastIndexOf('/');
+  const rootUrl   = path.substring(0, lastSlash + 1);
+  const fileName  = path.substring(lastSlash + 1);
+  window.BABYLON.SceneLoader.ImportMeshAsync('', rootUrl, fileName, scene)
     .then(result => {
-      if (!result.meshes || result.meshes.length === 0) {
-        console.warn('[assets] GLB empty, using fallback:', path);
-        onFallback();
-      } else {
+      if (result.meshes && result.meshes.length > 0) {
         onSuccess(result.meshes);
       }
     })
-    .catch(err => {
-      console.warn('[assets] GLB load failed, using fallback:', path, err.message);
-      onFallback();
-    });
+    .catch(() => { /* fallback already ran */ });
 }
 
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
@@ -979,10 +979,9 @@ function _buildArena(){
   _tryLoadGLB('./games/Arena_1/models/nodeblast_game_arena_1.glb',_scene,
     (meshes)=>{
       meshes.forEach(m=>{if(m.name==='__root__')return;m.isPickable=false;});
-      console.log('[assets] Arena GLB loaded');
-      _buildArenaCollision();
+      console.log('[assets] Arena GLB loaded (procedural kept for collision)');
     },
-    ()=>{_buildArenaProc();console.log('[assets] Arena using procedural fallback');}
+    ()=>{_buildArenaProc();}
   );
 }
 
@@ -1031,8 +1030,14 @@ export function initGame(canvas){
   canvas.setAttribute('tabindex','0');
   canvas.focus();
   document.addEventListener('pointerlockchange',()=>{
+    const wasLocked=_pointerLocked;
     _pointerLocked=document.pointerLockElement===canvas;
     const ch=document.getElementById('play-crosshair');if(ch)ch.style.opacity=_pointerLocked?'1':'0.35';
+    // Browser exits pointer lock on Escape before keydown fires —
+    // open exit modal when pointer lock is lost (not during death/respawn)
+    if(wasLocked&&!_pointerLocked&&!_isDead&&!window._nbPlayExitModalOpen){
+      if(window._nbOpenExitModal)window._nbOpenExitModal();
+    }
   });
   _keyDownHandler=e=>{_keys[e.code]=true;if(e.code==='ShiftLeft'||e.code==='ShiftRight')_sprinting=true;if(e.code==='Space')e.preventDefault();};
   _keyUpHandler=e=>{_keys[e.code]=false;if(e.code==='ShiftLeft'||e.code==='ShiftRight')_sprinting=false;};

@@ -97,6 +97,12 @@ export async function renderPlayRoute() {
   const canvas = document.getElementById('play-canvas');
   if (!view || !canvas) return;
 
+  // Hard refresh on /play should redirect to home
+  if (document.referrer === '' && window.location.pathname === '/play') {
+    navigate('/');
+    return;
+  }
+
   // Detect mobile — play mode requires keyboard + mouse
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
     || (navigator.maxTouchPoints > 1 && !window.matchMedia('(pointer:fine)').matches);
