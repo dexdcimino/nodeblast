@@ -148,6 +148,15 @@ export function openDotSim(catalystTitle) {
     };
   }
 
+  // Download source
+  const dlBtn = document.getElementById('dot-sim-download-btn');
+  if (dlBtn) dlBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.href = './js/dot-sim.js';
+    a.download = 'dot-sim.js';
+    a.click();
+  };
+
   // Close
   const closeBtn = document.getElementById('dot-sim-close-btn');
   if (closeBtn) closeBtn.onclick = () => closeDotSim();

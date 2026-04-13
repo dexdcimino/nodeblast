@@ -36,6 +36,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* Username admin ".dev" tag */
 .uname-main{display:inline;}
 .uname-dev-tag{display:inline;color:var(--tx3) !important;font-size:0.82em;font-weight:500;letter-spacing:0.2px;}
+.nb-dev-badge{display:inline-flex;align-items:center;font-size:9px;font-weight:800;letter-spacing:0.12em;padding:2px 6px;border-radius:4px;border:1px solid #a78bfa;color:#a78bfa;vertical-align:middle;margin-left:6px;line-height:1;}
 
 /* ── Custom tooltip ── */
 #dex-tip{position:fixed;background:var(--bg2);color:var(--tx);font-size:13px;font-family:var(--fn);font-weight:400;padding:5px 10px;border-radius:6px;border:1px solid color-mix(in srgb,var(--bdr) 40%,transparent);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s ease;z-index:99999;box-shadow:0 2px 8px rgba(0,0,0,.2);}

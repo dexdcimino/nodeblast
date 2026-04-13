@@ -554,6 +554,7 @@ export async function createCatalyst(data, file) {
     type: CATALYST_TYPES.includes(data.type) ? data.type : DEFAULT_TYPE,
     internalSubtype: INTERNAL_SUBTYPES.includes(data.internalSubtype) ? data.internalSubtype : 'scene',
     gameId: typeof data.gameId === 'string' ? data.gameId : '',
+    sourceUrl: typeof data.sourceUrl === 'string' ? data.sourceUrl : '',
     thumbURL,
     logoURL: '',
     accentColor: data.accentColor || '#5AAA72',
@@ -598,6 +599,7 @@ export async function updateCatalyst(id, data, file) {
     type: CATALYST_TYPES.includes(data.type) ? data.type : DEFAULT_TYPE,
     internalSubtype: INTERNAL_SUBTYPES.includes(data.internalSubtype) ? data.internalSubtype : 'scene',
     gameId: typeof data.gameId === 'string' ? data.gameId : '',
+    sourceUrl: typeof data.sourceUrl === 'string' ? data.sourceUrl : '',
     accentColor: data.accentColor || '#5AAA72',
     // Refresh the owner-denormalized fields in case the editor changed
     // their profile between catalyst creation and this edit.
@@ -769,6 +771,7 @@ function _applyStatus(status) {
 // there's nothing to link — the catalyst's own page is its content.
 let _internalSubtype = 'scene';
 let _gameId = '';
+let _sourceUrl = ''; // DS-04: future hook for user-hosted game modules
 
 function _applyType(type) {
   _type = CATALYST_TYPES.includes(type) ? type : DEFAULT_TYPE;
@@ -1447,6 +1450,7 @@ export function initCatalystModal(onSaved) {
       type: _type,
       internalSubtype: _internalSubtype,
       gameId: _type === 'internal' && _internalSubtype === 'game' ? _gameId : '',
+      sourceUrl: _type === 'internal' && _internalSubtype === 'game' ? _sourceUrl : '',
       accentColor: _accentColor,
       collaborators: _editingCollabs.slice(),
       isLocked,

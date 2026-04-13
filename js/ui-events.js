@@ -40,13 +40,14 @@ export function stripDevSuffix(name) {
 // separate span so it doesn't inherit the parent color. Any ".dev"
 // stored inside the name itself is stripped first — it's never supposed
 // to be part of the stored value, but legacy profiles may still have it.
-export function renderUsername(name, hexColor, isAdmin = false) {
+export function renderUsername(name, hexColor, isAdmin = false, isDev = false) {
   const base = stripDevSuffix(name || 'anon');
   const safeName = escapeHtml(base);
   const colorAttr = hexColor ? ` style="color:${escapeHtml(hexColor)}"` : '';
-  const main = `<span class="uname-main"${colorAttr}>${safeName}</span>`;
-  if (!isAdmin) return main;
-  return `${main}<span class="uname-dev-tag">.dev</span>`;
+  let html = `<span class="uname-main"${colorAttr}>${safeName}</span>`;
+  if (isAdmin) html += '<span class="uname-dev-tag">.dev</span>';
+  if (isDev) html += '<span class="nb-dev-badge" title="NodeBlast Developer">DEV</span>';
+  return html;
 }
 
 /* ── Toast (DexNote-verbatim) ── */
