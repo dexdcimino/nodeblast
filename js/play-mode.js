@@ -81,6 +81,22 @@ export async function renderPlayRoute() {
   const canvas = document.getElementById('play-canvas');
   if (!view || !canvas) return;
 
+  // Detect mobile — play mode requires keyboard + mouse
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    || (navigator.maxTouchPoints > 1 && !window.matchMedia('(pointer:fine)').matches);
+  if (isMobile) {
+    view.classList.add('visible');
+    view.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;font-family:'Outfit',sans-serif;color:rgba(255,255,255,0.8);padding:32px;text-align:center;">
+        <div style="font-size:48px">🎮</div>
+        <div style="font-size:22px;font-weight:700">Desktop Only</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.5)">Play mode requires a keyboard and mouse.<br>Visit on desktop to play.</div>
+        <button onclick="history.back()" style="margin-top:8px;padding:10px 24px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;">← Back</button>
+      </div>`;
+    document.getElementById('hdr')?.classList.add('play-mode');
+    return;
+  }
+
   document.title = 'play — nodeblast';
   view.classList.add('visible');
   document.getElementById('hdr')?.classList.add('play-mode');

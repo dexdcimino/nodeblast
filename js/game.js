@@ -64,6 +64,9 @@ let _shakeAmount=0;
 let _isDead=false;
 let _respawnTimer=0;
 const RESPAWN_DELAY=300;
+let _fpsFrames=0;
+let _fpsLastTime=Date.now();
+let _fpsValue=60;
 
 export function refreshPlayerIdentity(){_playerUsername=State.profile?.displayName||State.user?.displayName||'player';_playerHex=State.profile?.hexCode||'5aaa72';}
 export function getPlayerState(){if(!_camera)return null;return{x:_camera.position.x,y:_camera.position.y,z:_camera.position.z,rotY:_camera.rotation.y,pitch:_camera.rotation.x,username:_playerUsername,hex:_playerHex};}
@@ -211,7 +214,8 @@ function _spawnGooSplat(pos,normal){
   _gooSplats.push(disc);
   const flash=new B.PointLight('gf_'+Date.now(),pos.clone(),_scene);flash.diffuse=new B.Color3(0.1,1.0,0.3);flash.intensity=2.5;flash.range=8;
   let t=0;const fade=setInterval(()=>{t+=0.15;if(flash.intensity!==undefined)flash.intensity=Math.max(0,2.5-t*2.5);if(t>=1){clearInterval(fade);try{flash.dispose();}catch{}}},16);
-  if(_gooSplats.length>300){const old=_gooSplats.splice(0,20);old.forEach(m=>{try{m.dispose();}catch{}});}
+  const MAX_SPLATS=200;
+  while(_gooSplats.length>MAX_SPLATS){const old=_gooSplats.splice(0,15);old.forEach(m=>{try{m.dispose();}catch{}});}
 }
 
 function _updateFuelBar() {
@@ -280,7 +284,9 @@ function _buildGun(){
 function _shoot(){
   const now=Date.now();
   const gun=getActiveGun();
-  if(now-_lastShot<gun.cooldown)return;_lastShot=now;
+  if(now-_lastShot<gun.cooldown)return;
+  if(_projectiles.length>=20)return;
+  _lastShot=now;
   if(gun.id==='nodeblaster'){
     const B=window.BABYLON;
     const pc=getProjectileColor();
@@ -712,6 +718,21 @@ function _physicsTick() {
 
   // Track previous key state for single-press detection
   Object.keys(_keys).forEach(k => { _prevKeys[k] = _keys[k]; });
+
+  // FPS counter
+  _fpsFrames++;
+  if (_fpsFrames >= 30) {
+    const fpsNow = Date.now();
+    _fpsValue    = Math.round(30000 / (fpsNow - _fpsLastTime));
+    _fpsLastTime = fpsNow;
+    _fpsFrames   = 0;
+    const el = document.getElementById('play-fps');
+    if (el) {
+      el.textContent = _fpsValue + ' fps';
+      el.style.color = _fpsValue >= 50 ? 'rgba(255,255,255,0.25)'
+        : _fpsValue >= 30 ? 'rgba(255,200,50,0.5)' : 'rgba(255,80,80,0.7)';
+    }
+  }
 }
 
 function _createSkybox(){
@@ -830,11 +851,14 @@ export function initGame(canvas){
   const B=window.BABYLON;if(!B)throw new Error('Babylon.js not loaded');
   _canvas=canvas;_colBlocks.length=0;refreshPlayerIdentity();
   _engine=new B.Engine(canvas,true,{adaptToDeviceRatio:true,antialias:true});
+  const isLowEnd=navigator.hardwareConcurrency<=4||/Android|iPhone|iPad/i.test(navigator.userAgent);
+  if(isLowEnd){_engine.setHardwareScalingLevel(1.5);console.log('[game] low-end device detected — reduced quality');}
   _scene=new B.Scene(_engine);_scene.clearColor=new B.Color4(0.02,0.02,0.05,1);_scene.collisionsEnabled=false;
+  _scene.autoClear=true;_scene.autoClearDepthAndStencil=true;_scene.blockMaterialDirtyMechanism=false;
   _createSkybox();
   const hemi=new B.HemisphericLight('hemi',new B.Vector3(0,1,0),_scene);hemi.intensity=0.30;hemi.diffuse=new B.Color3(0.55,0.60,0.85);hemi.groundColor=new B.Color3(0.04,0.04,0.07);
   const dir=new B.DirectionalLight('dir',new B.Vector3(-0.5,-1,-0.3),_scene);dir.intensity=0.65;dir.diffuse=new B.Color3(0.85,0.82,0.75);dir.position=new B.Vector3(30,50,30);
-  _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=0.008;
+  _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=isLowEnd?0.005:0.008;
   _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-48),_scene);_camera.setTarget(B.Vector3.Zero());
   _camera.attachControl(canvas,true);_camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
   _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;
@@ -866,6 +890,15 @@ export function initGame(canvas){
   _buildJetpackFX();
   _buildGunPickups();
   _buildColorNodes();
+  // Freeze static materials for performance
+  _scene.meshes.forEach(mesh=>{
+    if(mesh.material&&!mesh.name.startsWith('proj')&&!mesh.name.startsWith('goo')&&
+       !mesh.name.startsWith('enemy')&&!mesh.name.startsWith('remote')&&!mesh.name.startsWith('fn_')&&
+       !mesh.name.startsWith('gun_')&&!mesh.name.startsWith('plasma')&&!mesh.name.startsWith('rr_')&&
+       !mesh.name.startsWith('rb_')&&!mesh.name.startsWith('rl_')&&!mesh.name.startsWith('rg_')){
+      try{mesh.material.freeze();}catch{}
+    }
+  });
   initGunHUD();
   initPlasma(_scene, _camera, _colBlocks);
   initEnemyNodes(_scene, _camera, _onPlayerDamaged);
