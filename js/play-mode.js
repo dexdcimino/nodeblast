@@ -164,7 +164,7 @@ export async function renderPlayRoute(gameId) {
     setTimeout(() => {
       const c = document.getElementById('play-canvas');
       if (c && !document.pointerLockElement) {
-        c.requestPointerLock();
+        c.requestPointerLock().catch(() => {});
       }
     }, 100);
 

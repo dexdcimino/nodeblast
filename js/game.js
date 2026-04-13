@@ -560,7 +560,7 @@ function _respawn() {
   _updateHealthHUD();
   setTimeout(() => {
     const canvas = document.getElementById('play-canvas');
-    if (canvas) canvas.requestPointerLock();
+    if (canvas) canvas.requestPointerLock().catch(() => {});
   }, 200);
 }
 
@@ -1025,10 +1025,7 @@ export function initGame(canvas){
   _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;
   window._nbSetSpawn=(x,z)=>{if(_camera){_camera.position.x=x;_camera.position.z=z;_camera.position.y=GROUND_Y;_velX=0;_velZ=0;_velY=0;}};
   _pointerLocked=false;
-  canvas.addEventListener('click',()=>{if(!_pointerLocked)canvas.requestPointerLock();});
-  canvas.addEventListener('focus',()=>{if(!_pointerLocked)canvas.requestPointerLock();});
-  canvas.setAttribute('tabindex','0');
-  canvas.focus();
+  canvas.addEventListener('click',()=>{if(!_pointerLocked)canvas.requestPointerLock().catch(()=>{});});
   document.addEventListener('pointerlockchange',()=>{
     const wasLocked=_pointerLocked;
     _pointerLocked=document.pointerLockElement===canvas;
