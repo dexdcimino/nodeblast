@@ -10,6 +10,12 @@ let _ambientOsc = null;
 let _ambientGain = null;
 let _jetpackNode = null;
 let _jetpackGain = null;
+let _jetpackNoise       = null;
+let _jetpackFilter      = null;
+let _jetpackNoiseGain   = null;
+let _jetpackShimmer     = null;
+let _jetpackShimmerGain = null;
+let _jetpackLFO         = null;
 let _enabled = true;
 
 const VOL_MASTER   = 0.35;
@@ -149,21 +155,63 @@ export function playJump() {
 export function playJetpack(active) {
   if (!_ctx || !_enabled) return;
   if (active && !_jetpackNode) {
+    // Layer 1: low rumble
     _jetpackNode       = _ctx.createOscillator();
     _jetpackGain       = _ctx.createGain();
-    _jetpackNode.type  = 'sawtooth';
-    _jetpackNode.frequency.value = 120;
+    _jetpackNode.type  = 'sine';
+    _jetpackNode.frequency.value = 55;
     _jetpackGain.gain.value      = 0;
-    _jetpackGain.gain.linearRampToValueAtTime(VOL_JETPACK, _ctx.currentTime + 0.1);
+    _jetpackGain.gain.linearRampToValueAtTime(VOL_JETPACK * 0.6, _ctx.currentTime + 0.15);
     _jetpackNode.connect(_jetpackGain);
     _jetpackGain.connect(_master);
     _jetpackNode.start();
+    // Layer 2: mid thrust — filtered noise whoosh
+    const bufSize = _ctx.sampleRate * 2;
+    const buffer  = _ctx.createBuffer(1, bufSize, _ctx.sampleRate);
+    const data    = buffer.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    _jetpackNoise        = _ctx.createBufferSource();
+    _jetpackNoise.buffer = buffer;
+    _jetpackNoise.loop   = true;
+    _jetpackFilter                 = _ctx.createBiquadFilter();
+    _jetpackFilter.type            = 'bandpass';
+    _jetpackFilter.frequency.value = 800;
+    _jetpackFilter.Q.value         = 0.8;
+    _jetpackNoiseGain              = _ctx.createGain();
+    _jetpackNoiseGain.gain.value   = 0;
+    _jetpackNoiseGain.gain.linearRampToValueAtTime(VOL_JETPACK * 0.5, _ctx.currentTime + 0.2);
+    _jetpackNoise.connect(_jetpackFilter);
+    _jetpackFilter.connect(_jetpackNoiseGain);
+    _jetpackNoiseGain.connect(_master);
+    _jetpackNoise.start();
+    // Layer 3: high shimmer with LFO
+    _jetpackShimmer       = _ctx.createOscillator();
+    _jetpackShimmerGain   = _ctx.createGain();
+    _jetpackShimmer.type  = 'triangle';
+    _jetpackShimmer.frequency.value = 1200;
+    const lfo       = _ctx.createOscillator();
+    const lfoGain   = _ctx.createGain();
+    lfo.frequency.value = 3.5;
+    lfoGain.gain.value  = 40;
+    lfo.connect(lfoGain);
+    lfoGain.connect(_jetpackShimmer.frequency);
+    lfo.start();
+    _jetpackLFO = lfo;
+    _jetpackShimmerGain.gain.value = 0;
+    _jetpackShimmerGain.gain.linearRampToValueAtTime(VOL_JETPACK * 0.15, _ctx.currentTime + 0.25);
+    _jetpackShimmer.connect(_jetpackShimmerGain);
+    _jetpackShimmerGain.connect(_master);
+    _jetpackShimmer.start();
   } else if (!active && _jetpackNode) {
-    _jetpackGain?.gain.linearRampToValueAtTime(0, _ctx.currentTime + 0.15);
-    const node = _jetpackNode;
-    setTimeout(() => { try { node.stop(); } catch {} }, 200);
-    _jetpackNode = null;
-    _jetpackGain = null;
+    const stopTime = _ctx.currentTime + 0.25;
+    [_jetpackGain, _jetpackNoiseGain, _jetpackShimmerGain].forEach(g => {
+      if (g) { try { g.gain.linearRampToValueAtTime(0, stopTime); } catch {} }
+    });
+    const toStop = [_jetpackNode, _jetpackNoise, _jetpackShimmer, _jetpackLFO];
+    setTimeout(() => { toStop.forEach(n => { try { if (n) n.stop(); } catch {} }); }, 280);
+    _jetpackNode = null; _jetpackGain = null;
+    _jetpackNoise = null; _jetpackFilter = null; _jetpackNoiseGain = null;
+    _jetpackShimmer = null; _jetpackShimmerGain = null; _jetpackLFO = null;
   }
 }
 
@@ -178,8 +226,11 @@ export function playGooImpact() {
 
 export function destroyAudio() {
   try {
-    if (_jetpackNode) { _jetpackNode.stop(); _jetpackNode = null; }
-    if (_ambientOsc)  { _ambientOsc.stop();  _ambientOsc  = null; }
-    if (_ctx)         { _ctx.close();        _ctx         = null; }
+    if (_jetpackNode)    { _jetpackNode.stop();    _jetpackNode    = null; }
+    if (_jetpackNoise)   { _jetpackNoise.stop();   _jetpackNoise   = null; }
+    if (_jetpackShimmer) { _jetpackShimmer.stop();  _jetpackShimmer = null; }
+    if (_jetpackLFO)     { _jetpackLFO.stop();     _jetpackLFO     = null; }
+    if (_ambientOsc)     { _ambientOsc.stop();     _ambientOsc     = null; }
+    if (_ctx)            { _ctx.close();            _ctx            = null; }
   } catch {}
 }

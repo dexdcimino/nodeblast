@@ -227,50 +227,66 @@ function _spawnGooSplat(pos,normal,color){
   normal=normal.normalize();
   if(!color)color=getProjectileColor();
   const cr=color.r,cg=color.g,cb=color.b;
-  const n=10+Math.floor(Math.random()*6);
+  const up=B.Vector3.Up();
+  const axis=B.Vector3.Cross(up,normal);
+  const axisLen=axis.length();
+  // Persistent splat disc on surface
+  const splatSize=0.4+Math.random()*0.35;
+  const disc=B.MeshBuilder.CreateCylinder('goo_splat_'+Date.now(),{diameter:splatSize,height:0.03,tessellation:10},_scene);
+  disc.position.set(pos.x+normal.x*0.02,pos.y+normal.y*0.02,pos.z+normal.z*0.02);
+  if(axisLen>0.001){disc.rotationQuaternion=B.Quaternion.RotationAxis(axis.normalize(),Math.acos(B.Vector3.Dot(up,normal)));}
+  else if(normal.y<0){disc.rotationQuaternion=B.Quaternion.RotationAxis(B.Vector3.Right(),Math.PI);}
+  const discMat=new B.StandardMaterial('gs_disc_'+Date.now(),_scene);
+  discMat.diffuseColor=new B.Color3(cr*0.4,cg*0.4,cb*0.4);
+  discMat.emissiveColor=new B.Color3(cr*0.7,cg*0.7,cb*0.7);
+  discMat.specularColor=new B.Color3(0.1,0.1,0.1);
+  disc.material=discMat;
+  _gooSplats.push({mesh:disc,_vel:null,_gravity:0,_landed:true,_life:600});
+  // Exploding blob pieces
+  const n=8+Math.floor(Math.random()*5);
   for(let i=0;i<n;i++){
-    const size=0.06+Math.random()*0.18;
-    const blob=B.MeshBuilder.CreateSphere('goo_'+Date.now()+'_'+i,{diameter:size,segments:4},_scene);
+    const size=0.05+Math.random()*0.14;
+    const blob=B.MeshBuilder.CreateSphere('goo_blob_'+Date.now()+'_'+i,{diameter:size,segments:4},_scene);
     blob.position.set(pos.x,pos.y+0.05,pos.z);
-    const mat=new B.StandardMaterial('gm_'+i+Date.now(),_scene);
+    const mat=new B.StandardMaterial('goo_bm_'+i+Date.now(),_scene);
     const br=0.7+Math.random()*0.3;
     mat.diffuseColor=new B.Color3(cr*0.5*br,cg*0.5*br,cb*0.5*br);
     mat.emissiveColor=new B.Color3(cr*br,cg*br,cb*br);
     blob.material=mat;
-    const outward=normal.scale(0.08+Math.random()*0.12);
-    const scatter=new B.Vector3((Math.random()-0.5)*0.18,0.05+Math.random()*0.12,(Math.random()-0.5)*0.18);
-    blob._vel=outward.add(scatter);
-    blob._gravity=0.004+Math.random()*0.003;
-    blob._landed=false;
-    blob._life=180+Math.floor(Math.random()*120);
-    _gooSplats.push(blob);
+    const outward=normal.scale(0.06+Math.random()*0.10);
+    const scatter=new B.Vector3((Math.random()-0.5)*0.16,0.04+Math.random()*0.10,(Math.random()-0.5)*0.16);
+    const vel=outward.add(scatter);
+    const grav=0.004+Math.random()*0.003;
+    _gooSplats.push({mesh:blob,_vel:vel,_gravity:grav,_landed:false,_life:120+Math.floor(Math.random()*80)});
   }
+  // Impact flash
   const flash=new B.PointLight('gf_'+Date.now(),pos.clone(),_scene);
-  flash.diffuse=new B.Color3(cr,cg,cb);flash.intensity=2.5;flash.range=6;
-  let t=0;const fade=setInterval(()=>{t+=0.2;if(flash.intensity!==undefined)flash.intensity=Math.max(0,2.5-t*2.5);if(t>=1){clearInterval(fade);try{flash.dispose();}catch{}}},16);
-  if(_gooSplats.length>200){const old=_gooSplats.splice(0,20);old.forEach(m=>{try{m.dispose();}catch{}});}
+  flash.diffuse=new B.Color3(cr,cg,cb);flash.intensity=2.2;flash.range=5;
+  let t=0;const fade=setInterval(()=>{t+=0.2;if(flash.intensity!==undefined)flash.intensity=Math.max(0,2.2-t*2.2);if(t>=1){clearInterval(fade);try{flash.dispose();}catch{}}},16);
+  if(_gooSplats.length>250){const old=_gooSplats.splice(0,20);old.forEach(s=>{try{s.mesh.dispose();}catch{}});}
   playGooImpact();
 }
 
 function _updateGooSplats(){
   const dead=[];
   for(let i=0;i<_gooSplats.length;i++){
-    const b=_gooSplats[i];
-    if(!b._vel)continue;
-    b._life--;
-    if(b._life<=0){dead.push(i);continue;}
-    if(!b._landed){
-      b._vel.y-=b._gravity;
-      b.position.addInPlace(b._vel);
-      if(b.position.y<=0.04){
-        b.position.y=0.04;
-        b._vel.scaleInPlace(0);
-        b._landed=true;
-        b.scaling.y=0.15;b.scaling.x=1.3;b.scaling.z=1.3;
+    const s=_gooSplats[i];
+    s._life--;
+    if(s._life<=0){dead.push(i);try{s.mesh.dispose();}catch{};continue;}
+    if(!s._landed&&s._vel){
+      s._vel.y-=s._gravity;
+      s.mesh.position.addInPlace(s._vel);
+      if(s.mesh.position.y<=0.04){
+        s.mesh.position.y=0.04;
+        s._vel.scaleInPlace(0);
+        s._landed=true;
+        s.mesh.scaling.set(1.4,0.12,1.4);
       }
+    } else if(s._landed&&s._life<60&&s.mesh.material){
+      s.mesh.material.alpha=s._life/60;
     }
   }
-  for(let i=dead.length-1;i>=0;i--){try{_gooSplats[dead[i]].dispose();}catch{}_gooSplats.splice(dead[i],1);}
+  for(let i=dead.length-1;i>=0;i--)_gooSplats.splice(dead[i],1);
 }
 
 function _updateFuelBar() {
@@ -1116,7 +1132,7 @@ export function destroyGame(engine){
   if(_scene&&_obsHandler){_scene.onBeforeRenderObservable.remove(_obsHandler);_obsHandler=null;}
   if(_resizeHandler){window.removeEventListener('resize',_resizeHandler);_resizeHandler=null;}
   _projectiles.forEach(p=>{try{p.mesh.dispose();}catch{}});_projectiles.length=0;
-  _gooSplats.forEach(m=>{try{m.dispose();}catch{}});_gooSplats.length=0;
+  _gooSplats.forEach(s=>{try{s.mesh.dispose();}catch{}});_gooSplats.length=0;
   _remotePlayers.forEach((_,id)=>removeRemotePlayer(id));_remotePlayers.clear();
   _pendingRemotePlayers.clear();
   if(_gunRoot){try{_gunRoot.getChildMeshes().forEach(m=>m.dispose());_gunRoot.dispose();}catch{}_gunRoot=null;}
