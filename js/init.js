@@ -1726,6 +1726,12 @@ function paintLogo(top, bot) {
   const circR = document.getElementById('nodeblast_circle_right');
   if (circL) circL.setAttribute('fill', 'transparent');
   if (circR) circR.setAttribute('fill', 'transparent');
+
+  // Sync loading screen logo colors (may already be hidden — fine)
+  const loadTop = document.getElementById('loading-path-top');
+  const loadBot = document.getElementById('loading-path-bot');
+  if (loadTop) loadTop.setAttribute('fill', topAdj);
+  if (loadBot) loadBot.setAttribute('fill', botAdj);
 }
 
 function markSelectedSwatches() {
