@@ -1345,6 +1345,12 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
   const unsub = subscribeUserCatalysts(user.uid, (catalysts) => {
     _profileCache.set(cacheKey, { user, catalysts });
     const match = openSlug ? catalysts.find((c) => c.slug === openSlug) : null;
+    // If a slug was requested but doesn't exist in the subscription
+    // snapshot, DON'T render the profile page — the fallback lookup
+    // below will call show404() if it also fails. Rendering the
+    // profile here would flash a profile page that instantly gets
+    // replaced by 404, or worse, stays visible covering the 404.
+    if (openSlug && !match) return;
     // MD12: route internal matches to the full-page view before
     // touching the profile bar / grid so the project page takes over.
     if (match && _routeInternalIfNeeded(user, match)) {
