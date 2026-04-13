@@ -328,17 +328,12 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .friend-card .friend-body{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25;}
 .friend-card .friend-name{font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .friend-card .friend-hex{font-size:11px;color:var(--friend-hex,var(--tx3));font-family:var(--fn);letter-spacing:0.02em;}
-/* Action button row — star / copy / message / remove. Hidden until
-   the card is hovered so the resting state stays clean. */
-.friend-card .friend-actions{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;opacity:0;transition:opacity var(--ease);}
-.friend-card:hover .friend-actions{opacity:1;}
-.friend-card .friend-util-btn{background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
-.friend-card .friend-util-btn:hover{color:var(--tx);background:var(--bg4);}
+/* Action button row — always visible. */
+.friend-card .friend-actions{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;}
+.friend-card .friend-util-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:none;background:transparent;color:var(--tx2);cursor:pointer;transition:background 0.15s,color 0.15s;flex-shrink:0;}
+.friend-card .friend-util-btn:hover{background:rgba(255,255,255,0.08);color:var(--tx1);}
 .friend-card .friend-util-btn[data-action="favorite"] .friend-star.active{color:#f5c23c;fill:#f5c23c;}
 .friend-card .friend-util-btn[data-action="remove"]:hover{color:#ff6b6b;}
-/* Favorites always keep their star visible (not just on hover) so
-   the user can see which friends they've starred at a glance. */
-.friend-card .friend-util-btn[data-action="favorite"]{opacity:1;}
 
 /* MD15: invite-by-email placeholder row */
 /* MD32: hint row below the friends list telling users to share

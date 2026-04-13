@@ -159,17 +159,20 @@ function _friendCardHTML(f) {
         <div class="friend-hex">#${escapeHtml(hex)}</div>
       </div>
       <div class="friend-actions">
-        <button class="friend-util-btn" data-action="favorite" title="Favorite" data-tip="Favorite">
-          <svg class="friend-star ${favClass}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        </button>
-        <button class="friend-util-btn" data-action="copy" title="Copy ID" data-tip="Copy ID">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <button class="friend-util-btn friend-remove-btn" data-action="remove" title="Remove friend" data-tip="Remove">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
         <button class="friend-util-btn" data-action="message" title="Message" data-tip="Message">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </button>
-        <button class="friend-util-btn friend-remove-btn" data-action="remove" title="Remove friend" data-tip="Remove">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <button class="friend-util-btn friend-invite-btn" data-action="invite" title="Invite to game" data-tip="Invite to game">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+        </button>
+        <button class="friend-util-btn${favClass ? ' active' : ''}" data-action="favorite" title="Favorite" data-tip="Favorite">
+          <svg class="friend-star ${favClass}" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+        <button class="friend-util-btn" data-action="copy" title="Copy ID" data-tip="Copy ID">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
       </div>
     </div>
@@ -194,6 +197,14 @@ function _renderFriendsList() {
     return (a.username || '').localeCompare(b.username || '');
   });
   list.innerHTML = sorted.map(_friendCardHTML).join('');
+
+  // Gray out invite buttons when not in a game
+  const inGame = window.location.pathname === '/play';
+  list.querySelectorAll('.friend-invite-btn').forEach(btn => {
+    btn.style.opacity = inGame ? '1' : '0.35';
+    btn.style.cursor = inGame ? 'pointer' : 'not-allowed';
+    if (!inGame) btn.setAttribute('data-tip', 'Start a game first');
+  });
 }
 
 // Live presence indicator update — called by the per-friend
@@ -852,6 +863,11 @@ export function initFriends() {
       }
     } else if (action === 'message') {
       openDM(friend);
+    } else if (action === 'invite') {
+      const inGame = window.location.pathname === '/play';
+      if (!inGame) { toast('Start a game first'); return; }
+      // TODO: wire up multiplayer invite logic
+      toast('Invite sent to ' + (friend.username || 'anon'));
     }
   });
 
