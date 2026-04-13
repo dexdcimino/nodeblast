@@ -110,29 +110,32 @@ function _spawnEnemy(i) {
   lm.disableLighting = true;
   label.material     = lm;
 
+  const hbWrap = new B.TransformNode('enemy_hb_wrap_' + i, _scene);
+  hbWrap.parent     = root;
+  hbWrap.position.y = 1.05;
+
   const hbBg = B.MeshBuilder.CreatePlane('enemy_hb_bg_' + i,
-    { width: 1.0, height: 0.1 }, _scene);
-  hbBg.parent        = root;
-  hbBg.position.y    = 0.65;
+    { width: 1.1, height: 0.12 }, _scene);
+  hbBg.parent        = hbWrap;
+  hbBg.position.z    = 0.001;
   hbBg.billboardMode = B.Mesh.BILLBOARDMODE_ALL;
   const hbBgM        = new B.StandardMaterial('ehbgm_' + i, _scene);
-  hbBgM.diffuseColor    = new B.Color3(0.1, 0.0, 0.0);
+  hbBgM.diffuseColor    = new B.Color3(0.08, 0.0, 0.0);
+  hbBgM.emissiveColor   = new B.Color3(0.05, 0.0, 0.0);
   hbBgM.disableLighting = true;
   hbBg.material         = hbBgM;
 
   const hbFill = B.MeshBuilder.CreatePlane('enemy_hb_fill_' + i,
-    { width: 1.0, height: 0.08 }, _scene);
-  hbFill.parent        = root;
-  hbFill.position.y    = 0.65;
-  hbFill.position.z    = -0.001;
+    { width: 1.0, height: 0.10 }, _scene);
+  hbFill.parent        = hbWrap;
   hbFill.billboardMode = B.Mesh.BILLBOARDMODE_ALL;
   const hbFillM        = new B.StandardMaterial('ehbfm_' + i, _scene);
-  hbFillM.emissiveColor   = new B.Color3(0.9, 0.0, 0.0);
+  hbFillM.emissiveColor   = new B.Color3(0.1, 0.9, 0.1);
   hbFillM.disableLighting = true;
   hbFill.material         = hbFillM;
 
   const enemy = {
-    root, body, ring, light, label, hbBg, hbFill, lt,
+    root, body, ring, light, label, hbBg, hbFill, hbWrap, lt,
     index:        i,
     name,
     hp:           100,
@@ -336,16 +339,21 @@ function _killEnemy(e) {
 }
 
 function _updateHealthBar(e) {
-  if (!e.hbFill) return;
-  const pct = Math.max(0, e.hp / e.maxHp);
-  e.hbFill.scaling.x = pct;
+  if (!e.hbFill || !e.hbBg) return;
+  const pct = Math.max(0, Math.min(1, e.hp / e.maxHp));
+  e.hbFill.scaling.x  = pct;
   e.hbFill.position.x = -(1 - pct) * 0.5;
+  if (e.hbFill.material) {
+    if (pct > 0.6) e.hbFill.material.emissiveColor = new BABYLON.Color3(0.1, 0.9, 0.1);
+    else if (pct > 0.3) e.hbFill.material.emissiveColor = new BABYLON.Color3(0.9, 0.7, 0.0);
+    else e.hbFill.material.emissiveColor = new BABYLON.Color3(0.9, 0.05, 0.05);
+  }
 }
 
 export function destroyEnemyNodes() {
   _enemies.forEach(e => {
-    ['label', 'hbBg', 'hbFill', 'ring', 'body', 'root', 'light'].forEach(k => {
-      try { e[k].dispose(); } catch {}
+    ['label', 'hbBg', 'hbFill', 'hbWrap', 'ring', 'body', 'root', 'light'].forEach(k => {
+      try { e[k]?.dispose(); } catch {}
     });
     try { e.lt.dispose(); } catch {}
   });

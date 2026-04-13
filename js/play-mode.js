@@ -7,7 +7,7 @@
 
 import State from './state.js';
 import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer, getRemotePlayerIds, damageRemotePlayer, getRemotePlayerData } from './game.js';
-import { initPhoton, destroyPhoton, setPhotonStatus, photonSendDamage } from './photon-client.js';
+import { initPhoton, destroyPhoton, setPhotonStatus, photonSendDamage, isInRoom } from './photon-client.js';
 import { initHathora, destroyHathora, hathoraSendMove, isHathoraConnected } from './hathora-client.js';
 import { navigate } from './router.js';
 
@@ -235,6 +235,7 @@ export async function renderPlayRoute() {
         _addKillFeedEntry(attackerName, targetId);
       },
     });
+    window._nbPhotonInRoom = isInRoom;
   } catch (err) {
     console.error('[play] failed to init:', err);
     view.innerHTML = '<div style="color:#f66;padding:2rem;font:14px monospace">Failed to load: ' + (err.message || err) + '</div>';
@@ -259,5 +260,6 @@ export function destroyPlayRoute() {
   window._nbSendDamage = null;
   window._nbOnPlayerDamaged = null;
   window._nbPhotonSendDamage = null;
+  window._nbPhotonInRoom = null;
   try { document.exitPointerLock(); } catch {}
 }

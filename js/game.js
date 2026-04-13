@@ -168,9 +168,10 @@ export function addOrUpdateRemotePlayer(id,x,y,z,rotY,username,hex){
     const safeHex=(hex||'5aaa72').replace('#','');
     const safeName=username||'player';
     const meshes=_createRemotePlayerMesh(id,safeHex,safeName);
-    p={...meshes,username:username||'player',hex:hex||'5aaa72',targetX:x,targetY:y-GROUND_Y,targetZ:z,renderX:x,renderY:y-GROUND_Y,renderZ:z,targetRotY:rotY,renderRotY:rotY,lastUpdate:Date.now(),hp:100,maxHp:100};
+    p={...meshes,username:username||'player',hex:(hex||'5aaa72').replace('#',''),targetX:x,targetY:y-GROUND_Y,targetZ:z,renderX:x,renderY:0,renderZ:z,targetRotY:rotY,renderRotY:rotY,lastUpdate:Date.now(),hp:100,maxHp:100};
     _remotePlayers.set(id,p);
-    console.log('[game] remote player created:',id,username);
+    p.root.setEnabled(true);
+    console.log('[game] remote player spawned at:',x.toFixed(1),y.toFixed(1),z.toFixed(1));
   }else{p.targetX=x;p.targetY=y-GROUND_Y;p.targetZ=z;p.targetRotY=rotY;p.lastUpdate=Date.now();if(username)p.username=username;if(hex)p.hex=hex;}
 }
 export function getRemotePlayerIds(){return Array.from(_remotePlayers.keys());}

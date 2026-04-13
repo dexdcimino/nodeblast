@@ -139,11 +139,10 @@ function _startSendLoop() {
     if (!window._nbGetPlayerState) return;
     const s = window._nbGetPlayerState();
     if (!s) return;
-    console.log('[photon] sending state:', s.x.toFixed(2), s.z.toFixed(2));
     if (window._nbHathoraConnected?.()) {
       window._nbHathoraSendMove?.(s.x, s.y, s.z, s.rotY, s.pitch);
     }
-    photonSendState(s.x, s.y, s.z, s.rotY, s.pitch, s.username, s.hex);
+    photonSendState(s.x, s.y, s.z, s.rotY, s.pitch, s.username || 'player', s.hex || '5aaa72');
   }, SEND_RATE_MS);
 }
 
@@ -161,3 +160,5 @@ export function destroyPhoton() {
   _onConnected    = null;
   _onPlayerDamage = null;
 }
+
+export function isInRoom() { return _inRoom; }
