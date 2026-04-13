@@ -87,6 +87,10 @@ let _footstepTimer=0;
 let _fpsFrames=0;
 let _fpsLastTime=Date.now();
 let _fpsValue=60;
+let _lastTickTime=0;
+let _delta=1.0;
+const TARGET_MS=1000/60;
+const MAX_DELTA=3.0;
 
 export function refreshPlayerIdentity(){_playerUsername=State.profile?.displayName||State.user?.displayName||'player';_playerHex=State.profile?.hexCode||'5aaa72';}
 export function getPlayerState(){if(!_camera)return null;return{x:_camera.position.x,y:_camera.position.y,z:_camera.position.z,rotY:_camera.rotation.y,pitch:_camera.rotation.x,username:_playerUsername,hex:_playerHex};}
@@ -372,7 +376,7 @@ function _updateProjectiles(){
   for(let i=0;i<_projectiles.length;i++){
     const p=_projectiles[i];p.life--;
     const prev=p.mesh.position.clone();
-    p.mesh.position.addInPlace(p.vel);p.vel.y-=0.006;
+    p.mesh.position.addInPlace(p.vel.scale(_delta));p.vel.y-=0.006*_delta;
     const px=p.mesh.position.x,py=p.mesh.position.y,pz=p.mesh.position.z;
     let hit=false,hitPos=null,hitBlock=null;
     let hitNormal=new B.Vector3(0,1,0);
@@ -519,6 +523,11 @@ function _physicsTick() {
   if (!_camera || !_scene) return;
   const B = window.BABYLON;
 
+  // Delta time — keeps physics speed consistent across all frame rates
+  const _now = performance.now();
+  _delta = _lastTickTime ? Math.min(MAX_DELTA, (_now - _lastTickTime) / TARGET_MS) : 1.0;
+  _lastTickTime = _now;
+
   // Flush pending remote players now that scene is ready
   if (_pendingRemotePlayers.size > 0) {
     _pendingRemotePlayers.forEach((data, id) => {
@@ -580,11 +589,11 @@ function _physicsTick() {
   const spd  = WALK_SPEED * (_sprinting ? SPRINT_MULT : 1);
   const ctrl = _onGround ? 1.0 : AIR_CONTROL;
 
-  _velX += ((mx * spd) - _velX) * INERTIA * ctrl;
-  _velZ += ((mz * spd) - _velZ) * INERTIA * ctrl;
-  if (ml === 0 && _onGround) { _velX *= FRICTION; _velZ *= FRICTION; }
+  _velX += ((mx * spd) - _velX) * INERTIA * ctrl * _delta;
+  _velZ += ((mz * spd) - _velZ) * INERTIA * ctrl * _delta;
+  if (ml === 0 && _onGround) { const fd = Math.pow(FRICTION, _delta); _velX *= fd; _velZ *= fd; }
 
-  _velY -= GRAVITY * (_velY < 0 ? FALL_MULT : 1.0);
+  _velY -= GRAVITY * (_velY < 0 ? FALL_MULT : 1.0) * _delta;
 
   if (jumping && !_jumpHeld && _jumpsLeft > 0) {
     playJump();
@@ -600,10 +609,10 @@ function _physicsTick() {
 
   if (_jpActive) {
     if (_camera.position.y < JP_MAX_Y) {
-      _velY += JP_FORCE;
+      _velY += JP_FORCE * _delta;
       if (_velY < 0) _velY *= 0.7;
     }
-    _jpFuel = Math.max(0, _jpFuel - 1);
+    _jpFuel = Math.max(0, _jpFuel - _delta);
     _updateJetpackParticles(true);
   } else {
     _updateJetpackParticles(false);
@@ -611,7 +620,7 @@ function _physicsTick() {
   playJetpack(_jpActive);
 
   if (_onGround && _jpFuel < JP_MAX_FUEL) {
-    _jpFuel = Math.min(JP_MAX_FUEL, _jpFuel + JP_RECHARGE);
+    _jpFuel = Math.min(JP_MAX_FUEL, _jpFuel + JP_RECHARGE * _delta);
   }
 
   _updateFuelBar();
@@ -623,14 +632,16 @@ function _physicsTick() {
     if (_footstepTimer >= rate) { _footstepTimer = 0; playFootstep(); }
   } else { _footstepTimer = 0; }
 
+  const stepX = _velX * _delta;
+  const stepZ = _velZ * _delta;
   const res = _resolveCollision(
-    _camera.position.x + _velX,
-    _camera.position.z + _velZ,
+    _camera.position.x + stepX,
+    _camera.position.z + stepZ,
     _camera.position.y,
   );
   _camera.position.x = res.x;
   _camera.position.z = res.z;
-  _camera.position.y += _velY;
+  _camera.position.y += _velY * _delta;
 
   let landed     = false;
   let landHeight = GROUND_Y;
@@ -1060,6 +1071,7 @@ export function destroyGame(engine){
   window._nbSetAudio=null;
   destroyAudio();
   _playerHp=100;_isDead=false;_respawnTimer=0;_damageFlash=0;_shakeTimer=0;
+  _lastTickTime=0;_delta=1.0;
   _muzzleOffset=null;
   window._nbGetPlayerState=null;
   _velX=0;_velZ=0;_velY=0;_onGround=true;_sprinting=false;_jumpHeld=false;_jumpsLeft=2;_jpFuel=JP_MAX_FUEL;_jpActive=false;
