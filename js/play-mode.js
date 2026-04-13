@@ -202,9 +202,12 @@ export async function renderPlayRoute(gameId) {
               snapshotIds.add(p.id);
               addOrUpdateRemotePlayer(p.id, p.x, p.y, p.z, p.rotY, p.username, p.hex);
             });
+            // Only remove Hathora-tracked players (UUID string IDs), not Photon players (integer IDs)
             getRemotePlayerIds().forEach((id) => {
-              if (!snapshotIds.has(id)) removeRemotePlayer(id);
+              const isHathoraId = typeof id === 'string' && id.length > 8;
+              if (isHathoraId && !snapshotIds.has(id)) removeRemotePlayer(id);
             });
+            _updatePlayerList();
           },
           onConnected: (id) => {
             console.log('[play] hathora connected:', id);
