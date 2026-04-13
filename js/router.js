@@ -29,10 +29,14 @@ export function buildUserSlug(username, hex) {
 export function getRoute() {
   const path = window.location.pathname;
   if (path === '/' || path === '') return { page: 'feed' };
-  if (path === '/play') return { page: 'play' };
+  if (path === '/play') return { page: 'play', gameId: 'arena1' };
   if (path === '/games') return { page: 'games' };
 
   const parts = path.split('/').filter(Boolean);
+
+  if (parts.length === 2 && parts[0] === 'game') {
+    return { page: 'play', gameId: parts[1] };
+  }
 
   if (parts.length === 1) {
     const parsed = parseUserSlug(decodeURIComponent(parts[0]));

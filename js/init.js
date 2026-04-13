@@ -421,7 +421,7 @@ function handleTileClick(cat) {
     if (cat.internalSubtype === 'game' && cat.gameId) {
       const gameDef = getGame(cat.gameId);
       if (!gameDef) { toast('Game not found'); return; }
-      if (gameDef.launchMode === 'route') { navigate(gameDef.route); return; }
+      if (gameDef.launchMode === 'route') { navigate('/game/' + cat.slug); return; }
       if (gameDef.launchMode === 'modal') { openDotSim(cat.title || gameDef.name); return; }
     }
     const userPart = buildUserSlug(ownerName, ownerHex);
@@ -1226,7 +1226,7 @@ function handleGameTileClick(cat) {
   const gameDef = getGame(cat.gameId);
   if (!gameDef) return;
   if (gameDef.status === 'coming_soon') { toast('Coming soon — stay tuned'); return; }
-  if (gameDef.launchMode === 'route') { navigate(gameDef.route); return; }
+  if (gameDef.launchMode === 'route') { navigate('/game/' + (cat.slug || cat.gameId)); return; }
   if (gameDef.launchMode === 'modal') { openDotSim(cat.title); return; }
 }
 
@@ -1500,7 +1500,7 @@ async function renderRoute({ force = false } = {}) {
   // MD01: play route is fully self-contained — skip the honeycomb
   // fade and the normal page rendering.
   if (route.page === 'play') {
-    await renderPlayRoute();
+    await renderPlayRoute(route.gameId);
     return;
   }
 
