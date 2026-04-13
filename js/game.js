@@ -746,8 +746,20 @@ function _physicsTick() {
 
   // Node blaster update
   updateNodeBlaster(
-    () => window._nbEnemyPositions ? window._nbEnemyPositions() : [],
-    (idx, dmg) => damageEnemyNode(idx, dmg),
+    _colBlocks,
+    (x, y, z, radius, damage) => {
+      if (_camera) {
+        const B=window.BABYLON;
+        const dx=_camera.position.x-x,dy=_camera.position.y-y,dz=_camera.position.z-z;
+        if (Math.sqrt(dx*dx+dy*dy+dz*dz) < radius) _onPlayerDamaged(damage);
+      }
+      if (window._nbEnemyPositions) {
+        window._nbEnemyPositions().forEach(e => {
+          const dx=e.pos.x-x,dz=e.pos.z-z;
+          if (Math.sqrt(dx*dx+dz*dz) < radius) damageEnemyNode(e.index, damage);
+        });
+      }
+    },
   );
 
   // ── Gun pickup check ──
@@ -1075,6 +1087,9 @@ export function initGame(canvas){
   window._nbSendDamage = null; // set by play-mode.js
   window._nbPlayEnemyDeath = playEnemyDeath;
   window._nbSetAudio = setAudioEnabled;
+  window._nbColorEnemy = (index, color) => {
+    if (window._nbApplyEnemyColor) window._nbApplyEnemyColor(index, color);
+  };
   window._nbGetRemotePlayerData = getRemotePlayerData;
   window._nbSetGunColor = (r, g, b) => {
     const orb = _scene?.getMeshByName('gun_orb');
@@ -1125,6 +1140,8 @@ export function destroyGame(engine){
   window._nbSetAudio=null;
   window._nbRebuildGun=null;
   window._nbGetRemotePlayerData=null;
+  window._nbColorEnemy=null;
+  window._nbApplyEnemyColor=null;
   destroyAudio();
   _playerHp=100;_isDead=false;_respawnTimer=0;_damageFlash=0;_shakeTimer=0;
   _lastTickTime=0;_delta=1.0;

@@ -217,15 +217,11 @@ export async function renderPlayRoute(gameId) {
         });
       },
       onPlayerUpdate: (id, x, y, z, rotY, pitch, username, hex) => {
-        if (!isHathoraConnected()) {
-          addOrUpdateRemotePlayer(id, x, y, z, rotY, username, hex);
-        }
+        addOrUpdateRemotePlayer(id, x, y, z, rotY, username, hex);
         _updatePlayerList();
       },
       onPlayerLeave: (id) => {
-        if (!isHathoraConnected()) {
-          removeRemotePlayer(id);
-        }
+        removeRemotePlayer(id);
         _updatePlayerList();
       },
       onPlayerDamage: (targetId, damage, attackerName) => {

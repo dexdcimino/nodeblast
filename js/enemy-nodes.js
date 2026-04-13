@@ -170,8 +170,9 @@ export function updateEnemyNodes() {
     if (dist < AGGRO_RANGE) {
       e.state = 'aggro';
       const invDist = 1 / Math.max(dist, 0.1);
-      e.root.position.x += dx * invDist * MOVE_SPEED;
-      e.root.position.z += dz * invDist * MOVE_SPEED;
+      const moveSpeedActual = e._slowed ? MOVE_SPEED * 0.5 : MOVE_SPEED;
+      e.root.position.x += dx * invDist * moveSpeedActual;
+      e.root.position.z += dz * invDist * moveSpeedActual;
       e.root.rotation.y  = Math.atan2(dx, dz);
 
       if (dist < SHOOT_RANGE) {
@@ -266,6 +267,34 @@ export function damageEnemyNode(enemyIndex, damage) {
     }, 80);
   }
 }
+
+// Called by node blaster when an enemy gets hit — recolors + slows
+window._nbApplyEnemyColor = (index, color) => {
+  const e = _enemies.find(en => en && en.index === index);
+  if (!e || e.state === 'dead') return;
+  if (e.body?.material) {
+    e.body.material.diffuseColor  = new BABYLON.Color3(color.r * 0.5, color.g * 0.5, color.b * 0.5);
+    e.body.material.emissiveColor = new BABYLON.Color3(color.r, color.g, color.b);
+  }
+  if (e.ring?.material) {
+    e.ring.material.emissiveColor = new BABYLON.Color3(color.r, color.g, color.b);
+  }
+  const origSpeed = e.patrolSpeed;
+  e.patrolSpeed  *= 0.5;
+  e._slowed = true;
+  setTimeout(() => {
+    if (e) {
+      e.patrolSpeed = origSpeed;
+      e._slowed     = false;
+      if (e.body?.material) {
+        e.body.material.diffuseColor  = new BABYLON.Color3(0.6, 0.0, 0.0);
+        e.body.material.emissiveColor = new BABYLON.Color3(0.8, 0.0, 0.0);
+      }
+      if (e.ring?.material)
+        e.ring.material.emissiveColor = new BABYLON.Color3(1.0, 0.1, 0.1);
+    }
+  }, 5000);
+};
 
 export function checkEnemyHit(pos) {
   for (const e of _enemies) {

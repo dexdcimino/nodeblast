@@ -6,7 +6,7 @@
 
 const SERVER_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
   ? 'ws://localhost:7777'
-  : 'wss://d3qpbz.edge.hathora.dev:14188';
+  : 'wss://d3qpbz.edge.hathora.dev:14188'; // updated MD31
 
 let _ws = null;
 let _connected = false;
