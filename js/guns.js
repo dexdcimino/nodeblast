@@ -47,6 +47,11 @@ export function getActiveGun()       { return GUNS[_activeSlot]; }
 export function getActiveSlot()      { return _activeSlot; }
 export function getProjectileColor() { return _projectileColor; }
 
+export function setProjectileColor(r, g, b) {
+  _projectileColor = { r, g, b };
+  if (window._nbSetGunColor) window._nbSetGunColor(r, g, b);
+}
+
 export function setActiveSlot(slot) {
   if (slot < 0 || slot >= GUNS.length) return;
   _activeSlot = slot;
