@@ -1287,6 +1287,10 @@ body.cat-modal-open{overflow:hidden;}
 #play-death-title{font-family:'Outfit',sans-serif;font-size:48px;font-weight:800;color:#ff3333;letter-spacing:0.12em;text-shadow:0 0 30px rgba(255,0,0,0.6);}
 #play-death-sub{font-family:'Outfit',sans-serif;font-size:16px;color:rgba(255,255,255,0.55);letter-spacing:0.06em;}
 #play-death-count{font-family:'JetBrains Mono',monospace;font-size:64px;font-weight:700;color:#ffffff;line-height:1;}
+/* ── Kill feed ── */
+#play-killfeed{position:absolute;top:70px;right:20px;display:flex;flex-direction:column;gap:6px;pointer-events:none;align-items:flex-end;}
+.killfeed-entry{background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);font-family:'Outfit',sans-serif;font-size:12px;padding:4px 10px;border-radius:6px;backdrop-filter:blur(4px);animation:killfeed-in 0.2s ease;}
+@keyframes killfeed-in{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
 #play-fuel-wrap{position:absolute;bottom:52px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none;}
 #play-fuel-label{color:rgba(100,255,160,0.7);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:0.12em;}
 #play-fuel-track{width:120px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);}

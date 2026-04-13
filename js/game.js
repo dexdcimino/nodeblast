@@ -110,7 +110,14 @@ function _createRemotePlayerMesh(id,hex,username){
   lt.update();
   const lm=new B.StandardMaterial('rlm_'+id,_scene);
   lm.diffuseTexture=lt;lm.emissiveTexture=lt;lm.opacityTexture=lt;lm.backFaceCulling=false;lm.disableLighting=true;labelPlane.material=lm;
-  return{root,body,ring,labelPlane,labelTex:lt};
+  // Health bar
+  const hbBg=B.MeshBuilder.CreatePlane('rhb_bg_'+id,{width:1.2,height:0.1},_scene);
+  hbBg.parent=root;hbBg.position.y=2.75;hbBg.billboardMode=B.Mesh.BILLBOARDMODE_ALL;
+  const hbBgM=new B.StandardMaterial('rhbgm_'+id,_scene);hbBgM.diffuseColor=new B.Color3(0.08,0.0,0.0);hbBgM.disableLighting=true;hbBg.material=hbBgM;
+  const hbFill=B.MeshBuilder.CreatePlane('rhb_fill_'+id,{width:1.2,height:0.08},_scene);
+  hbFill.parent=root;hbFill.position.y=2.75;hbFill.position.z=-0.001;hbFill.billboardMode=B.Mesh.BILLBOARDMODE_ALL;
+  const hbFillM=new B.StandardMaterial('rhbfm_'+id,_scene);hbFillM.emissiveColor=new B.Color3(0.9,0.1,0.1);hbFillM.disableLighting=true;hbFill.material=hbFillM;
+  return{root,body,ring,labelPlane,labelTex:lt,hbBg,hbFill};
 }
 
 export function addOrUpdateRemotePlayer(id,x,y,z,rotY,username,hex){
@@ -120,13 +127,42 @@ export function addOrUpdateRemotePlayer(id,x,y,z,rotY,username,hex){
     const safeHex=(hex||'5aaa72').replace('#','');
     const safeName=username||'player';
     const meshes=_createRemotePlayerMesh(id,safeHex,safeName);
-    p={...meshes,targetX:x,targetY:y-GROUND_Y,targetZ:z,renderX:x,renderY:y-GROUND_Y,renderZ:z,targetRotY:rotY,renderRotY:rotY,lastUpdate:Date.now()};
+    p={...meshes,targetX:x,targetY:y-GROUND_Y,targetZ:z,renderX:x,renderY:y-GROUND_Y,renderZ:z,targetRotY:rotY,renderRotY:rotY,lastUpdate:Date.now(),hp:100,maxHp:100};
     _remotePlayers.set(id,p);
     console.log('[game] remote player created:',id,username);
   }else{p.targetX=x;p.targetY=y-GROUND_Y;p.targetZ=z;p.targetRotY=rotY;p.lastUpdate=Date.now();}
 }
 export function getRemotePlayerIds(){return Array.from(_remotePlayers.keys());}
-export function removeRemotePlayer(id){const p=_remotePlayers.get(id);if(!p)return;['labelTex','labelPlane','ring','body','root'].forEach(k=>{try{p[k].dispose();}catch{}});_remotePlayers.delete(id);}
+export function removeRemotePlayer(id){const p=_remotePlayers.get(id);if(!p)return;['labelTex','labelPlane','hbBg','hbFill','ring','body','root'].forEach(k=>{try{p[k]?.dispose();}catch{}});_remotePlayers.delete(id);}
+
+export function damageRemotePlayer(id,damage){
+  const B=window.BABYLON;
+  const p=_remotePlayers.get(id);
+  if(!p)return;
+  p.hp=Math.max(0,p.hp-damage);
+  const pct=p.hp/p.maxHp;
+  if(p.hbFill){p.hbFill.scaling.x=pct;p.hbFill.position.x=-(1-pct)*0.6;}
+  if(p.body?.material){
+    const origColor=p.body.material.diffuseColor.clone();
+    p.body.material.emissiveColor=new B.Color3(1.0,1.0,1.0);
+    setTimeout(()=>{if(p.body?.material)p.body.material.emissiveColor=origColor.scale(0.3);},80);
+  }
+  if(p.hp<=0)_killRemotePlayer(id);
+}
+
+function _killRemotePlayer(id){
+  const B=window.BABYLON;
+  const p=_remotePlayers.get(id);
+  if(!p)return;
+  const pos=p.root.position.clone();
+  const exp=new B.PointLight('rexp_'+id,pos,_scene);
+  exp.diffuse=new B.Color3(1.0,0.5,0.0);exp.intensity=4.0;exp.range=10;
+  let ei=0;
+  const fade=setInterval(()=>{ei++;if(exp.intensity!==undefined)exp.intensity=Math.max(0,4-ei*0.35);if(ei>=12){clearInterval(fade);try{exp.dispose();}catch{}}},16);
+  p.root.setEnabled(false);
+  p.hp=100;
+  setTimeout(()=>{if(_remotePlayers.has(id)){p.root.setEnabled(true);if(p.hbFill){p.hbFill.scaling.x=1;p.hbFill.position.x=0;}}},5200);
+}
 
 function _addCol(x,z,w,d,h){_colBlocks.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2,maxY:h});}
 
@@ -291,6 +327,16 @@ function _updateProjectiles(){
       for(const b of _colBlocks){const m=0.1;if(sx>b.minX-m&&sx<b.maxX+m&&sz>b.minZ-m&&sz<b.maxZ+m&&sy<b.maxY+m&&sy>-0.5){hit=true;hitPos=sp.clone();hitBlock=b;break outer;}}
       const enemyIdx=checkEnemyHit(sp);
       if(enemyIdx>=0){damageEnemyNode(enemyIdx,20);hit=true;hitPos=sp.clone();break outer;}
+      // Remote player hit check
+      for(const[rpId,rp] of _remotePlayers){
+        if(!rp.root.isEnabled())continue;
+        const rdx=sp.x-rp.root.position.x,rdy=sp.y-(rp.root.position.y+GROUND_Y*0.5),rdz=sp.z-rp.root.position.z;
+        if(Math.sqrt(rdx*rdx+rdy*rdy+rdz*rdz)<0.7){
+          hit=true;hitPos=sp.clone();
+          if(window._nbSendDamage)window._nbSendDamage(rpId,20,_playerUsername);
+          break outer;
+        }
+      }
       if(sy<0.08){hit=true;hitPos=new B.Vector3(sx,0,sz);break;}
     }
     if(hit&&hitPos&&hitBlock){
@@ -826,6 +872,8 @@ export function initGame(canvas){
   initNodeBlaster(_scene, _camera);
   window._nbEnemyPositions = null; // set by enemy-nodes.js
   window._nbDamageEnemy = (idx, dmg) => damageEnemyNode(idx, dmg);
+  window._nbApplyPlayerDamage = _onPlayerDamaged;
+  window._nbSendDamage = null; // set by play-mode.js
   window._nbSetGunColor = (r, g, b) => {
     const orb = _scene?.getMeshByName('gun_orb');
     if (orb?.material) orb.material.emissiveColor = new B.Color3(r, g, b);
@@ -869,6 +917,8 @@ export function destroyGame(engine){
   window._nbEnemyPositions=null;
   window._nbDamageEnemy=null;
   window._nbSetSpawn=null;
+  window._nbApplyPlayerDamage=null;
+  window._nbSendDamage=null;
   _playerHp=100;_isDead=false;_respawnTimer=0;_damageFlash=0;_shakeTimer=0;
   _muzzleOffset=null;
   window._nbGetPlayerState=null;

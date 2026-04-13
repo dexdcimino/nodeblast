@@ -15,6 +15,7 @@ let _inRoom = false;
 let _onPlayerUpdate = null;
 let _onPlayerLeave = null;
 let _onConnected = null;
+let _onPlayerDamage = null;
 let _sendTimer = null;
 
 export function setPhotonStatus(msg) {
@@ -22,13 +23,14 @@ export function setPhotonStatus(msg) {
   if (el) el.textContent = msg;
 }
 
-export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
+export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlayerDamage }) {
   const P = window.Photon;
   if (!P) throw new Error('Photon SDK not loaded');
 
   _onPlayerUpdate = onPlayerUpdate || null;
   _onPlayerLeave  = onPlayerLeave  || null;
   _onConnected    = onConnected    || null;
+  _onPlayerDamage = onPlayerDamage || null;
 
   _client = new P.LoadBalancing.LoadBalancingClient(
     P.ConnectionProtocol.Wss,
@@ -97,6 +99,9 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
         );
       }
     }
+    if (code === 2 && _onPlayerDamage) {
+      _onPlayerDamage(content.targetId, content.damage, content.attackerName);
+    }
   };
 
   _client.onError = (errorCode, errorMsg) => {
@@ -114,6 +119,15 @@ function _updatePlayerCount() {
     const count = _client.myRoomActorsCount();
     setPhotonStatus('online \u2014 ' + count + (count === 1 ? ' player' : ' players'));
   } catch {}
+}
+
+export function photonSendDamage(targetActorId, damage, attackerName) {
+  if (!_inRoom || !_client) return;
+  const P = window.Photon;
+  _client.raiseEvent(2,
+    { targetId: targetActorId, damage, attackerName },
+    { receivers: P.LoadBalancing.Constants.ReceiverGroup.All }
+  );
 }
 
 export function photonSendState(x, y, z, rotY, pitch, username, hex) {
@@ -147,4 +161,5 @@ export function destroyPhoton() {
   _onPlayerUpdate = null;
   _onPlayerLeave  = null;
   _onConnected    = null;
+  _onPlayerDamage = null;
 }

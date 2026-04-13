@@ -6,8 +6,8 @@
 // ══════════════════════════════════════
 
 import State from './state.js';
-import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer, getRemotePlayerIds } from './game.js';
-import { initPhoton, destroyPhoton, setPhotonStatus } from './photon-client.js';
+import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer, getRemotePlayerIds, damageRemotePlayer } from './game.js';
+import { initPhoton, destroyPhoton, setPhotonStatus, photonSendDamage } from './photon-client.js';
 import { initHathora, destroyHathora, hathoraSendMove, isHathoraConnected } from './hathora-client.js';
 import { navigate } from './router.js';
 
@@ -18,6 +18,17 @@ const PHOTON_CDN = '/photon-realtime-module.js';
 let _engine = null;
 let _modalWired = false;
 let _exitModalOpen = false;
+
+function _addKillFeedEntry(attackerName, targetActorId) {
+  const feed = document.getElementById('play-killfeed');
+  if (!feed) return;
+  const entry     = document.createElement('div');
+  entry.className = 'killfeed-entry';
+  entry.innerHTML = `<span style="color:#00ff88">${attackerName || 'Unknown'}</span> \u26A1 actor ${targetActorId}`;
+  feed.appendChild(entry);
+  setTimeout(() => { try { feed.removeChild(entry); } catch {} }, 4000);
+  while (feed.children.length > 5) feed.removeChild(feed.firstChild);
+}
 
 function _loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -101,6 +112,11 @@ export async function renderPlayRoute() {
     const result = initGame(canvas);
     _engine = result.engine;
 
+    // Wire damage bridges
+    window._nbSendDamage = (targetId, dmg, name) => {
+      photonSendDamage(targetId, dmg, name);
+    };
+
     // Request pointer lock immediately — the Play button click is
     // the required user gesture, so this fires without needing
     // a second click on the canvas
@@ -170,6 +186,14 @@ export async function renderPlayRoute() {
           removeRemotePlayer(id);
         }
       },
+      onPlayerDamage: (targetId, damage, attackerName) => {
+        if (targetId === window._nbMyActorId) {
+          if (window._nbApplyPlayerDamage) window._nbApplyPlayerDamage(damage);
+        } else {
+          damageRemotePlayer(targetId, damage);
+        }
+        _addKillFeedEntry(attackerName, targetId);
+      },
     });
   } catch (err) {
     console.error('[play] failed to init:', err);
@@ -192,5 +216,8 @@ export function destroyPlayRoute() {
   window._nbCloseExitModal = null;
   window._nbHathoraConnected = null;
   window._nbHathoraSendMove = null;
+  window._nbSendDamage = null;
+  window._nbOnPlayerDamaged = null;
+  window._nbPhotonSendDamage = null;
   try { document.exitPointerLock(); } catch {}
 }
