@@ -30,13 +30,40 @@ function _createRemotePlayerMesh(id,hex,username){
   const ring=B.MeshBuilder.CreateTorus('rg_'+id,{diameter:0.9,thickness:0.06,tessellation:24},_scene);
   ring.parent=root;ring.position.y=0.05;ring.rotation.x=Math.PI/2;
   const rm=new B.StandardMaterial('rgm_'+id,_scene);rm.emissiveColor=new B.Color3(r,g,b);rm.disableLighting=true;ring.material=rm;
-  const lp=B.MeshBuilder.CreatePlane('rl_'+id,{width:2.2,height:0.5},_scene);
-  lp.parent=root;lp.position.y=2.35;lp.billboardMode=B.Mesh.BILLBOARDMODE_ALL;
-  const lt=new B.DynamicTexture('rlt_'+id,{width:256,height:64},_scene);
-  lt.drawText(username,null,46,'bold 26px Outfit,Arial','#'+hex,'transparent',true);
+  // ── Pill label ──
+  const LABEL_W=300,LABEL_H=72;
+  const labelPlane=B.MeshBuilder.CreatePlane('rl_'+id,{width:2.6,height:0.62},_scene);
+  labelPlane.parent=root;labelPlane.position.y=2.5;labelPlane.billboardMode=B.Mesh.BILLBOARDMODE_ALL;
+  const lt=new B.DynamicTexture('rlt_'+id,{width:LABEL_W,height:LABEL_H},_scene);
+  const ctx=lt.getContext();
+  const borderColor='#'+hex;
+  const radius=LABEL_H/2;
+  ctx.clearRect(0,0,LABEL_W,LABEL_H);
+  ctx.beginPath();
+  ctx.moveTo(radius,0);
+  ctx.lineTo(LABEL_W-radius,0);
+  ctx.arcTo(LABEL_W,0,LABEL_W,LABEL_H,radius);
+  ctx.lineTo(LABEL_W,LABEL_H-radius);
+  ctx.arcTo(LABEL_W,LABEL_H,LABEL_W-radius,LABEL_H,radius);
+  ctx.lineTo(radius,LABEL_H);
+  ctx.arcTo(0,LABEL_H,0,LABEL_H-radius,radius);
+  ctx.lineTo(0,radius);
+  ctx.arcTo(0,0,radius,0,radius);
+  ctx.closePath();
+  ctx.fillStyle='rgba(8,8,14,0.82)';
+  ctx.fill();
+  ctx.strokeStyle=borderColor;
+  ctx.lineWidth=4;
+  ctx.stroke();
+  ctx.fillStyle='#ffffff';
+  ctx.font='bold 28px Outfit,Arial';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(username,LABEL_W/2,LABEL_H/2);
+  lt.update();
   const lm=new B.StandardMaterial('rlm_'+id,_scene);
-  lm.diffuseTexture=lt;lm.emissiveTexture=lt;lm.opacityTexture=lt;lm.backFaceCulling=false;lm.disableLighting=true;lp.material=lm;
-  return{root,body,ring,labelPlane:lp,labelTex:lt};
+  lm.diffuseTexture=lt;lm.emissiveTexture=lt;lm.opacityTexture=lt;lm.backFaceCulling=false;lm.disableLighting=true;labelPlane.material=lm;
+  return{root,body,ring,labelPlane,labelTex:lt};
 }
 
 export function addOrUpdateRemotePlayer(id,x,y,z,rotY,username,hex){
@@ -248,6 +275,9 @@ export function initGame(canvas){
   _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;
   _pointerLocked=false;
   canvas.addEventListener('click',()=>{if(!_pointerLocked)canvas.requestPointerLock();});
+  canvas.addEventListener('focus',()=>{if(!_pointerLocked)canvas.requestPointerLock();});
+  canvas.setAttribute('tabindex','0');
+  canvas.focus();
   document.addEventListener('pointerlockchange',()=>{
     _pointerLocked=document.pointerLockElement===canvas;
     const ch=document.getElementById('play-crosshair');if(ch)ch.style.opacity=_pointerLocked?'1':'0.35';

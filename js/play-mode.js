@@ -101,12 +101,22 @@ export async function renderPlayRoute() {
     const result = initGame(canvas);
     _engine = result.engine;
 
+    // Request pointer lock immediately — the Play button click is
+    // the required user gesture, so this fires without needing
+    // a second click on the canvas
+    setTimeout(() => {
+      const c = document.getElementById('play-canvas');
+      if (c && !document.pointerLockElement) {
+        c.requestPointerLock();
+      }
+    }, 100);
+
     // Identity HUD
     const identEl = document.getElementById('play-identity');
     if (identEl) {
       const name = State.profile?.displayName || 'player';
-      const hex = State.profile?.hexCode || '5aaa72';
-      identEl.innerHTML = `<span style="color:#${hex}">\u25a0</span> ${name}`;
+      const hex  = State.profile?.hexCode || '5aaa72';
+      identEl.innerHTML = `<span style="color:#${hex};font-size:18px;vertical-align:middle;margin-right:6px;">●</span><span style="vertical-align:middle">${name}</span>`;
     }
 
     // Hathora window bridges for photon-client.js dual-send
