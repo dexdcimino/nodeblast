@@ -18,7 +18,7 @@ export const SYSTEM_PROFILE = {
 export const GAME_REGISTRY = [
   {
     id: 'arena_1',
-    name: 'NodeBlast: Arena 1',
+    name: 'Arena 1',
     description: 'First-person shooter. Fast movement, 4 weapons, multiplayer.',
     badge: '🎮',
     color: '#00ff8c',

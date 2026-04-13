@@ -647,6 +647,7 @@ function _physicsTick() {
   const ml = Math.sqrt(mx*mx + mz*mz);
   if (ml > 0) { mx /= ml; mz /= ml; }
 
+  _sprinting = _keys['ShiftLeft'] || _keys['ShiftRight'] || false;
   const spd  = WALK_SPEED * (_sprinting ? SPRINT_MULT : 1);
   const ctrl = _onGround ? 1.0 : AIR_CONTROL;
 
@@ -666,7 +667,9 @@ function _physicsTick() {
   }
   if (!jumping) _jumpHeld = false;
 
-  _jpActive = jumping && _jumpsLeft === 0 && _jpFuel > 0 && !_onGround;
+  const jpFromGround = _onGround && _jumpHeld && _jumpsLeft < 2;
+  const jpInAir      = !_onGround && _jumpsLeft === 0;
+  _jpActive = jumping && _jpFuel > 0 && (jpFromGround || jpInAir);
 
   if (_jpActive) {
     if (_camera.position.y < JP_MAX_Y) {
@@ -680,7 +683,7 @@ function _physicsTick() {
   }
   playJetpack(_jpActive);
 
-  if (_onGround && _jpFuel < JP_MAX_FUEL) {
+  if ((_onGround || !_jpActive) && _jpFuel < JP_MAX_FUEL) {
     _jpFuel = Math.min(JP_MAX_FUEL, _jpFuel + JP_RECHARGE * _delta);
   }
 
