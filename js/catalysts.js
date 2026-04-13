@@ -30,6 +30,7 @@ import { toast, showModal, renderUsername, escapeHtml } from './ui-events.js';
 import { navigate, buildUserSlug } from './router.js';
 import { searchUsers } from './users.js';
 import { openDM } from './friends.js';
+import { getLiveGames } from './game-registry.js';
 
 const db = getFirestore(app);
 
@@ -552,6 +553,7 @@ export async function createCatalyst(data, file) {
     status: STATUSES.includes(data.status) ? data.status : DEFAULT_STATUS,
     type: CATALYST_TYPES.includes(data.type) ? data.type : DEFAULT_TYPE,
     internalSubtype: INTERNAL_SUBTYPES.includes(data.internalSubtype) ? data.internalSubtype : 'scene',
+    gameId: typeof data.gameId === 'string' ? data.gameId : '',
     thumbURL,
     logoURL: '',
     accentColor: data.accentColor || '#5AAA72',
@@ -595,6 +597,7 @@ export async function updateCatalyst(id, data, file) {
     status: STATUSES.includes(data.status) ? data.status : DEFAULT_STATUS,
     type: CATALYST_TYPES.includes(data.type) ? data.type : DEFAULT_TYPE,
     internalSubtype: INTERNAL_SUBTYPES.includes(data.internalSubtype) ? data.internalSubtype : 'scene',
+    gameId: typeof data.gameId === 'string' ? data.gameId : '',
     accentColor: data.accentColor || '#5AAA72',
     // Refresh the owner-denormalized fields in case the editor changed
     // their profile between catalyst creation and this edit.
@@ -765,6 +768,7 @@ function _applyStatus(status) {
 // (on-site workspace). When internal, we hide the URL field because
 // there's nothing to link — the catalyst's own page is its content.
 let _internalSubtype = 'scene';
+let _gameId = '';
 
 function _applyType(type) {
   _type = CATALYST_TYPES.includes(type) ? type : DEFAULT_TYPE;
@@ -779,11 +783,35 @@ function _applyType(type) {
   if (subtypePick) subtypePick.style.display = _type === 'internal' ? '' : 'none';
 }
 
-function _applyInternalSubtype(sub) {
+function _applyInternalSubtype(sub, gameId) {
   _internalSubtype = INTERNAL_SUBTYPES.includes(sub) ? sub : 'scene';
+  _gameId = gameId || '';
   document.querySelectorAll('#cat-internal-subtype-pick .cat-subtype-btn').forEach((b) => {
     b.classList.toggle('selected', b.dataset.sub === _internalSubtype);
   });
+  const gamePick = document.getElementById('cat-game-pick');
+  const gameCards = document.getElementById('cat-game-cards');
+  if (gamePick) gamePick.style.display = _internalSubtype === 'game' ? '' : 'none';
+  if (_internalSubtype === 'game' && gameCards) {
+    const games = getLiveGames();
+    gameCards.innerHTML = games.map(g => `
+      <div class="cat-game-card ${_gameId === g.id ? 'selected' : ''}" data-game-id="${g.id}">
+        <div class="cat-game-card-badge">${g.badge}</div>
+        <div class="cat-game-card-info">
+          <div class="cat-game-card-name" style="color:${g.color}">${g.name}</div>
+          <div class="cat-game-card-desc">${g.description}</div>
+        </div>
+        ${g.status === 'beta' ? '<span class="cat-game-badge-beta">BETA</span>' : ''}
+      </div>
+    `).join('');
+    gameCards.querySelectorAll('.cat-game-card').forEach(el => {
+      el.addEventListener('click', () => {
+        _gameId = el.dataset.gameId;
+        gameCards.querySelectorAll('.cat-game-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+      });
+    });
+  }
 }
 
 function _updateAccentBtn() {
@@ -1070,7 +1098,7 @@ export function openCatalystModal(existing = null) {
   document.getElementById('cat-modal-title').textContent = existing ? 'Edit Catalyst' : 'New Catalyst';
   _applyStatus(existing?.status || DEFAULT_STATUS);
   _applyType(existing?.type || DEFAULT_TYPE);
-  _applyInternalSubtype(existing?.internalSubtype || 'scene');
+  _applyInternalSubtype(existing?.internalSubtype || 'scene', existing?.gameId || '');
   document.getElementById('cat-title').value = existing?.title || '';
   document.getElementById('cat-url').value = existing?.url || '';
   document.getElementById('cat-desc').value = existing?.description || '';
@@ -1211,9 +1239,9 @@ export function initCatalystModal(onSaved) {
   document.querySelectorAll('#cat-type-pick .cat-type-btn').forEach((b) => {
     b.addEventListener('click', () => _applyType(b.dataset.type));
   });
-  // MD04: internal subtype picker (scene / game / sim)
+  // DS-03: internal subtype picker (scene / game)
   document.querySelectorAll('#cat-internal-subtype-pick .cat-subtype-btn').forEach((b) => {
-    b.addEventListener('click', () => _applyInternalSubtype(b.dataset.sub));
+    b.addEventListener('click', () => _applyInternalSubtype(b.dataset.sub, _gameId));
   });
 
   // MD28: solo / co-dev toggle buttons. Clicking solo-dev while
@@ -1403,10 +1431,14 @@ export function initCatalystModal(onSaved) {
     const devCountFloor = 1 + _editingCollabs.length;
     const devCount = devMode === 'co' ? Math.max(devCountRaw, devCountFloor) : 1;
 
+    // DS-03: game subtype requires a game selection
+    if (_type === 'internal' && _internalSubtype === 'game' && !_gameId) {
+      toast('Select a game for this catalyst');
+      return;
+    }
+
     const data = {
       title,
-      // Internal catalysts don't carry an external URL — always store
-      // empty string so stale UI state can't leak into the doc.
       url: _type === 'internal' ? '' : url,
       description: document.getElementById('cat-desc').value.trim(),
       category: _getPill('cat-category-pills') || 'sites',
@@ -1414,6 +1446,7 @@ export function initCatalystModal(onSaved) {
       status: _status,
       type: _type,
       internalSubtype: _internalSubtype,
+      gameId: _type === 'internal' && _internalSubtype === 'game' ? _gameId : '',
       accentColor: _accentColor,
       collaborators: _editingCollabs.slice(),
       isLocked,

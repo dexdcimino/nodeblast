@@ -1363,6 +1363,17 @@ body.cat-modal-open{overflow:hidden;}
 .dot-sim-btn-icon{background:transparent;border:none;color:#888;cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;transition:color .15s,background .15s;}
 .dot-sim-btn-icon:hover{color:#fff;background:rgba(255,255,255,0.07);}
 
+/* DS-03: game picker cards in edit catalyst modal */
+.cat-game-cards{display:flex;flex-direction:column;gap:8px;}
+.cat-game-card{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:border-color .15s,background .15s;background:rgba(255,255,255,0.02);position:relative;}
+.cat-game-card:hover{border-color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);}
+.cat-game-card.selected{border-color:#00ff8c;background:rgba(0,255,140,0.05);}
+.cat-game-card-badge{font-size:20px;line-height:1;flex-shrink:0;}
+.cat-game-card-info{flex:1;min-width:0;}
+.cat-game-card-name{font-size:12px;font-weight:600;margin-bottom:2px;}
+.cat-game-card-desc{font-size:11px;color:#666;line-height:1.4;}
+.cat-game-badge-beta{position:absolute;top:6px;right:8px;font-size:9px;font-weight:700;letter-spacing:0.08em;color:#a78bfa;border:1px solid #a78bfa;border-radius:4px;padding:1px 5px;}
+
 #not-found{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:var(--bg);z-index:80;}
 
 /* ══════════════════════════════════════

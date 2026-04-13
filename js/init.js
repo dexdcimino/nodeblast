@@ -47,6 +47,8 @@ import { initNotifications, initHelpPanel } from './notifications.js';
 import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest } from './friends.js';
 import { renderSocialIconsHTML } from './social.js';
 import { renderPlayRoute, destroyPlayRoute } from './play-mode.js';
+import { getGame } from './game-registry.js';
+import { openDotSim } from './dot-sim-modal.js';
 import {
   pinCatalyst,
   unpinCatalyst,
@@ -388,15 +390,15 @@ function handleTileClick(cat) {
     return;
   }
 
-  // MD12: internal catalysts navigate to their full-page view via
-  // navigate() so renderRoute runs and the internal-catalyst-view
-  // container takes over. External catalysts keep the existing
-  // history.pushState + openCatalystDetail modal flow.
-  // MD04: game-subtype internal catalysts go straight to /play.
+  // MD12: internal catalysts navigate to their full-page view.
+  // DS-03: game-subtype catalysts look up the GAME_REGISTRY to
+  // decide whether to navigate (route) or open a modal overlay.
   if (cat.type === 'internal' && slug) {
-    if (cat.internalSubtype === 'game') {
-      navigate('/play');
-      return;
+    if (cat.internalSubtype === 'game' && cat.gameId) {
+      const gameDef = getGame(cat.gameId);
+      if (!gameDef) { toast('Game not found'); return; }
+      if (gameDef.launchMode === 'route') { navigate(gameDef.route); return; }
+      if (gameDef.launchMode === 'modal') { openDotSim(cat.title || gameDef.name); return; }
     }
     const userPart = buildUserSlug(ownerName, ownerHex);
     navigate(`/${userPart}/${encodeURIComponent(slug)}`);

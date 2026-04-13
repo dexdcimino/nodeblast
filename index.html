@@ -709,14 +709,18 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
             <span>This catalyst will have its own page on nodeblast.</span>
           </div>
-          <!-- MD04: internal subtype picker (hidden when type != internal) -->
+          <!-- DS-03: internal subtype picker (scene / game) -->
           <div class="cat-field" id="cat-internal-subtype-pick" style="display:none">
             <label class="cat-label">Internal Type</label>
             <div class="cat-pills">
               <button class="cat-pill cat-subtype-btn selected" data-sub="scene">Scene</button>
               <button class="cat-pill cat-subtype-btn" data-sub="game">Game</button>
-              <button class="cat-pill cat-subtype-btn" data-sub="sim">Sim</button>
             </div>
+          </div>
+          <!-- DS-03: game picker — shown when subtype = game -->
+          <div class="cat-field" id="cat-game-pick" style="display:none">
+            <label class="cat-label">Select Game</label>
+            <div class="cat-game-cards" id="cat-game-cards"></div>
           </div>
 
           <div class="cat-field">
