@@ -1802,7 +1802,21 @@ function initLogoPicker() {
   // darkening is recomputed against the current _logoTop/_logoBot.
   // applyFavicon uses the raw (unadjusted) colors intentionally — a
   // darkened favicon would look worse on dark OS chrome.
-  onThemeChange(() => paintLogo(_logoTop, _logoBot));
+  // On theme change: repaint + swap neutral color if one side is
+  // the old theme's neutral (white↔near-black).
+  onThemeChange(() => {
+    const oldNeutral = document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#1a1a1a';
+    const newNeutral = document.documentElement.dataset.theme === 'light' ? '#1a1a1a' : '#ffffff';
+    let changed = false;
+    if (_logoTop.toLowerCase() === oldNeutral.toLowerCase()) { _logoTop = newNeutral; changed = true; }
+    if (_logoBot.toLowerCase() === oldNeutral.toLowerCase()) { _logoBot = newNeutral; changed = true; }
+    paintLogo(_logoTop, _logoBot);
+    if (changed) {
+      try { localStorage.setItem(LOGO_TOP_KEY, _logoTop); localStorage.setItem(LOGO_BOT_KEY, _logoBot); } catch {}
+      if (State.user) saveLogoColors({ logoTopColor: _logoTop, logoBotColor: _logoBot });
+      markSelectedSwatches();
+    }
+  });
 
   let hideTimer = null;
   const show = () => {
@@ -1818,6 +1832,12 @@ function initLogoPicker() {
   picker.addEventListener('mouseenter', show);
   picker.addEventListener('mouseleave', hide);
 
+  // Neutral color used when both halves would be identical.
+  // Dark mode = white, light mode = near-black.
+  function _neutralColor() {
+    return document.documentElement.dataset.theme === 'light' ? '#1a1a1a' : '#ffffff';
+  }
+
   picker.addEventListener('click', (e) => {
     const btn = e.target.closest('.logo-swatch');
     if (!btn) return;
@@ -1825,13 +1845,19 @@ function initLogoPicker() {
     const col = btn.closest('.logo-picker-col')?.dataset.col;
     const newColor = btn.dataset.color;
     if (!col || !newColor) return;
-    if (col === 'top') setLogoColors(newColor, _logoBot);
-    else               setLogoColors(_logoTop, newColor);
-    if (State.user) {
-      saveLogoColors(col === 'top'
-        ? { logoTopColor: newColor }
-        : { logoBotColor: newColor });
+
+    let nextTop = _logoTop, nextBot = _logoBot;
+    if (col === 'top') {
+      nextTop = newColor;
+      // If picking the same color the other side already has, push
+      // the OTHER side to neutral so both halves are never identical.
+      if (nextTop.toLowerCase() === nextBot.toLowerCase()) nextBot = _neutralColor();
+    } else {
+      nextBot = newColor;
+      if (nextBot.toLowerCase() === nextTop.toLowerCase()) nextTop = _neutralColor();
     }
+    setLogoColors(nextTop, nextBot);
+    if (State.user) saveLogoColors({ logoTopColor: nextTop, logoBotColor: nextBot });
   });
 }
 
