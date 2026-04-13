@@ -2282,14 +2282,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   console.log('[BOOT] 20 - boot complete');
+  // Hide loading screen — boot succeeded
+  const ls = document.getElementById('loading-screen');
+  if (ls) {
+    ls.classList.add('hidden');
+    ls.addEventListener('transitionend', () => { ls.style.display = 'none'; }, { once: true });
+  }
   } catch (err) {
-    // EMERGENCY DEBUG: surface any init-time crash both to the console
-    // and directly in the page so a user with devtools closed still
-    // sees something useful. Stack trace is rendered as plain text so
-    // it survives any styling weirdness the thrown code may have left.
     console.error('[BOOT] Fatal error during initialization:', err);
-    try {
-      document.body.innerHTML = '<pre style="color:#f66;background:#111;padding:2rem;font:13px/1.5 monospace;white-space:pre-wrap;word-break:break-word;">[BOOT] Fatal error during initialization:\n\n' + ((err && err.stack) || String(err)) + '</pre>';
-    } catch {}
+    // Keep loading screen visible + show error message after 5s
+    const le = document.getElementById('loading-error');
+    if (le) setTimeout(() => { le.style.display = ''; }, 5000);
   }
 });
