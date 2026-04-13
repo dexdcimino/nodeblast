@@ -6,7 +6,7 @@
 
 const SERVER_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
   ? 'ws://localhost:7777'
-  : 'wss://app-09e8d72d-3941-4c6d-a47d-b74ab05cc08b.hathora.run';
+  : 'wss://d3qpbz.edge.hathora.dev:14188';
 
 let _ws = null;
 let _connected = false;

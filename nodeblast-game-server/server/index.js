@@ -138,3 +138,10 @@ wss.on('connection', (ws) => {
     console.warn(`[ws] error ${socketId}:`, err.message);
   });
 });
+
+const http = require('http');
+const healthServer = http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('ok');
+});
+healthServer.listen(process.env.PORT_HTTP || 8080);
