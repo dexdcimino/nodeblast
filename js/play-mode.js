@@ -127,6 +127,10 @@ export async function renderPlayRoute() {
     initPhoton({
       onConnected: (myId) => {
         console.log('[play] photon connected, actor:', myId);
+        // Assign spawn based on actor number
+        const spawnZ = (myId % 2 === 1) ? -48 : 48;
+        const spawnX = (Math.random() - 0.5) * 6;
+        if (window._nbSetSpawn) window._nbSetSpawn(spawnX, spawnZ);
         // Layer Hathora on top of Photon for authoritative state
         const name = State.profile?.displayName || 'player';
         const hex = State.profile?.hexCode || '5aaa72';

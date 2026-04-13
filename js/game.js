@@ -54,6 +54,7 @@ let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandl
 let _mouseHeld=false;
 let _lastShot=0;const SHOT_COOLDOWN=220;const _projectiles=[];const _gooSplats=[];
 const _remotePlayers=new Map();
+const _pendingRemotePlayers=new Map();
 let _playerHp=100;
 let _playerMaxHp=100;
 const _colorNodes=[];
@@ -107,10 +108,15 @@ function _createRemotePlayerMesh(id,hex,username){
 }
 
 export function addOrUpdateRemotePlayer(id,x,y,z,rotY,username,hex){
+  if(!_scene||!_camera){_pendingRemotePlayers.set(id,{x,y,z,rotY,username,hex});return;}
   let p=_remotePlayers.get(id);
-  if(!p){const m=_createRemotePlayerMesh(id,(hex||'5aaa72').replace('#',''),username||'player');
-    p={...m,targetX:x,targetY:y-GROUND_Y,targetZ:z,renderX:x,renderY:y-GROUND_Y,renderZ:z,targetRotY:rotY,renderRotY:rotY,lastUpdate:Date.now()};
+  if(!p){
+    const safeHex=(hex||'5aaa72').replace('#','');
+    const safeName=username||'player';
+    const meshes=_createRemotePlayerMesh(id,safeHex,safeName);
+    p={...meshes,targetX:x,targetY:y-GROUND_Y,targetZ:z,renderX:x,renderY:y-GROUND_Y,renderZ:z,targetRotY:rotY,renderRotY:rotY,lastUpdate:Date.now()};
     _remotePlayers.set(id,p);
+    console.log('[game] remote player created:',id,username);
   }else{p.targetX=x;p.targetY=y-GROUND_Y;p.targetZ=z;p.targetRotY=rotY;p.lastUpdate=Date.now();}
 }
 export function getRemotePlayerIds(){return Array.from(_remotePlayers.keys());}
@@ -130,19 +136,35 @@ function _resolveCollision(nx,nz,cy){
   return{x:rx,z:rz};
 }
 
-function _spawnGooSplat(pos){
-  const B=window.BABYLON;const n=8+Math.floor(Math.random()*6);
+function _spawnGooSplat(pos,normal){
+  const B=window.BABYLON;
+  if(!normal)normal=new B.Vector3(0,1,0);
+  normal=normal.normalize();
+  const up=B.Vector3.Up();
+  const axis=B.Vector3.Cross(up,normal);
+  const axisLen=axis.length();
+  const n=8+Math.floor(Math.random()*6);
   for(let i=0;i<n;i++){
     const angle=Math.random()*Math.PI*2,radius=0.15+Math.random()*0.55,size=0.08+Math.random()*0.22;
     const blob=B.MeshBuilder.CreateSphere('goo_'+Date.now()+'_'+i,{diameter:size,segments:4},_scene);
     blob.position.set(pos.x+Math.cos(angle)*radius,pos.y+0.02+Math.random()*0.06,pos.z+Math.sin(angle)*radius);
     blob.scaling.y=0.18+Math.random()*0.12;
+    if(axisLen>0.001){
+      blob.rotationQuaternion=B.Quaternion.RotationAxis(axis.normalize(),Math.acos(B.Vector3.Dot(up,normal)));
+    }else if(normal.y<0){
+      blob.rotationQuaternion=B.Quaternion.RotationAxis(B.Vector3.Right(),Math.PI);
+    }
     const mat=new B.StandardMaterial('gm_'+i+Date.now(),_scene);const br=0.7+Math.random()*0.3;
     mat.diffuseColor=new B.Color3(0,br*0.6,0);mat.emissiveColor=new B.Color3(0,br,br*0.3);blob.material=mat;
     _gooSplats.push(blob);
   }
   const disc=B.MeshBuilder.CreateCylinder('gd_'+Date.now(),{diameter:0.5+Math.random()*0.3,height:0.04,tessellation:10},_scene);
   disc.position.set(pos.x,pos.y+0.02,pos.z);
+  if(axisLen>0.001){
+    disc.rotationQuaternion=B.Quaternion.RotationAxis(axis.normalize(),Math.acos(B.Vector3.Dot(up,normal)));
+  }else if(normal.y<0){
+    disc.rotationQuaternion=B.Quaternion.RotationAxis(B.Vector3.Right(),Math.PI);
+  }
   const dm=new B.StandardMaterial('gdm_'+Date.now(),_scene);dm.diffuseColor=new B.Color3(0,0.5,0.1);dm.emissiveColor=new B.Color3(0,0.8,0.2);disc.material=dm;
   _gooSplats.push(disc);
   const flash=new B.PointLight('gf_'+Date.now(),pos.clone(),_scene);flash.diffuse=new B.Color3(0.1,1.0,0.3);flash.intensity=2.5;flash.range=8;
@@ -254,19 +276,31 @@ function _updateProjectiles(){
     const prev=p.mesh.position.clone();
     p.mesh.position.addInPlace(p.vel);p.vel.y-=0.006;
     const px=p.mesh.position.x,py=p.mesh.position.y,pz=p.mesh.position.z;
-    let hit=false,hitPos=null;
-    // Swept detection — check along travel path in 0.12-unit steps
+    let hit=false,hitPos=null,hitBlock=null;
+    let hitNormal=new B.Vector3(0,1,0);
     const travel=p.mesh.position.subtract(prev);const tLen=travel.length();
     const steps=Math.max(1,Math.ceil(tLen/0.12));const step=travel.scale(1/steps);
     outer:for(let s=0;s<=steps;s++){
       const sp=prev.add(step.scale(s));const sx=sp.x,sy=sp.y,sz=sp.z;
-      for(const b of _colBlocks){const m=0.1;if(sx>b.minX-m&&sx<b.maxX+m&&sz>b.minZ-m&&sz<b.maxZ+m&&sy<b.maxY+m&&sy>-0.5){hit=true;hitPos=sp.clone();break outer;}}
+      for(const b of _colBlocks){const m=0.1;if(sx>b.minX-m&&sx<b.maxX+m&&sz>b.minZ-m&&sz<b.maxZ+m&&sy<b.maxY+m&&sy>-0.5){hit=true;hitPos=sp.clone();hitBlock=b;break outer;}}
       const enemyIdx=checkEnemyHit(sp);
       if(enemyIdx>=0){damageEnemyNode(enemyIdx,20);hit=true;hitPos=sp.clone();break outer;}
       if(sy<0.08){hit=true;hitPos=new B.Vector3(sx,0,sz);break;}
     }
+    if(hit&&hitPos&&hitBlock){
+      const cx=hitPos.x,cz=hitPos.z,cy=hitPos.y;
+      const dists=[
+        {n:new B.Vector3(1,0,0),d:Math.abs(cx-hitBlock.maxX)},
+        {n:new B.Vector3(-1,0,0),d:Math.abs(cx-hitBlock.minX)},
+        {n:new B.Vector3(0,0,1),d:Math.abs(cz-hitBlock.maxZ)},
+        {n:new B.Vector3(0,0,-1),d:Math.abs(cz-hitBlock.minZ)},
+        {n:new B.Vector3(0,1,0),d:Math.abs(cy-hitBlock.maxY)},
+      ];
+      hitNormal=dists.reduce((a,c)=>c.d<a.d?c:a).n;
+    }
+    if(py<0.12)hitNormal=new B.Vector3(0,1,0);
     if(!hit&&(Math.abs(px)>65||Math.abs(pz)>65)){try{p.mesh.dispose();}catch{}dead.push(i);continue;}
-    if(hit||p.life<=0){if(hit&&hitPos)_spawnGooSplat(hitPos);try{p.mesh.dispose();}catch{}dead.push(i);}
+    if(hit||p.life<=0){if(hit&&hitPos)_spawnGooSplat(hitPos,hitNormal);try{p.mesh.dispose();}catch{}dead.push(i);}
   }
   for(let i=dead.length-1;i>=0;i--)_projectiles.splice(dead[i],1);
 }
@@ -322,6 +356,14 @@ function _updateHealthHUD() {
 function _physicsTick() {
   if (!_camera || !_scene) return;
   const B = window.BABYLON;
+
+  // Flush pending remote players now that scene is ready
+  if (_pendingRemotePlayers.size > 0) {
+    _pendingRemotePlayers.forEach((data, id) => {
+      addOrUpdateRemotePlayer(id, data.x, data.y, data.z, data.rotY, data.username, data.hex);
+    });
+    _pendingRemotePlayers.clear();
+  }
 
   const forward = _keys['KeyW']    || _keys['ArrowUp'];
   const back    = _keys['KeyS']    || _keys['ArrowDown'];
@@ -659,6 +701,7 @@ export function initGame(canvas){
   _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-48),_scene);_camera.setTarget(B.Vector3.Zero());
   _camera.attachControl(canvas,true);_camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
   _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;
+  window._nbSetSpawn=(x,z)=>{if(_camera){_camera.position.x=x;_camera.position.z=z;_camera.position.y=GROUND_Y;_velX=0;_velZ=0;_velY=0;}};
   _pointerLocked=false;
   canvas.addEventListener('click',()=>{if(!_pointerLocked)canvas.requestPointerLock();});
   canvas.addEventListener('focus',()=>{if(!_pointerLocked)canvas.requestPointerLock();});
@@ -722,6 +765,7 @@ export function destroyGame(engine){
   _projectiles.forEach(p=>{try{p.mesh.dispose();}catch{}});_projectiles.length=0;
   _gooSplats.forEach(m=>{try{m.dispose();}catch{}});_gooSplats.length=0;
   _remotePlayers.forEach((_,id)=>removeRemotePlayer(id));_remotePlayers.clear();
+  _pendingRemotePlayers.clear();
   if(_gunRoot){try{_gunRoot.getChildMeshes().forEach(m=>m.dispose());_gunRoot.dispose();}catch{}_gunRoot=null;}
   if(_jetpackPS){try{_jetpackPS.dispose();}catch{}_jetpackPS=null;}
   if(_jetpackNode){try{_jetpackNode.dispose();}catch{}_jetpackNode=null;}
@@ -736,6 +780,7 @@ export function destroyGame(engine){
   _colorNodes.length=0;
   window._nbEnemyPositions=null;
   window._nbDamageEnemy=null;
+  window._nbSetSpawn=null;
   _playerHp=100;
   _muzzleOffset=null;
   window._nbGetPlayerState=null;

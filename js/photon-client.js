@@ -67,8 +67,9 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
   };
 
   _client.onJoinRoomFailed = (code, msg) => {
-    console.log('[photon] join failed, creating room:', code, msg);
-    _client.createRoom('nodeblast-main', { maxPlayers: MAX_PLAYERS_PER_ROOM });
+    console.log('[photon] join failed, creating new room:', code, msg);
+    const roomId = 'nodeblast-' + Math.floor(Date.now() / 30000);
+    _client.createRoom(roomId, { maxPlayers: MAX_PLAYERS_PER_ROOM });
   };
 
   _client.onActorLeave = (actor) => {
@@ -81,14 +82,19 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected }) {
   };
 
   _client.onEvent = (code, content, actorNr) => {
-    console.log('[photon] event received:', code, 'from actor:', actorNr, 'myId:', _myId);
-    if (code === 1 && actorNr !== _myId && _onPlayerUpdate) {
-      _onPlayerUpdate(
-        actorNr,
-        content.x, content.y, content.z,
-        content.rotY, content.pitch,
-        content.username, content.hex,
-      );
+    if (code === 1) {
+      console.log('[photon] pos update from actor:', actorNr,
+        'my id:', _myId,
+        'x:', content?.x?.toFixed(2),
+        'z:', content?.z?.toFixed(2));
+      if (actorNr !== _myId && _onPlayerUpdate) {
+        _onPlayerUpdate(
+          actorNr,
+          content.x, content.y, content.z,
+          content.rotY, content.pitch,
+          content.username, content.hex,
+        );
+      }
     }
   };
 
