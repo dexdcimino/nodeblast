@@ -4,11 +4,13 @@
 // ══════════════════════════════════════
 
 import State from './state.js';
-import { getActiveGun, getActiveSlot, setActiveSlot,
+import { getActiveGun, getActiveSlot, setActiveSlot, setProjectileColor,
          getProjectileColor, initGunHUD, resetGuns, GUNS } from './guns.js';
 import { initPlasma, updatePlasma, destroyPlasma } from './plasma.js';
 import { initEnemyNodes, updateEnemyNodes, damageEnemyNode,
          checkEnemyHit, destroyEnemyNodes } from './enemy-nodes.js';
+import { initNodeBlaster, fireNodeBlaster, updateNodeBlaster,
+         destroyNodeBlaster } from './node-blaster.js';
 
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
 let _playerUsername='player',_playerHex='5aaa72';
@@ -54,6 +56,7 @@ let _lastShot=0;const SHOT_COOLDOWN=220;const _projectiles=[];const _gooSplats=[
 const _remotePlayers=new Map();
 let _playerHp=100;
 let _playerMaxHp=100;
+const _colorNodes=[];
 
 export function refreshPlayerIdentity(){_playerUsername=State.profile?.displayName||State.user?.displayName||'player';_playerHex=State.profile?.hexCode||'5aaa72';}
 export function getPlayerState(){if(!_camera)return null;return{x:_camera.position.x,y:_camera.position.y,z:_camera.position.z,rotY:_camera.rotation.y,pitch:_camera.rotation.x,username:_playerUsername,hex:_playerHex};}
@@ -214,6 +217,14 @@ function _shoot(){
   const now=Date.now();
   const gun=getActiveGun();
   if(now-_lastShot<gun.cooldown)return;_lastShot=now;
+  if(gun.id==='nodeblaster'){
+    const B=window.BABYLON;
+    const pc=getProjectileColor();
+    const dir=_camera.getDirection(B.Vector3.Forward()).normalize();
+    const muz=_muzzleOffset?_muzzleOffset.clone():_camera.position.clone();
+    fireNodeBlaster(muz,dir,pc);
+    return;
+  }
   const B=window.BABYLON,dir=_camera.getDirection(B.Vector3.Forward()).normalize();
   const isMG=gun.id==='machinegun';
   if(isMG){
@@ -427,6 +438,12 @@ function _physicsTick() {
     }
   }
 
+  // Node blaster update
+  updateNodeBlaster(
+    () => window._nbEnemyPositions ? window._nbEnemyPositions() : [],
+    (idx, dmg) => damageEnemyNode(idx, dmg),
+  );
+
   // ── Gun pickup check ──
   _nearPickup = null;
   for (const pu of _gunPickups) {
@@ -461,6 +478,25 @@ function _physicsTick() {
     pu.orb.position.y = 1.1 + Math.sin(pt + i * 1.2) * 0.12;
     pu.orb.rotation.y = pt * 0.8;
   });
+
+  // Color node pickup
+  const t2 = Date.now() * 0.0015;
+  for (const cn of _colorNodes) {
+    cn.sphere.position.y = cn.sphere._floatBase + Math.sin(t2 + cn.sphere._floatPhase) * 0.15;
+    cn.sphere.rotation.y = t2 * 0.5;
+    const dx = _camera.position.x - cn.sphere.position.x;
+    const dz = _camera.position.z - cn.sphere.position.z;
+    if (Math.sqrt(dx*dx + dz*dz) < 1.5) {
+      const c = cn.color;
+      setProjectileColor(c.r, c.g, c.b);
+      if (cn.sphere.material) {
+        cn.sphere.material.emissiveColor = new B.Color3(1, 1, 1);
+        setTimeout(() => {
+          if (cn.sphere.material) cn.sphere.material.emissiveColor = new B.Color3(c.r, c.g, c.b);
+        }, 150);
+      }
+    }
+  }
 
   // 1-4 key switching
   for (let k = 1; k <= 4; k++) {
@@ -553,12 +589,62 @@ function _buildArena(){
     const pad=B.MeshBuilder.CreateGround('sp_'+i,{width:4,height:4},_scene);pad.position.set(s.x,0.02,s.z);pad.material=MGD;
   });
 
-  const W=60;
-  [{x:0,z:W,w:W*2,d:1},{x:0,z:-W,w:W*2,d:1},{x:W,z:0,w:1,d:W*2},{x:-W,z:0,w:1,d:W*2}].forEach((w,i)=>{
-    const wall=B.MeshBuilder.CreateBox('bd_'+i,{width:w.w,height:12,depth:w.d},_scene);wall.position.set(w.x,6,w.z);wall.isVisible=false;_addCol(w.x,w.z,w.w,w.d,12);
+  const W=60,FH=3.5,FP=8,FW=W*2;
+  const fenceMat=new B.StandardMaterial('fence_mat',_scene);
+  fenceMat.diffuseColor=new B.Color3(0.08,0.10,0.08);fenceMat.emissiveColor=new B.Color3(0.0,0.18,0.06);
+  fenceMat.specularColor=new B.Color3(0.1,0.3,0.1);fenceMat.alpha=0.85;
+  const fenceGlowMat=new B.StandardMaterial('fence_glow_mat',_scene);
+  fenceGlowMat.emissiveColor=new B.Color3(0.0,0.7,0.25);fenceGlowMat.disableLighting=true;
+  [{x:0,z:W,rotY:0},{x:0,z:-W,rotY:0},{x:W,z:0,rotY:Math.PI/2},{x:-W,z:0,rotY:Math.PI/2}].forEach((fd,fi)=>{
+    const fence=B.MeshBuilder.CreateBox('fence_'+fi,{width:FW,height:FH,depth:0.3},_scene);
+    fence.position.set(fd.x,FH/2,fd.z);fence.rotation.y=fd.rotY;fence.material=fenceMat;
+    _addCol(fd.x,fd.z,fd.rotY===0?FW:0.3,fd.rotY===0?0.3:FW,FH);
+    const topS=B.MeshBuilder.CreateBox('fence_top_'+fi,{width:FW,height:0.08,depth:0.35},_scene);
+    topS.position.set(fd.x,FH+0.04,fd.z);topS.rotation.y=fd.rotY;topS.material=fenceGlowMat;
+    const botS=B.MeshBuilder.CreateBox('fence_bot_'+fi,{width:FW,height:0.06,depth:0.35},_scene);
+    botS.position.set(fd.x,0.3,fd.z);botS.rotation.y=fd.rotY;botS.material=fenceGlowMat;
+    const postCount=Math.floor(FW/FP);
+    for(let p=0;p<=postCount;p++){
+      const offset=-FW/2+p*FP;
+      const post=B.MeshBuilder.CreateBox('fence_post_'+fi+'_'+p,{width:0.25,height:FH+0.5,depth:0.4},_scene);
+      if(fd.rotY===0)post.position.set(fd.x+offset,(FH+0.5)/2,fd.z);
+      else post.position.set(fd.x,(FH+0.5)/2,fd.z+offset);
+      post.rotation.y=fd.rotY;post.material=fenceMat;
+      const pip=B.MeshBuilder.CreateSphere('pip_'+fi+'_'+p,{diameter:0.22,segments:4},_scene);
+      pip.position.copyFrom(post.position);pip.position.y=FH+0.5;pip.material=fenceGlowMat;
+    }
+    for(let pl=0;pl<Math.floor(FW/24);pl++){
+      const offset=-FW/2+pl*24+12;
+      const ptPos=fd.rotY===0?new B.Vector3(fd.x+offset,2,fd.z):new B.Vector3(fd.x,2,fd.z+offset);
+      const fpt=new B.PointLight('fence_pt_'+fi+'_'+pl,ptPos,_scene);
+      fpt.diffuse=new B.Color3(0.0,0.8,0.3);fpt.intensity=0.5;fpt.range=10;
+    }
   });
 
   const spot=new B.SpotLight('spot',new B.Vector3(0,30,0),new B.Vector3(0,-1,0),Math.PI/5,10,_scene);spot.intensity=0.55;spot.diffuse=new B.Color3(0.85,0.95,1.0);
+}
+
+function _buildColorNodes(){
+  const B=window.BABYLON;
+  const COLORS=[
+    {r:1.0,g:0.1,b:0.1,name:'red'},{r:1.0,g:0.5,b:0.0,name:'orange'},
+    {r:1.0,g:1.0,b:0.0,name:'yellow'},{r:0.1,g:1.0,b:0.2,name:'green'},
+    {r:0.0,g:1.0,b:1.0,name:'cyan'},{r:0.1,g:0.3,b:1.0,name:'blue'},
+    {r:0.7,g:0.1,b:1.0,name:'purple'},{r:1.0,g:1.0,b:1.0,name:'white'},
+  ];
+  [-50,50].forEach(sz=>{
+    COLORS.forEach((col,ci)=>{
+      const x=8+ci*2.2,z=sz;
+      const sphere=B.MeshBuilder.CreateSphere('color_node_'+col.name+sz,{diameter:0.5,segments:8},_scene);
+      sphere.position.set(x,1.2,z);
+      const mat=new B.StandardMaterial('cnm_'+col.name+sz,_scene);
+      mat.emissiveColor=new B.Color3(col.r,col.g,col.b);mat.disableLighting=true;sphere.material=mat;
+      const pt=new B.PointLight('cnl_'+col.name+sz,new B.Vector3(x,1.2,z),_scene);
+      pt.diffuse=new B.Color3(col.r,col.g,col.b);pt.intensity=0.6;pt.range=3.5;
+      sphere._floatBase=1.2;sphere._floatPhase=ci*0.8;sphere._color=col;
+      _colorNodes.push({sphere,pt,color:col});
+    });
+  });
 }
 
 export function initGame(canvas){
@@ -599,12 +685,16 @@ export function initGame(canvas){
   _buildGun();
   _buildJetpackFX();
   _buildGunPickups();
+  _buildColorNodes();
   initGunHUD();
   initPlasma(_scene, _camera, _colBlocks);
   initEnemyNodes(_scene, _camera, (damage) => {
     _playerHp = Math.max(0, _playerHp - damage);
     _updateHealthHUD();
   });
+  initNodeBlaster(_scene, _camera);
+  window._nbEnemyPositions = null; // set by enemy-nodes.js
+  window._nbDamageEnemy = (idx, dmg) => damageEnemyNode(idx, dmg);
   window._nbSetGunColor = (r, g, b) => {
     const orb = _scene?.getMeshByName('gun_orb');
     if (orb?.material) orb.material.emissiveColor = new B.Color3(r, g, b);
@@ -641,6 +731,11 @@ export function destroyGame(engine){
   resetGuns();
   destroyPlasma();
   destroyEnemyNodes();
+  destroyNodeBlaster();
+  _colorNodes.forEach(cn=>{try{cn.sphere.dispose();cn.pt.dispose();}catch{}});
+  _colorNodes.length=0;
+  window._nbEnemyPositions=null;
+  window._nbDamageEnemy=null;
   _playerHp=100;
   _muzzleOffset=null;
   window._nbGetPlayerState=null;

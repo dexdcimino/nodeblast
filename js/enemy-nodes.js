@@ -32,6 +32,11 @@ export function initEnemyNodes(scene, camera, onHitPlayer) {
   _camera      = camera;
   _onHitPlayer = onHitPlayer;
 
+  // Expose positions for node blaster seeking
+  window._nbEnemyPositions = () => _enemies
+    .filter(e => e.state !== 'dead')
+    .map(e => ({ index: e.index, pos: e.root.position.clone() }));
+
   for (let i = 0; i < ENEMY_COUNT; i++) {
     _spawnEnemy(i);
   }
