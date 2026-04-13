@@ -7,6 +7,8 @@ import State from './state.js';
 import { getActiveGun, getActiveSlot, setActiveSlot,
          getProjectileColor, initGunHUD, resetGuns, GUNS } from './guns.js';
 import { initPlasma, updatePlasma, destroyPlasma } from './plasma.js';
+import { initEnemyNodes, updateEnemyNodes, damageEnemyNode,
+         checkEnemyHit, destroyEnemyNodes } from './enemy-nodes.js';
 
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
 let _playerUsername='player',_playerHex='5aaa72';
@@ -50,6 +52,8 @@ let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandl
 let _mouseHeld=false;
 let _lastShot=0;const SHOT_COOLDOWN=220;const _projectiles=[];const _gooSplats=[];
 const _remotePlayers=new Map();
+let _playerHp=100;
+let _playerMaxHp=100;
 
 export function refreshPlayerIdentity(){_playerUsername=State.profile?.displayName||State.user?.displayName||'player';_playerHex=State.profile?.hexCode||'5aaa72';}
 export function getPlayerState(){if(!_camera)return null;return{x:_camera.position.x,y:_camera.position.y,z:_camera.position.z,rotY:_camera.rotation.y,pitch:_camera.rotation.x,username:_playerUsername,hex:_playerHex};}
@@ -246,6 +250,8 @@ function _updateProjectiles(){
     outer:for(let s=0;s<=steps;s++){
       const sp=prev.add(step.scale(s));const sx=sp.x,sy=sp.y,sz=sp.z;
       for(const b of _colBlocks){const m=0.1;if(sx>b.minX-m&&sx<b.maxX+m&&sz>b.minZ-m&&sz<b.maxZ+m&&sy<b.maxY+m&&sy>-0.5){hit=true;hitPos=sp.clone();break outer;}}
+      const enemyIdx=checkEnemyHit(sp);
+      if(enemyIdx>=0){damageEnemyNode(enemyIdx,20);hit=true;hitPos=sp.clone();break outer;}
       if(sy<0.08){hit=true;hitPos=new B.Vector3(sx,0,sz);break;}
     }
     if(!hit&&(Math.abs(px)>65||Math.abs(pz)>65)){try{p.mesh.dispose();}catch{}dead.push(i);continue;}
@@ -290,7 +296,17 @@ function _buildGunPickups() {
   });
 }
 
-function _updateEnemyNodes(){}
+function _updateHealthHUD() {
+  const bar = document.getElementById('play-health-bar');
+  const num = document.getElementById('play-health-num');
+  if (bar) {
+    const pct = (_playerHp / _playerMaxHp) * 100;
+    bar.style.width = pct + '%';
+    if (pct < 30) bar.classList.add('critical');
+    else          bar.classList.remove('critical');
+  }
+  if (num) num.textContent = Math.ceil(_playerHp);
+}
 
 function _physicsTick() {
   if (!_camera || !_scene) return;
@@ -477,7 +493,7 @@ function _physicsTick() {
     p.root.setEnabled(now - p.lastUpdate <= 5000);
   });
 
-  _updateEnemyNodes();
+  updateEnemyNodes();
 
   // Track previous key state for single-press detection
   Object.keys(_keys).forEach(k => { _prevKeys[k] = _keys[k]; });
@@ -585,6 +601,10 @@ export function initGame(canvas){
   _buildGunPickups();
   initGunHUD();
   initPlasma(_scene, _camera, _colBlocks);
+  initEnemyNodes(_scene, _camera, (damage) => {
+    _playerHp = Math.max(0, _playerHp - damage);
+    _updateHealthHUD();
+  });
   window._nbSetGunColor = (r, g, b) => {
     const orb = _scene?.getMeshByName('gun_orb');
     if (orb?.material) orb.material.emissiveColor = new B.Color3(r, g, b);
@@ -620,6 +640,8 @@ export function destroyGame(engine){
   window._nbSetGunColor=null;
   resetGuns();
   destroyPlasma();
+  destroyEnemyNodes();
+  _playerHp=100;
   _muzzleOffset=null;
   window._nbGetPlayerState=null;
   _velX=0;_velZ=0;_velY=0;_onGround=true;_sprinting=false;_jumpHeld=false;_jumpsLeft=2;_jpFuel=JP_MAX_FUEL;_jpActive=false;
