@@ -1273,6 +1273,17 @@ body.cat-modal-open{overflow:hidden;}
 #play-fuel-track{width:120px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);}
 #play-fuel-bar{height:100%;width:100%;background:linear-gradient(90deg,#00ff88,#00ffcc);border-radius:3px;transition:width 0.05s linear,background 0.2s;}
 #play-fuel-bar.low{background:linear-gradient(90deg,#ff4444,#ff8800);}
+/* ── Gun HUD ── */
+#play-gun-hud{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;pointer-events:none;}
+.gun-slot{width:72px;height:80px;background:rgba(0,0,0,0.65);border:2px solid rgba(255,255,255,0.12);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-family:'Outfit',sans-serif;backdrop-filter:blur(4px);transition:border-color 0.15s,background 0.15s;position:relative;}
+.gun-slot.active{border-color:rgba(100,255,160,0.8);background:rgba(0,40,20,0.75);box-shadow:0 0 12px rgba(0,255,120,0.25);}
+.gun-slot-key{position:absolute;top:5px;left:7px;font-size:10px;color:rgba(255,255,255,0.35);font-family:'JetBrains Mono',monospace;}
+.gun-slot-icon{font-size:22px;color:rgba(255,255,255,0.8);line-height:1;}
+.gun-slot.active .gun-slot-icon{color:#00ff88;}
+.gun-slot-name{font-size:8px;color:rgba(255,255,255,0.45);text-align:center;letter-spacing:0.04em;text-transform:uppercase;line-height:1.2;max-width:62px;}
+.gun-slot.active .gun-slot-name{color:rgba(100,255,160,0.8);}
+#play-equip-tip{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.75);color:rgba(255,255,255,0.9);font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;padding:8px 20px;border-radius:8px;border:1px solid rgba(100,255,160,0.4);pointer-events:none;display:none;backdrop-filter:blur(4px);}
+#play-equip-tip.visible{display:block;}
 /* Play button uses --clr-adj (light-mode adjusted) for bg and
    --clr-adj-on for text so contrast adapts to both themes. */
 .hdr-play-btn{background:var(--clr-adj);color:var(--clr-adj-on,#fff);border:none;border-radius:8px;padding:6px 16px;font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;}

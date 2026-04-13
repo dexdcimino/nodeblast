@@ -4,6 +4,8 @@
 // ══════════════════════════════════════
 
 import State from './state.js';
+import { getActiveGun, getActiveSlot, setActiveSlot,
+         getProjectileColor, initGunHUD, resetGuns, GUNS } from './guns.js';
 
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
 let _playerUsername='player',_playerHex='5aaa72';
@@ -37,6 +39,12 @@ let _jpFuel    = JP_MAX_FUEL;
 let _jpActive  = false;
 const _colBlocks=[];
 const _keys={};
+const _prevKeys={};
+const _gunPickups=[];
+let _nearPickup=null;
+let _eHeld=false;
+let _eHoldTimer=0;
+const E_HOLD_TIME=30;
 let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null;
 let _lastShot=0;const SHOT_COOLDOWN=220;const _projectiles=[];const _gooSplats=[];
 const _remotePlayers=new Map();
@@ -197,16 +205,29 @@ function _buildGun(){
 }
 
 function _shoot(){
-  const now=Date.now();if(now-_lastShot<SHOT_COOLDOWN)return;_lastShot=now;
+  const now=Date.now();
+  const gun=getActiveGun();
+  if(now-_lastShot<gun.cooldown)return;_lastShot=now;
   const B=window.BABYLON,dir=_camera.getDirection(B.Vector3.Forward()).normalize();
+  const isMG=gun.id==='machinegun';
+  if(isMG){
+    const spread=0.04;
+    dir.x+=(Math.random()-0.5)*spread;
+    dir.y+=(Math.random()-0.5)*spread;
+    dir.z+=(Math.random()-0.5)*spread;
+    dir.normalize();
+  }
+  const projSize=isMG?0.10:0.22;
+  const projSpeed=isMG?2.2:1.6;
   const origin=_muzzleOffset?_muzzleOffset.clone():_camera.position.add(dir.scale(0.4));
-  const ball=B.MeshBuilder.CreateSphere('proj_'+now,{diameter:0.22,segments:5},_scene);ball.position.copyFrom(origin);
-  const mat=new B.StandardMaterial('pm_'+now,_scene);mat.emissiveColor=new B.Color3(0.1,1.0,0.35);mat.alpha=0.88;mat.disableLighting=true;ball.material=mat;
-  const flash=new B.PointLight('mf_'+now,origin.clone(),_scene);flash.diffuse=new B.Color3(0.2,1.0,0.4);flash.intensity=3.0;flash.range=7;
+  const ball=B.MeshBuilder.CreateSphere('proj_'+now,{diameter:projSize,segments:5},_scene);ball.position.copyFrom(origin);
+  const pc=getProjectileColor();
+  const mat=new B.StandardMaterial('pm_'+now,_scene);mat.emissiveColor=new B.Color3(pc.r,pc.g,pc.b);mat.alpha=0.88;mat.disableLighting=true;ball.material=mat;
+  const flash=new B.PointLight('mf_'+now,origin.clone(),_scene);flash.diffuse=new B.Color3(pc.r,pc.g,pc.b);flash.intensity=3.0;flash.range=7;
   setTimeout(()=>{try{flash.dispose();}catch{}},70);
   const orb=_scene.getMeshByName('gun_orb');
-  if(orb&&orb.material){orb.material.emissiveColor=new B.Color3(0.3,1.0,0.6);setTimeout(()=>{if(orb.material)orb.material.emissiveColor=new B.Color3(0.1,1.0,0.4);},80);}
-  _projectiles.push({mesh:ball,vel:dir.scale(1.6),life:80});
+  if(orb&&orb.material){orb.material.emissiveColor=new B.Color3(pc.r*1.2,pc.g*1.2,pc.b*1.2);setTimeout(()=>{if(orb.material)orb.material.emissiveColor=new B.Color3(pc.r,pc.g,pc.b);},80);}
+  _projectiles.push({mesh:ball,vel:dir.scale(projSpeed),life:80});
 }
 
 function _updateProjectiles(){
@@ -229,6 +250,42 @@ function _updateProjectiles(){
     if(hit||p.life<=0){if(hit&&hitPos)_spawnGooSplat(hitPos);try{p.mesh.dispose();}catch{}dead.push(i);}
   }
   for(let i=dead.length-1;i>=0;i--)_projectiles.splice(dead[i],1);
+}
+
+function _buildGunPickups() {
+  const B = window.BABYLON;
+  const spawnSets = [{ z: -44 }, { z: 44 }];
+  const pickupDefs = [
+    { slot: 1, name: 'machinegun', x: -6 },
+    { slot: 2, name: 'plasma',     x:  0 },
+    { slot: 3, name: 'nodeblaster',x:  6 },
+  ];
+  spawnSets.forEach(sp => {
+    pickupDefs.forEach(def => {
+      const base = B.MeshBuilder.CreateBox('pickup_' + def.name + '_' + sp.z,
+        { width: 0.6, height: 0.2, depth: 0.6 }, _scene);
+      base.position.set(def.x, 0.5, sp.z);
+      const mat = new B.StandardMaterial('pm_' + def.name + sp.z, _scene);
+      const gc = GUNS[def.slot].color;
+      mat.diffuseColor  = new B.Color3(gc.r * 0.3, gc.g * 0.3, gc.b * 0.3);
+      mat.emissiveColor = new B.Color3(gc.r * 0.6, gc.g * 0.6, gc.b * 0.6);
+      base.material = mat;
+      const orb = B.MeshBuilder.CreateSphere('pickup_orb_' + def.name + sp.z,
+        { diameter: 0.35, segments: 8 }, _scene);
+      orb.position.set(def.x, 1.1, sp.z);
+      const orbMat = new B.StandardMaterial('pom_' + def.name + sp.z, _scene);
+      orbMat.emissiveColor   = new B.Color3(gc.r, gc.g, gc.b);
+      orbMat.disableLighting = true;
+      orb.material = orbMat;
+      const pt = new B.PointLight('ppt_' + def.name + sp.z,
+        new B.Vector3(def.x, 1.1, sp.z), _scene);
+      pt.diffuse   = new B.Color3(gc.r, gc.g, gc.b);
+      pt.intensity = 0.8;
+      pt.range     = 4;
+      _gunPickups.push({ base, orb, pt, slot: def.slot,
+        pos: new B.Vector3(def.x, 1.0, sp.z) });
+    });
+  });
 }
 
 function _updateEnemyNodes(){}
@@ -341,6 +398,48 @@ function _physicsTick() {
 
   _updateProjectiles();
 
+  // ── Gun pickup check ──
+  _nearPickup = null;
+  for (const pu of _gunPickups) {
+    const dx   = _camera.position.x - pu.pos.x;
+    const dz   = _camera.position.z - pu.pos.z;
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    if (dist < 2.2) { _nearPickup = pu; break; }
+  }
+  const equipTip = document.getElementById('play-equip-tip');
+  if (_nearPickup) {
+    if (equipTip) equipTip.classList.add('visible');
+    if (_keys['KeyE'] && !_eHeld) {
+      _eHoldTimer++;
+      if (_eHoldTimer >= E_HOLD_TIME) {
+        setActiveSlot(_nearPickup.slot);
+        _eHeld      = true;
+        _eHoldTimer = 0;
+        if (equipTip) equipTip.classList.remove('visible');
+      }
+    } else if (!_keys['KeyE']) {
+      _eHeld      = false;
+      _eHoldTimer = 0;
+    }
+  } else {
+    if (equipTip) equipTip.classList.remove('visible');
+    if (!_keys['KeyE']) { _eHeld = false; _eHoldTimer = 0; }
+  }
+
+  // Animate pickup orbs
+  const pt = Date.now() * 0.002;
+  _gunPickups.forEach((pu, i) => {
+    pu.orb.position.y = 1.1 + Math.sin(pt + i * 1.2) * 0.12;
+    pu.orb.rotation.y = pt * 0.8;
+  });
+
+  // 1-4 key switching
+  for (let k = 1; k <= 4; k++) {
+    if (_keys['Digit' + k] && !_prevKeys['Digit' + k]) {
+      setActiveSlot(k - 1);
+    }
+  }
+
   if (_gunRoot && _camera) {
     const r = _camera.getDirection(B.Vector3.Right());
     const u = _camera.getDirection(B.Vector3.Up());
@@ -366,6 +465,9 @@ function _physicsTick() {
   });
 
   _updateEnemyNodes();
+
+  // Track previous key state for single-press detection
+  Object.keys(_keys).forEach(k => { _prevKeys[k] = _keys[k]; });
 }
 
 function _createSkybox(){
@@ -459,6 +561,17 @@ export function initGame(canvas){
   _buildArena();
   _buildGun();
   _buildJetpackFX();
+  _buildGunPickups();
+  initGunHUD();
+  window._nbSetGunColor = (r, g, b) => {
+    const orb = _scene?.getMeshByName('gun_orb');
+    if (orb?.material) orb.material.emissiveColor = new B.Color3(r, g, b);
+    const dish = _scene?.getMeshByName('gun_dish');
+    if (dish?.material) {
+      dish.material.diffuseColor  = new B.Color3(r*0.2, g*0.2, b*0.2);
+      dish.material.emissiveColor = new B.Color3(r*0.4, g*0.4, b*0.4);
+    }
+  };
   _obsHandler=_scene.onBeforeRenderObservable.add(_physicsTick);
   _engine.runRenderLoop(()=>_scene.render());
   _resizeHandler=()=>_engine.resize();window.addEventListener('resize',_resizeHandler);
@@ -478,6 +591,10 @@ export function destroyGame(engine){
   if(_gunRoot){try{_gunRoot.getChildMeshes().forEach(m=>m.dispose());_gunRoot.dispose();}catch{}_gunRoot=null;}
   if(_jetpackPS){try{_jetpackPS.dispose();}catch{}_jetpackPS=null;}
   if(_jetpackNode){try{_jetpackNode.dispose();}catch{}_jetpackNode=null;}
+  _gunPickups.forEach(pu=>{try{pu.base.dispose();pu.orb.dispose();pu.pt.dispose();}catch{}});
+  _gunPickups.length=0;_nearPickup=null;
+  window._nbSetGunColor=null;
+  resetGuns();
   _muzzleOffset=null;
   window._nbGetPlayerState=null;
   _velX=0;_velZ=0;_velY=0;_onGround=true;_sprinting=false;_jumpHeld=false;_jumpsLeft=2;_jpFuel=JP_MAX_FUEL;_jpActive=false;
