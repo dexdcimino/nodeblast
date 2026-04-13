@@ -210,7 +210,7 @@ function _addCol(x,z,w,d,h){_colBlocks.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,ma
 function _resolveCollision(nx,nz,cy){
   const PR=0.45;let rx=nx,rz=nz;
   for(const b of _colBlocks){
-    if(cy-GROUND_Y>b.maxY+0.1)continue;
+    if(cy-GROUND_Y>=b.maxY-0.05)continue;
     if(!(rx>b.minX-PR&&rx<b.maxX+PR&&rz>b.minZ-PR&&rz<b.maxZ+PR))continue;
     const pushes=[{a:'x',v:b.minX-PR-rx},{a:'x',v:b.maxX+PR-rx},{a:'z',v:b.minZ-PR-rz},{a:'z',v:b.maxZ+PR-rz}];
     const best=pushes.reduce((a,c)=>Math.abs(c.v)<Math.abs(a.v)?c:a);
@@ -219,42 +219,56 @@ function _resolveCollision(nx,nz,cy){
   return{x:rx,z:rz};
 }
 
-function _spawnGooSplat(pos,normal){
+function _spawnGooSplat(pos,normal,color){
   const B=window.BABYLON;
   if(!normal)normal=new B.Vector3(0,1,0);
   normal=normal.normalize();
-  const up=B.Vector3.Up();
-  const axis=B.Vector3.Cross(up,normal);
-  const axisLen=axis.length();
-  const n=8+Math.floor(Math.random()*6);
+  if(!color)color=getProjectileColor();
+  const cr=color.r,cg=color.g,cb=color.b;
+  const n=10+Math.floor(Math.random()*6);
   for(let i=0;i<n;i++){
-    const angle=Math.random()*Math.PI*2,radius=0.15+Math.random()*0.55,size=0.08+Math.random()*0.22;
+    const size=0.06+Math.random()*0.18;
     const blob=B.MeshBuilder.CreateSphere('goo_'+Date.now()+'_'+i,{diameter:size,segments:4},_scene);
-    blob.position.set(pos.x+Math.cos(angle)*radius,pos.y+0.02+Math.random()*0.06,pos.z+Math.sin(angle)*radius);
-    blob.scaling.y=0.18+Math.random()*0.12;
-    if(axisLen>0.001){
-      blob.rotationQuaternion=B.Quaternion.RotationAxis(axis.normalize(),Math.acos(B.Vector3.Dot(up,normal)));
-    }else if(normal.y<0){
-      blob.rotationQuaternion=B.Quaternion.RotationAxis(B.Vector3.Right(),Math.PI);
-    }
-    const mat=new B.StandardMaterial('gm_'+i+Date.now(),_scene);const br=0.7+Math.random()*0.3;
-    mat.diffuseColor=new B.Color3(0,br*0.6,0);mat.emissiveColor=new B.Color3(0,br,br*0.3);blob.material=mat;
+    blob.position.set(pos.x,pos.y+0.05,pos.z);
+    const mat=new B.StandardMaterial('gm_'+i+Date.now(),_scene);
+    const br=0.7+Math.random()*0.3;
+    mat.diffuseColor=new B.Color3(cr*0.5*br,cg*0.5*br,cb*0.5*br);
+    mat.emissiveColor=new B.Color3(cr*br,cg*br,cb*br);
+    blob.material=mat;
+    const outward=normal.scale(0.08+Math.random()*0.12);
+    const scatter=new B.Vector3((Math.random()-0.5)*0.18,0.05+Math.random()*0.12,(Math.random()-0.5)*0.18);
+    blob._vel=outward.add(scatter);
+    blob._gravity=0.004+Math.random()*0.003;
+    blob._landed=false;
+    blob._life=180+Math.floor(Math.random()*120);
     _gooSplats.push(blob);
   }
-  const disc=B.MeshBuilder.CreateCylinder('gd_'+Date.now(),{diameter:0.5+Math.random()*0.3,height:0.04,tessellation:10},_scene);
-  disc.position.set(pos.x,pos.y+0.02,pos.z);
-  if(axisLen>0.001){
-    disc.rotationQuaternion=B.Quaternion.RotationAxis(axis.normalize(),Math.acos(B.Vector3.Dot(up,normal)));
-  }else if(normal.y<0){
-    disc.rotationQuaternion=B.Quaternion.RotationAxis(B.Vector3.Right(),Math.PI);
-  }
-  const dm=new B.StandardMaterial('gdm_'+Date.now(),_scene);dm.diffuseColor=new B.Color3(0,0.5,0.1);dm.emissiveColor=new B.Color3(0,0.8,0.2);disc.material=dm;
-  _gooSplats.push(disc);
-  const flash=new B.PointLight('gf_'+Date.now(),pos.clone(),_scene);flash.diffuse=new B.Color3(0.1,1.0,0.3);flash.intensity=2.5;flash.range=8;
-  let t=0;const fade=setInterval(()=>{t+=0.15;if(flash.intensity!==undefined)flash.intensity=Math.max(0,2.5-t*2.5);if(t>=1){clearInterval(fade);try{flash.dispose();}catch{}}},16);
-  const MAX_SPLATS=200;
-  while(_gooSplats.length>MAX_SPLATS){const old=_gooSplats.splice(0,15);old.forEach(m=>{try{m.dispose();}catch{}});}
+  const flash=new B.PointLight('gf_'+Date.now(),pos.clone(),_scene);
+  flash.diffuse=new B.Color3(cr,cg,cb);flash.intensity=2.5;flash.range=6;
+  let t=0;const fade=setInterval(()=>{t+=0.2;if(flash.intensity!==undefined)flash.intensity=Math.max(0,2.5-t*2.5);if(t>=1){clearInterval(fade);try{flash.dispose();}catch{}}},16);
+  if(_gooSplats.length>200){const old=_gooSplats.splice(0,20);old.forEach(m=>{try{m.dispose();}catch{}});}
   playGooImpact();
+}
+
+function _updateGooSplats(){
+  const dead=[];
+  for(let i=0;i<_gooSplats.length;i++){
+    const b=_gooSplats[i];
+    if(!b._vel)continue;
+    b._life--;
+    if(b._life<=0){dead.push(i);continue;}
+    if(!b._landed){
+      b._vel.y-=b._gravity;
+      b.position.addInPlace(b._vel);
+      if(b.position.y<=0.04){
+        b.position.y=0.04;
+        b._vel.scaleInPlace(0);
+        b._landed=true;
+        b.scaling.y=0.15;b.scaling.x=1.3;b.scaling.z=1.3;
+      }
+    }
+  }
+  for(let i=dead.length-1;i>=0;i--){try{_gooSplats[dead[i]].dispose();}catch{}_gooSplats.splice(dead[i],1);}
 }
 
 function _updateFuelBar() {
@@ -412,7 +426,7 @@ function _updateProjectiles(){
     }
     if(py<0.12)hitNormal=new B.Vector3(0,1,0);
     if(!hit&&(Math.abs(px)>65||Math.abs(pz)>65)){try{p.mesh.dispose();}catch{}dead.push(i);continue;}
-    if(hit||p.life<=0){if(hit&&hitPos)_spawnGooSplat(hitPos,hitNormal);try{p.mesh.dispose();}catch{}dead.push(i);}
+    if(hit||p.life<=0){const pc=getProjectileColor();if(hit&&hitPos)_spawnGooSplat(hitPos,hitNormal,pc);try{p.mesh.dispose();}catch{}dead.push(i);}
   }
   for(let i=dead.length-1;i>=0;i--)_projectiles.splice(dead[i],1);
 }
@@ -632,17 +646,10 @@ function _physicsTick() {
     if (_footstepTimer >= rate) { _footstepTimer = 0; playFootstep(); }
   } else { _footstepTimer = 0; }
 
-  const stepX = _velX * _delta;
-  const stepZ = _velZ * _delta;
-  const res = _resolveCollision(
-    _camera.position.x + stepX,
-    _camera.position.z + stepZ,
-    _camera.position.y,
-  );
-  _camera.position.x = res.x;
-  _camera.position.z = res.z;
+  // ── Apply vertical first ──
   _camera.position.y += _velY * _delta;
 
+  // ── Platform top-surface landing ──
   let landed     = false;
   let landHeight = GROUND_Y;
 
@@ -654,8 +661,8 @@ function _physicsTick() {
       if (cx > b.minX - PR && cx < b.maxX + PR &&
           cz > b.minZ - PR && cz < b.maxZ + PR) {
         const feetY     = _camera.position.y - GROUND_Y;
-        const prevFeetY = feetY - _velY;
-        if (prevFeetY >= b.maxY - 0.1 && feetY <= b.maxY + 0.3) {
+        const prevFeetY = feetY - _velY * _delta;
+        if (prevFeetY >= b.maxY - 0.05 && feetY <= b.maxY + 0.25) {
           landHeight = b.maxY + GROUND_Y;
           landed     = true;
           break;
@@ -677,11 +684,23 @@ function _physicsTick() {
     _jpActive          = false;
   }
 
+  // ── Horizontal collision (after vertical is resolved) ──
+  const stepX = _velX * _delta;
+  const stepZ = _velZ * _delta;
+  const res = _resolveCollision(
+    _camera.position.x + stepX,
+    _camera.position.z + stepZ,
+    _camera.position.y,
+  );
+  _camera.position.x = res.x;
+  _camera.position.z = res.z;
+
   const BOUND = 58;
   _camera.position.x = Math.max(-BOUND, Math.min(BOUND, _camera.position.x));
   _camera.position.z = Math.max(-BOUND, Math.min(BOUND, _camera.position.z));
 
   _updateProjectiles();
+  _updateGooSplats();
 
   // Plasma cannon continuous fire + machine gun auto-fire
   const activeGun = getActiveGun();
