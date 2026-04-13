@@ -6,7 +6,7 @@
 // ══════════════════════════════════════
 
 import State from './state.js';
-import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer, getRemotePlayerIds, damageRemotePlayer } from './game.js';
+import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer, getRemotePlayerIds, damageRemotePlayer, getRemotePlayerData } from './game.js';
 import { initPhoton, destroyPhoton, setPhotonStatus, photonSendDamage } from './photon-client.js';
 import { initHathora, destroyHathora, hathoraSendMove, isHathoraConnected } from './hathora-client.js';
 import { navigate } from './router.js';
@@ -18,6 +18,22 @@ const PHOTON_CDN = '/photon-realtime-module.js';
 let _engine = null;
 let _modalWired = false;
 let _exitModalOpen = false;
+
+function _updatePlayerList() {
+  const list = document.getElementById('play-player-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const ids = getRemotePlayerIds();
+  ids.forEach(id => {
+    const data = getRemotePlayerData(id);
+    const name = data?.username || ('Player ' + id);
+    const hex  = data?.hex      || '5aaa72';
+    const pill = document.createElement('div');
+    pill.className = 'player-list-pill';
+    pill.innerHTML = `<span class="player-list-dot" style="background:#${hex.replace('#','')}"></span><span>${name}</span>`;
+    list.appendChild(pill);
+  });
+}
 
 function _addKillFeedEntry(attackerName, targetActorId) {
   const feed = document.getElementById('play-killfeed');
@@ -199,15 +215,16 @@ export async function renderPlayRoute() {
         });
       },
       onPlayerUpdate: (id, x, y, z, rotY, pitch, username, hex) => {
-        // Only use Photon updates when Hathora is not connected
         if (!isHathoraConnected()) {
           addOrUpdateRemotePlayer(id, x, y, z, rotY, username, hex);
         }
+        _updatePlayerList();
       },
       onPlayerLeave: (id) => {
         if (!isHathoraConnected()) {
           removeRemotePlayer(id);
         }
+        _updatePlayerList();
       },
       onPlayerDamage: (targetId, damage, attackerName) => {
         if (targetId === window._nbMyActorId) {

@@ -168,12 +168,13 @@ export function addOrUpdateRemotePlayer(id,x,y,z,rotY,username,hex){
     const safeHex=(hex||'5aaa72').replace('#','');
     const safeName=username||'player';
     const meshes=_createRemotePlayerMesh(id,safeHex,safeName);
-    p={...meshes,targetX:x,targetY:y-GROUND_Y,targetZ:z,renderX:x,renderY:y-GROUND_Y,renderZ:z,targetRotY:rotY,renderRotY:rotY,lastUpdate:Date.now(),hp:100,maxHp:100};
+    p={...meshes,username:username||'player',hex:hex||'5aaa72',targetX:x,targetY:y-GROUND_Y,targetZ:z,renderX:x,renderY:y-GROUND_Y,renderZ:z,targetRotY:rotY,renderRotY:rotY,lastUpdate:Date.now(),hp:100,maxHp:100};
     _remotePlayers.set(id,p);
     console.log('[game] remote player created:',id,username);
-  }else{p.targetX=x;p.targetY=y-GROUND_Y;p.targetZ=z;p.targetRotY=rotY;p.lastUpdate=Date.now();}
+  }else{p.targetX=x;p.targetY=y-GROUND_Y;p.targetZ=z;p.targetRotY=rotY;p.lastUpdate=Date.now();if(username)p.username=username;if(hex)p.hex=hex;}
 }
 export function getRemotePlayerIds(){return Array.from(_remotePlayers.keys());}
+export function getRemotePlayerData(id){const p=_remotePlayers.get(id);if(!p)return null;return{username:p.username||null,hex:p.hex||null};}
 export function removeRemotePlayer(id){const p=_remotePlayers.get(id);if(!p)return;['labelTex','labelPlane','hbBg','hbFill','ring','body','root'].forEach(k=>{try{p[k]?.dispose();}catch{}});_remotePlayers.delete(id);}
 
 export function damageRemotePlayer(id,damage){
@@ -314,38 +315,67 @@ function _updateJetpackParticles(active) {
   _jetpackPS.emitRate = active ? 60 : 0;
 }
 
-function _buildGunProc(){
-  const B=window.BABYLON;
-  if(!_gunRoot)_gunRoot=new B.TransformNode('gun_root',_scene);
-  const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.055,height:0.13,depth:0.09},_scene);
-  grip.parent=_gunRoot;grip.position.set(0,-0.06,0);
-  const gm=new B.StandardMaterial('gun_grip_mat',_scene);gm.diffuseColor=new B.Color3(0.12,0.12,0.15);gm.emissiveColor=new B.Color3(0.02,0.02,0.03);grip.material=gm;
-  const barrel=B.MeshBuilder.CreateCylinder('gun_barrel',{diameter:0.045,height:0.22,tessellation:10},_scene);
-  barrel.parent=_gunRoot;barrel.rotation.x=Math.PI/2;barrel.position.set(0,0,0.08);
-  const bm=new B.StandardMaterial('gun_barrel_mat',_scene);bm.diffuseColor=new B.Color3(0.15,0.15,0.18);bm.emissiveColor=new B.Color3(0.02,0.04,0.06);bm.specularColor=new B.Color3(0.4,0.4,0.5);bm.specularPower=64;barrel.material=bm;
-  const dish=B.MeshBuilder.CreateTorus('gun_dish',{diameter:0.13,thickness:0.018,tessellation:20},_scene);
-  dish.parent=_gunRoot;dish.rotation.x=Math.PI/2;dish.position.set(0,0,0.20);
-  const dm=new B.StandardMaterial('gun_dish_mat',_scene);dm.diffuseColor=new B.Color3(0.1,0.55,0.28);dm.emissiveColor=new B.Color3(0,0.30,0.12);dm.specularColor=new B.Color3(0.3,0.8,0.5);dm.specularPower=80;dish.material=dm;
-  for(let i=0;i<4;i++){const spoke=B.MeshBuilder.CreateBox('gun_spoke_'+i,{width:0.008,height:0.1,depth:0.008},_scene);spoke.parent=_gunRoot;spoke.rotation.z=(i/4)*Math.PI*2;spoke.position.set(Math.cos((i/4)*Math.PI*2)*0.046,Math.sin((i/4)*Math.PI*2)*0.046,0.20);spoke.material=dm;}
-  const orb=B.MeshBuilder.CreateSphere('gun_orb',{diameter:0.038,segments:6},_scene);orb.parent=_gunRoot;orb.position.set(0,0,0.20);
-  const om=new B.StandardMaterial('gun_orb_mat',_scene);om.emissiveColor=new B.Color3(0.1,1.0,0.4);om.disableLighting=true;orb.material=om;
-  const ol=new B.PointLight('gun_orb_light',new B.Vector3(0,0,0),_scene);ol.parent=_gunRoot;ol.position=new B.Vector3(0,0,0.20);ol.diffuse=new B.Color3(0.1,1.0,0.4);ol.intensity=0.3;ol.range=2.5;
-  const cell=B.MeshBuilder.CreateBox('gun_cell',{width:0.025,height:0.06,depth:0.055},_scene);cell.parent=_gunRoot;cell.position.set(0.04,-0.02,0.04);
-  const cm=new B.StandardMaterial('gun_cell_mat',_scene);cm.diffuseColor=new B.Color3(0.05,0.3,0.15);cm.emissiveColor=new B.Color3(0,0.18,0.07);cell.material=cm;
+function _applyMat(mesh,suffix,r,g,b){
+  const B=window.BABYLON;const mat=new B.StandardMaterial('gun_mat_'+suffix,_scene);
+  mat.diffuseColor=new B.Color3(r,g,b);mat.emissiveColor=new B.Color3(r*0.15,g*0.15,b*0.15);
+  mat.specularColor=new B.Color3(0.3,0.3,0.4);mat.specularPower=64;mesh.material=mat;
+}
+function _applyColorMat(mesh,suffix,pc){
+  const B=window.BABYLON;const mat=new B.StandardMaterial('gun_cmat_'+suffix,_scene);
+  mat.diffuseColor=new B.Color3(pc.r*0.3,pc.g*0.3,pc.b*0.3);mat.emissiveColor=new B.Color3(pc.r*0.5,pc.g*0.5,pc.b*0.5);mesh.material=mat;
+}
+function _applyGlowMat(mesh,suffix,pc){
+  const B=window.BABYLON;const mat=new B.StandardMaterial('gun_gmat_'+suffix,_scene);
+  mat.emissiveColor=new B.Color3(pc.r,pc.g,pc.b);mat.disableLighting=true;mesh.material=mat;
 }
 
 function _buildGun(){
-  const B=window.BABYLON;
-  const gunId=getActiveGun().id;
+  const B=window.BABYLON;const gun=getActiveGun();
+  if(_gunRoot){try{_gunRoot.getChildMeshes().forEach(m=>m.dispose());_gunRoot.dispose();}catch{}_gunRoot=null;}
+  _gunRoot=new B.TransformNode('gun_root',_scene);
+  const pc=getProjectileColor();
+  const gunId=gun.id;
   const path='./games/Arena_1/models/nodeblast_gun_'+gunId+'.glb';
   _tryLoadGLB(path,_scene,
-    (meshes)=>{
-      if(!_gunRoot)_gunRoot=new B.TransformNode('gun_root',_scene);
-      meshes.forEach(m=>{if(m.name==='__root__')return;m.parent=_gunRoot;});
-      console.log('[assets] Gun GLB loaded:',gunId);
-    },
-    ()=>{_buildGunProc();console.log('[assets] Gun using procedural fallback');}
+    (meshes)=>{meshes.forEach(m=>{if(m.name==='__root__')return;m.parent=_gunRoot;});console.log('[assets] Gun GLB loaded:',gunId);},
+    ()=>{
+      switch(gun.id){
+        case 'pistol':default:{
+          const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.055,height:0.13,depth:0.09},_scene);grip.parent=_gunRoot;grip.position.set(0,-0.06,0);_applyMat(grip,'grip',0.12,0.12,0.15);
+          const barrel=B.MeshBuilder.CreateCylinder('gun_barrel',{diameter:0.045,height:0.22,tessellation:10},_scene);barrel.parent=_gunRoot;barrel.rotation.x=Math.PI/2;barrel.position.set(0,0,0.08);_applyMat(barrel,'barrel',0.15,0.15,0.18);
+          const dish=B.MeshBuilder.CreateTorus('gun_dish',{diameter:0.13,thickness:0.018,tessellation:20},_scene);dish.parent=_gunRoot;dish.rotation.x=Math.PI/2;dish.position.set(0,0,0.20);_applyColorMat(dish,'dish',pc);
+          for(let i=0;i<4;i++){const s=B.MeshBuilder.CreateBox('gun_spoke_'+i,{width:0.008,height:0.1,depth:0.008},_scene);s.parent=_gunRoot;s.rotation.z=(i/4)*Math.PI*2;s.position.set(Math.cos((i/4)*Math.PI*2)*0.046,Math.sin((i/4)*Math.PI*2)*0.046,0.20);_applyColorMat(s,'spoke'+i,pc);}
+          const orb=B.MeshBuilder.CreateSphere('gun_orb',{diameter:0.038,segments:6},_scene);orb.parent=_gunRoot;orb.position.set(0,0,0.20);_applyGlowMat(orb,'orb',pc);
+          const cell=B.MeshBuilder.CreateBox('gun_cell',{width:0.025,height:0.06,depth:0.055},_scene);cell.parent=_gunRoot;cell.position.set(0.04,-0.02,0.04);_applyMat(cell,'cell',0.05,0.12,0.06);
+          break;}
+        case 'machinegun':{
+          const body=B.MeshBuilder.CreateBox('gun_body',{width:0.08,height:0.07,depth:0.28},_scene);body.parent=_gunRoot;body.position.set(0,0,0.10);_applyMat(body,'body',0.18,0.18,0.20);
+          const rail=B.MeshBuilder.CreateBox('gun_rail',{width:0.015,height:0.015,depth:0.28},_scene);rail.parent=_gunRoot;rail.position.set(0,0.045,0.10);_applyMat(rail,'rail',0.25,0.25,0.28);
+          const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.05,height:0.11,depth:0.06},_scene);grip.parent=_gunRoot;grip.position.set(0,-0.07,-0.02);grip.rotation.x=0.15;_applyMat(grip,'grip',0.12,0.12,0.14);
+          const drum=B.MeshBuilder.CreateCylinder('gun_drum',{diameter:0.065,height:0.05,tessellation:10},_scene);drum.parent=_gunRoot;drum.rotation.z=Math.PI/2;drum.position.set(0.07,-0.01,0.06);_applyMat(drum,'drum',0.14,0.14,0.16);
+          const muzzle=B.MeshBuilder.CreateCylinder('gun_muzzle',{diameter:0.055,height:0.04,tessellation:8},_scene);muzzle.parent=_gunRoot;muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,0,0.26);_applyMat(muzzle,'muzzle',0.22,0.22,0.24);
+          const orb=B.MeshBuilder.CreateSphere('gun_orb',{diameter:0.03,segments:5},_scene);orb.parent=_gunRoot;orb.position.set(0,0,0.285);_applyGlowMat(orb,'orb',pc);
+          break;}
+        case 'plasma':{
+          const body=B.MeshBuilder.CreateCylinder('gun_body',{diameter:0.11,height:0.3,tessellation:6},_scene);body.parent=_gunRoot;body.rotation.x=Math.PI/2;body.position.set(0,0,0.10);_applyMat(body,'body',0.10,0.08,0.18);
+          for(let i=0;i<3;i++){const coil=B.MeshBuilder.CreateTorus('gun_coil_'+i,{diameter:0.14,thickness:0.014,tessellation:16},_scene);coil.parent=_gunRoot;coil.rotation.x=Math.PI/2;coil.position.set(0,0,0.0+i*0.09);_applyColorMat(coil,'coil'+i,pc);}
+          const muzzle=B.MeshBuilder.CreateCylinder('gun_muzzle',{diameterTop:0.15,diameterBottom:0.08,height:0.06,tessellation:8},_scene);muzzle.parent=_gunRoot;muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,0,0.27);_applyMat(muzzle,'muzzle',0.12,0.10,0.20);
+          const orb=B.MeshBuilder.CreateSphere('gun_orb',{diameter:0.05,segments:6},_scene);orb.parent=_gunRoot;orb.position.set(0,0,0.30);_applyGlowMat(orb,'orb',pc);
+          const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.06,height:0.12,depth:0.07},_scene);grip.parent=_gunRoot;grip.position.set(0,-0.09,0.05);_applyMat(grip,'grip',0.10,0.08,0.16);
+          break;}
+        case 'nodeblaster':{
+          const body=B.MeshBuilder.CreateSphere('gun_body',{diameter:0.11,segments:5},_scene);body.parent=_gunRoot;body.scaling.z=2.2;body.position.set(0,0,0.08);_applyMat(body,'body',0.15,0.05,0.05);
+          for(let i=0;i<3;i++){const fin=B.MeshBuilder.CreateBox('gun_fin_'+i,{width:0.015,height:0.06,depth:0.08},_scene);fin.parent=_gunRoot;const a=(i/3)*Math.PI*2+Math.PI/6;fin.position.set(Math.cos(a)*0.065,Math.sin(a)*0.065,0.08);fin.rotation.z=a;_applyMat(fin,'fin'+i,0.20,0.06,0.06);}
+          const tube=B.MeshBuilder.CreateCylinder('gun_tube',{diameter:0.06,height:0.18,tessellation:8},_scene);tube.parent=_gunRoot;tube.rotation.x=Math.PI/2;tube.position.set(0,0,0.20);_applyMat(tube,'tube',0.18,0.06,0.06);
+          const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.05,height:0.10,depth:0.06},_scene);grip.parent=_gunRoot;grip.position.set(0,-0.08,0.03);_applyMat(grip,'grip',0.12,0.04,0.04);
+          const orb=B.MeshBuilder.CreateSphere('gun_orb',{diameter:0.04,segments:6},_scene);orb.parent=_gunRoot;orb.position.set(0,0,0.30);_applyGlowMat(orb,'orb',pc);
+          break;}
+      }
+    }
   );
+  const orbLight=new B.PointLight('gun_orb_light',new B.Vector3(0,0,0),_scene);
+  orbLight.parent=_gunRoot;orbLight.position=new B.Vector3(0,0,0.20);
+  orbLight.diffuse=new B.Color3(pc.r,pc.g,pc.b);orbLight.intensity=0.3;orbLight.range=2.5;
 }
 
 function _shoot(){
@@ -1018,6 +1048,7 @@ export function initGame(canvas){
   document.addEventListener('mouseup',_mouseUpHandler);
   _buildArena();
   _buildGun();
+  window._nbRebuildGun=_buildGun;
   initAudio();
   _buildJetpackFX();
   _buildGunPickups();
@@ -1041,6 +1072,7 @@ export function initGame(canvas){
   window._nbSendDamage = null; // set by play-mode.js
   window._nbPlayEnemyDeath = playEnemyDeath;
   window._nbSetAudio = setAudioEnabled;
+  window._nbGetRemotePlayerData = getRemotePlayerData;
   window._nbSetGunColor = (r, g, b) => {
     const orb = _scene?.getMeshByName('gun_orb');
     if (orb?.material) orb.material.emissiveColor = new B.Color3(r, g, b);
@@ -1088,6 +1120,8 @@ export function destroyGame(engine){
   window._nbSendDamage=null;
   window._nbPlayEnemyDeath=null;
   window._nbSetAudio=null;
+  window._nbRebuildGun=null;
+  window._nbGetRemotePlayerData=null;
   destroyAudio();
   _playerHp=100;_isDead=false;_respawnTimer=0;_damageFlash=0;_shakeTimer=0;
   _lastTickTime=0;_delta=1.0;

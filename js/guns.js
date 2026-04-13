@@ -50,6 +50,7 @@ export function getProjectileColor() { return _projectileColor; }
 export function setProjectileColor(r, g, b) {
   _projectileColor = { r, g, b };
   if (window._nbSetGunColor) window._nbSetGunColor(r, g, b);
+  if (window._nbRebuildGun) window._nbRebuildGun();
 }
 
 export function setActiveSlot(slot) {
@@ -57,10 +58,7 @@ export function setActiveSlot(slot) {
   _activeSlot = slot;
   _projectileColor = { ...GUNS[slot].color };
   _updateHUD();
-  if (window._nbSetGunColor) {
-    const c = GUNS[slot].color;
-    window._nbSetGunColor(c.r, c.g, c.b);
-  }
+  if (window._nbRebuildGun) window._nbRebuildGun();
 }
 
 // ── HUD ──

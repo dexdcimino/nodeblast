@@ -76,20 +76,18 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlaye
   };
 
   _client.onActorLeave = (actor) => {
+    console.log('[photon] actor left:', actor.actorNr);
     if (_onPlayerLeave) _onPlayerLeave(actor.actorNr);
     _updatePlayerCount();
   };
 
-  _client.onActorJoin = () => {
+  _client.onActorJoin = (actor) => {
+    console.log('[photon] actor joined:', actor.actorNr);
     _updatePlayerCount();
   };
 
   _client.onEvent = (code, content, actorNr) => {
     if (code === 1) {
-      console.log('[photon] pos update from actor:', actorNr,
-        'my id:', _myId,
-        'x:', content?.x?.toFixed(2),
-        'z:', content?.z?.toFixed(2));
       if (actorNr !== _myId && _onPlayerUpdate) {
         _onPlayerUpdate(
           actorNr,
