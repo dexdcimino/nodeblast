@@ -97,12 +97,6 @@ export async function renderPlayRoute(gameId) {
   const canvas = document.getElementById('play-canvas');
   if (!view || !canvas) return;
 
-  // Hard refresh on /play or /game/* should redirect to home
-  if (document.referrer === '' && (window.location.pathname === '/play' || window.location.pathname.startsWith('/game/'))) {
-    navigate('/');
-    return;
-  }
-
   console.log('[play] loading game:', gameId || 'arena1');
 
   // Detect mobile — play mode requires keyboard + mouse
