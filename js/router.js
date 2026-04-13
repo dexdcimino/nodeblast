@@ -31,6 +31,8 @@ export function getRoute() {
   if (path === '/' || path === '') return { page: 'feed' };
   if (path === '/play') return { page: 'play', gameId: 'arena1' };
   if (path === '/games') return { page: 'games' };
+  if (path === '/nodesplit') return { page: 'nodesplit' };
+  if (path === '/dotsim') return { page: 'dotsim' };
 
   const parts = path.split('/').filter(Boolean);
 

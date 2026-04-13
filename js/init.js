@@ -49,6 +49,7 @@ import { renderSocialIconsHTML } from './social.js';
 import { renderPlayRoute, destroyPlayRoute } from './play-mode.js';
 import { getGame, SYSTEM_PROFILE, getGamesAsCatalysts, GAME_REGISTRY } from './game-registry.js';
 import { openDotSim } from './dot-sim-modal.js';
+import { openNodeSplit } from './nodesplit-modal.js';
 import {
   pinCatalyst,
   unpinCatalyst,
@@ -422,7 +423,10 @@ function handleTileClick(cat) {
       const gameDef = getGame(cat.gameId);
       if (!gameDef) { toast('Game not found'); return; }
       if (gameDef.launchMode === 'route') { navigate('/game/' + cat.slug); return; }
-      if (gameDef.launchMode === 'modal') { openDotSim(cat.title || gameDef.name); return; }
+      if (gameDef.launchMode === 'modal') {
+        if (gameDef.id === 'dot_sim') { openDotSim(cat.title || gameDef.name); return; }
+        if (gameDef.id === 'nodesplit') { openNodeSplit(cat.title || gameDef.name); return; }
+      }
     }
     const userPart = buildUserSlug(ownerName, ownerHex);
     navigate(`/${userPart}/${encodeURIComponent(slug)}`);
@@ -1227,7 +1231,10 @@ function handleGameTileClick(cat) {
   if (!gameDef) return;
   if (gameDef.status === 'coming_soon') { toast('Coming soon — stay tuned'); return; }
   if (gameDef.launchMode === 'route') { navigate('/game/' + (cat.slug || cat.gameId)); return; }
-  if (gameDef.launchMode === 'modal') { openDotSim(cat.title); return; }
+  if (gameDef.launchMode === 'modal') {
+    if (gameDef.id === 'dot_sim') { openDotSim(cat.title); return; }
+    if (gameDef.id === 'nodesplit') { openNodeSplit(cat.title); return; }
+  }
 }
 
 async function renderGamesRoute() {
@@ -1524,6 +1531,12 @@ async function renderRoute({ force = false } = {}) {
       await renderProfileRoute(route.username, route.hex, { openSlug: route.slug });
     } else if (route.page === 'games') {
       await renderGamesRoute();
+    } else if (route.page === 'nodesplit') {
+      await renderGamesRoute();
+      setTimeout(() => openNodeSplit('NodeSplit'), 100);
+    } else if (route.page === 'dotsim') {
+      await renderGamesRoute();
+      setTimeout(() => openDotSim('Dot-Sim'), 100);
     } else {
       show404();
     }

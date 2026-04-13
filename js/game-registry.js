@@ -12,7 +12,7 @@ export const SYSTEM_PROFILE = {
   hexCode: '000000',
   uid: 'system',
   isSystem: true,
-  bio: 'Official NodeBlast games. More dropping soon.',
+  bio: 'Arena 1 \u00b7 Dot-Sim \u00b7 NodeSplit \u2014 more dropping soon.',
 };
 
 export const GAME_REGISTRY = [
@@ -37,14 +37,14 @@ export const GAME_REGISTRY = [
     modalFn: 'openDotSim',
   },
   {
-    id: 'consensus',
-    name: 'Consensus',
-    description: 'A community game about collective decision-making. What does NodeBlast think? Coming soon.',
+    id: 'nodesplit',
+    name: 'NodeSplit',
+    description: 'Swipe through questions. Pick a side. See where everyone stands.',
     badge: '⬡',
     color: '#f59e0b',
-    status: 'coming_soon',
+    status: 'beta',
     launchMode: 'modal',
-    modalFn: null,
+    modalFn: 'openNodeSplit',
   },
 ];
 
