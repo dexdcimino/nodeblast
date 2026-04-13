@@ -109,9 +109,16 @@ export async function renderPlayRoute() {
     configurable: true,
   });
 
-  // Wire modal + exit buttons once
+  // Wire modal + exit buttons + audio toggle once
   if (!_modalWired) {
     _modalWired = true;
+    let _audioOn = true;
+    document.getElementById('play-audio-btn')?.addEventListener('click', () => {
+      _audioOn = !_audioOn;
+      if (window._nbSetAudio) window._nbSetAudio(_audioOn);
+      const btn = document.getElementById('play-audio-btn');
+      if (btn) btn.textContent = _audioOn ? '\uD83D\uDD0A' : '\uD83D\uDD07';
+    });
     document.getElementById('play-exit-btn')?.addEventListener('click', () => openExitModal());
     document.getElementById('play-exit-yes')?.addEventListener('click', () => {
       closeExitModal();

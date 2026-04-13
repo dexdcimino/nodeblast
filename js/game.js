@@ -11,6 +11,9 @@ import { initEnemyNodes, updateEnemyNodes, damageEnemyNode,
          checkEnemyHit, destroyEnemyNodes } from './enemy-nodes.js';
 import { initNodeBlaster, fireNodeBlaster, updateNodeBlaster,
          destroyNodeBlaster } from './node-blaster.js';
+import { initAudio, playShoot, playHit, playJump, playJetpack,
+         playFootstep, playGooImpact, playEnemyDeath, playPickup,
+         setAudioEnabled, destroyAudio } from './audio.js';
 
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
 let _playerUsername='player',_playerHex='5aaa72';
@@ -64,6 +67,7 @@ let _shakeAmount=0;
 let _isDead=false;
 let _respawnTimer=0;
 const RESPAWN_DELAY=300;
+let _footstepTimer=0;
 let _fpsFrames=0;
 let _fpsLastTime=Date.now();
 let _fpsValue=60;
@@ -216,6 +220,7 @@ function _spawnGooSplat(pos,normal){
   let t=0;const fade=setInterval(()=>{t+=0.15;if(flash.intensity!==undefined)flash.intensity=Math.max(0,2.5-t*2.5);if(t>=1){clearInterval(fade);try{flash.dispose();}catch{}}},16);
   const MAX_SPLATS=200;
   while(_gooSplats.length>MAX_SPLATS){const old=_gooSplats.splice(0,15);old.forEach(m=>{try{m.dispose();}catch{}});}
+  playGooImpact();
 }
 
 function _updateFuelBar() {
@@ -287,6 +292,7 @@ function _shoot(){
   if(now-_lastShot<gun.cooldown)return;
   if(_projectiles.length>=20)return;
   _lastShot=now;
+  playShoot(gun.id);
   if(gun.id==='nodeblaster'){
     const B=window.BABYLON;
     const pc=getProjectileColor();
@@ -425,6 +431,7 @@ function _onPlayerDamaged(damage) {
   if (_isDead) return;
   _playerHp = Math.max(0, _playerHp - damage);
   _updateHealthHUD();
+  playHit();
   _damageFlash = 12;
   const vignette = document.getElementById('play-vignette');
   if (vignette) {
@@ -536,6 +543,7 @@ function _physicsTick() {
   _velY -= GRAVITY * (_velY < 0 ? FALL_MULT : 1.0);
 
   if (jumping && !_jumpHeld && _jumpsLeft > 0) {
+    playJump();
     _velY      = _jumpsLeft === 2 ? JUMP_FORCE : JUMP2_FORCE;
     _jumpsLeft--;
     _jumpHeld  = true;
@@ -556,12 +564,20 @@ function _physicsTick() {
   } else {
     _updateJetpackParticles(false);
   }
+  playJetpack(_jpActive);
 
   if (_onGround && _jpFuel < JP_MAX_FUEL) {
     _jpFuel = Math.min(JP_MAX_FUEL, _jpFuel + JP_RECHARGE);
   }
 
   _updateFuelBar();
+
+  // Footsteps
+  if (_onGround && (ml > 0)) {
+    _footstepTimer++;
+    const rate = _sprinting ? 10 : 18;
+    if (_footstepTimer >= rate) { _footstepTimer = 0; playFootstep(); }
+  } else { _footstepTimer = 0; }
 
   const res = _resolveCollision(
     _camera.position.x + _velX,
@@ -644,6 +660,7 @@ function _physicsTick() {
       _eHoldTimer++;
       if (_eHoldTimer >= E_HOLD_TIME) {
         setActiveSlot(_nearPickup.slot);
+        playPickup();
         _eHeld      = true;
         _eHoldTimer = 0;
         if (equipTip) equipTip.classList.remove('visible');
@@ -887,6 +904,7 @@ export function initGame(canvas){
   document.addEventListener('mouseup',_mouseUpHandler);
   _buildArena();
   _buildGun();
+  initAudio();
   _buildJetpackFX();
   _buildGunPickups();
   _buildColorNodes();
@@ -907,6 +925,8 @@ export function initGame(canvas){
   window._nbDamageEnemy = (idx, dmg) => damageEnemyNode(idx, dmg);
   window._nbApplyPlayerDamage = _onPlayerDamaged;
   window._nbSendDamage = null; // set by play-mode.js
+  window._nbPlayEnemyDeath = playEnemyDeath;
+  window._nbSetAudio = setAudioEnabled;
   window._nbSetGunColor = (r, g, b) => {
     const orb = _scene?.getMeshByName('gun_orb');
     if (orb?.material) orb.material.emissiveColor = new B.Color3(r, g, b);
@@ -952,6 +972,9 @@ export function destroyGame(engine){
   window._nbSetSpawn=null;
   window._nbApplyPlayerDamage=null;
   window._nbSendDamage=null;
+  window._nbPlayEnemyDeath=null;
+  window._nbSetAudio=null;
+  destroyAudio();
   _playerHp=100;_isDead=false;_respawnTimer=0;_damageFlash=0;_shakeTimer=0;
   _muzzleOffset=null;
   window._nbGetPlayerState=null;

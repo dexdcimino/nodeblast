@@ -280,6 +280,7 @@ function _killEnemy(e) {
   e.state  = 'dead';
   e.hp     = 0;
   e.root.setEnabled(false);
+  if (window._nbPlayEnemyDeath) window._nbPlayEnemyDeath();
   e.respawnTimer = 0;
 
   const exp       = new B.PointLight('exp_' + Date.now(),
