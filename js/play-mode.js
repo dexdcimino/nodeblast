@@ -19,38 +19,60 @@ let _engine = null;
 let _modalWired = false;
 let _exitModalOpen = false;
 
+const MAX_VISIBLE_PLAYERS = 8;
+
 function _updatePlayerList() {
   const list = document.getElementById('play-player-list');
   if (!list) return;
   list.innerHTML = '';
 
-  // ── Local player row (always first) ──
   const localName = State.profile?.displayName || 'You';
   const localHex  = (State.profile?.hexCode || '5aaa72').replace('#', '');
+
+  // ── Player count header ──
+  const ids    = getRemotePlayerIds();
+  const total  = 1 + ids.length;
+  let countEl  = document.getElementById('play-player-count');
+  if (!countEl) {
+    countEl = document.createElement('div');
+    countEl.id = 'play-player-count';
+    list.parentElement?.insertBefore(countEl, list);
+  }
+  countEl.textContent = `${total} / ${MAX_VISIBLE_PLAYERS} players`;
+
+  // ── Local player row (always first, pulsing dot) ──
   const localPill = document.createElement('div');
   localPill.className = 'player-list-pill player-list-self';
-  localPill.innerHTML = `<span class="player-list-dot" style="background:#${localHex}"></span><span>${localName} <span style="opacity:0.5;font-size:11px">(you)</span></span>`;
+  localPill.innerHTML = `
+    <span class="player-list-dot pulse" style="background:#${localHex};box-shadow:0 0 6px #${localHex}"></span>
+    <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${localName}</span>
+    <span style="font-size:10px;opacity:0.45;flex-shrink:0">you</span>
+  `;
   list.appendChild(localPill);
 
-  // ── Remote players ──
-  const ids = getRemotePlayerIds();
-  ids.forEach(id => {
+  // ── Remote players (cap display at MAX_VISIBLE_PLAYERS - 1) ──
+  const visible  = ids.slice(0, MAX_VISIBLE_PLAYERS - 1);
+  const overflow = ids.length - visible.length;
+
+  visible.forEach(id => {
     const data = getRemotePlayerData(id);
     const name = data?.username || ('Player ' + id);
     const hex  = (data?.hex || '5aaa72').replace('#', '');
     const pill = document.createElement('div');
     pill.className = 'player-list-pill';
-    pill.innerHTML = `<span class="player-list-dot" style="background:#${hex}"></span><span>${name}</span>`;
+    pill.innerHTML = `
+      <span class="player-list-dot" style="background:#${hex};box-shadow:0 0 5px #${hex}"></span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${name}</span>
+    `;
     list.appendChild(pill);
   });
 
-  // ── Debug: show player count in status ──
-  const total = 1 + ids.length;
-  const statusEl = document.getElementById('play-status');
-  if (statusEl && statusEl.textContent.includes('online')) {
-    // Append player count without overwriting the connection status
-    const base = statusEl.textContent.replace(/ — \d+ players?$/, '');
-    statusEl.textContent = `${base} — ${total} ${total === 1 ? 'player' : 'players'}`;
+  // ── Overflow indicator if somehow > 8 ──
+  if (overflow > 0) {
+    const ovf = document.createElement('div');
+    ovf.className = 'player-list-overflow';
+    ovf.textContent = `+${overflow} more`;
+    list.appendChild(ovf);
   }
 }
 
