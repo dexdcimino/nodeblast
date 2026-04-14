@@ -772,6 +772,15 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-overflow-badge{display:flex;align-items:center;justify-content:center;border-radius:14px;border:1.5px dashed var(--bdr);background:var(--bg3);cursor:pointer;transition:border-color var(--ease),background var(--ease);flex-shrink:0;}
 .community-overflow-badge:hover{border-color:var(--clr-adj);background:color-mix(in srgb,var(--clr-adj) 8%,var(--bg3));}
 .community-overflow-badge span{font-size:18px;font-weight:700;color:var(--tx2);}
+
+/* NB-MD09: creator-level vote buttons (fire / poop) */
+.creator-vote-row{display:flex;gap:8px;padding:10px 14px 12px;border-top:1px solid rgba(255,255,255,0.05);}
+.creator-vote-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.1);background:transparent;font-size:13px;cursor:pointer;transition:border-color .15s,background .15s,transform .1s;color:var(--tx2);}
+.creator-vote-btn:hover{border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.05);}
+.creator-vote-btn:active{transform:scale(0.95);}
+.creator-vote-btn.active.fire{border-color:#ff6b35;background:rgba(255,107,53,0.12);color:#ff6b35;}
+.creator-vote-btn.active.frost{border-color:#a07850;background:rgba(160,120,80,0.12);color:#c8a87a;}
+.creator-vote-count{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
 .community-empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px;}
 
 /* MD18: pin button on community-view hex tiles. Positioned in the

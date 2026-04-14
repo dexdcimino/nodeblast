@@ -51,6 +51,17 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // NB-MD09: creator-level fire/poop votes
+    match /creator_votes/{voteId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.voterId;
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.voterId;
+      allow delete: if request.auth != null
+        && resource.data.voterId == request.auth.uid;
+    }
+
     // NodeSplit
     match /nodesplit_questions/{questionId} {
       allow read: if true;

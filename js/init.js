@@ -60,6 +60,7 @@ import {
   loadUserTracked,
   loadFollowedAlchemistCatalysts,
 } from './tracked.js';
+import { voteCreator, getMyCreatorVotes } from './creator-votes.js';
 
 let _currentCategory = 'all';
 // Feed view mode — 'catalysts' (flat hex flow) or 'alchemists' (grouped
@@ -1112,6 +1113,11 @@ function _groupCatalystsByCreator(catalysts) {
         oldestCreatedAt: Number.POSITIVE_INFINITY,
         totalFireCount: 0,
         totalFrostCount: 0,
+        // NB-MD09: creator-level vote totals (live on users/{uid}).
+        // Defaulted to 0; populated opportunistically if the catalyst
+        // doc carries denormalized owner fields.
+        fireVoteCount: 0,
+        frostVoteCount: 0,
       };
       groups.set(ownerId, g);
     }
@@ -1121,6 +1127,8 @@ function _groupCatalystsByCreator(catalysts) {
     if (ts && ts < g.oldestCreatedAt) g.oldestCreatedAt = ts;
     g.totalFireCount += (cat.fireCount || 0);
     g.totalFrostCount += (cat.frostCount || 0);
+    if (typeof cat.ownerFireVoteCount === 'number') g.fireVoteCount = cat.ownerFireVoteCount;
+    if (typeof cat.ownerFrostVoteCount === 'number') g.frostVoteCount = cat.ownerFrostVoteCount;
   }
   // Normalize groups that had no dated catalysts so the oldest sort
   // doesn't leave +Infinity sentinels in place.
@@ -1195,6 +1203,17 @@ function _sortCardTiles(tiles) {
 // alongside the card's padding and the grid's side margins.
 const COMMUNITY_TILE_W = 180;
 const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_W * 1.1547);
+
+// NB-MD09: reflect the user's current creator-vote (or lack thereof)
+// on every matching card in the DOM. Called both after pre-fetching
+// votes for the feed and after the authoritative vote RPC resolves.
+function _updateCreatorVoteUI(creatorUid, activeType) {
+  document
+    .querySelectorAll(`.creator-vote-row[data-creator-uid="${creatorUid}"] .creator-vote-btn`)
+    .forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.voteType === activeType);
+    });
+}
 
 function _buildCommunityCard(group) {
   const hex = group.hexCode;
@@ -1375,6 +1394,55 @@ function _buildCommunityCard(group) {
   }
   card.appendChild(body);
 
+  // NB-MD09: creator-level vote buttons (fire / poop). Hidden on own card.
+  const isOwnCardForVote = State.user && group.uid === State.user.uid;
+  if (!isOwnCardForVote) {
+    const voteRow = document.createElement('div');
+    voteRow.className = 'creator-vote-row';
+    voteRow.dataset.creatorUid = group.uid;
+
+    const fireBtn = document.createElement('button');
+    fireBtn.type = 'button';
+    fireBtn.className = 'creator-vote-btn fire';
+    fireBtn.dataset.voteType = 'fire';
+    fireBtn.setAttribute('data-tip', 'Fire');
+    fireBtn.innerHTML = `🔥 <span class="creator-vote-count">${group.fireVoteCount || 0}</span>`;
+
+    const frostBtn = document.createElement('button');
+    frostBtn.type = 'button';
+    frostBtn.className = 'creator-vote-btn frost';
+    frostBtn.dataset.voteType = 'frost';
+    frostBtn.setAttribute('data-tip', 'Poop');
+    frostBtn.innerHTML = `💩 <span class="creator-vote-count">${group.frostVoteCount || 0}</span>`;
+
+    [fireBtn, frostBtn].forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!State.user) { toast('Sign in to vote'); openSigninModal(); return; }
+        const voteType = btn.dataset.voteType;
+        const sibling = btn === fireBtn ? frostBtn : fireBtn;
+        const wasActive = btn.classList.contains('active');
+        const sibWasActive = sibling.classList.contains('active');
+        // Optimistic: flip active state; adjust counts.
+        btn.classList.toggle('active', !wasActive);
+        sibling.classList.remove('active');
+        const btnCountEl = btn.querySelector('.creator-vote-count');
+        const sibCountEl = sibling.querySelector('.creator-vote-count');
+        const btnN = parseInt(btnCountEl.textContent, 10) || 0;
+        const sibN = parseInt(sibCountEl.textContent, 10) || 0;
+        btnCountEl.textContent = String(wasActive ? Math.max(0, btnN - 1) : btnN + 1);
+        if (sibWasActive) sibCountEl.textContent = String(Math.max(0, sibN - 1));
+
+        const result = await voteCreator(group.uid, voteType);
+        if (result !== null) _updateCreatorVoteUI(group.uid, result.type);
+      });
+    });
+
+    voteRow.appendChild(fireBtn);
+    voteRow.appendChild(frostBtn);
+    card.appendChild(voteRow);
+  }
+
   // NB-MD06: aggregate fire / poop vote totals for this creator.
   // Only rendered when at least one vote exists.
   const totalFire = group.totalFireCount || 0;
@@ -1420,6 +1488,16 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   const groups = Array.from(_groupCatalystsByCreator(catalysts).values());
   const ranked = _sortCreatorGroups(groups, _feedSortMode);
   ranked.forEach((g) => list.appendChild(_buildCommunityCard(g)));
+
+  // NB-MD09: pre-fetch the signed-in user's creator votes for every
+  // visible creator so their buttons render in the active state. Runs
+  // async after cards are in the DOM — no layout blocking.
+  if (State.user) {
+    const creatorUids = ranked.map((g) => g.uid).filter((uid) => uid && uid !== State.user.uid);
+    getMyCreatorVotes(creatorUids).then((votesMap) => {
+      votesMap.forEach((voteType, uid) => _updateCreatorVoteUI(uid, voteType));
+    });
+  }
 }
 
 // "Catalysts" view: a single flow of hex tiles, sorted by createdAt
