@@ -1,10 +1,12 @@
+const http              = require('http');
 const { WebSocketServer } = require('ws');
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 }    = require('uuid');
 
 const PORT = process.env.PORT || 7777;
 const TICK_RATE_MS = 50;
 const MAX_PLAYERS_PER_ROOM = 8;
-const MOVE_SPEED_CAP = 0.5;
+const MOVE_SPEED_CAP_XZ = 0.55;  // horizontal max per tick
+const MOVE_SPEED_CAP_Y  = 1.2;   // vertical max per tick (allows jetpack launch)
 const MAP_BOUNDS = 38;
 
 const rooms = new Map();
@@ -48,22 +50,64 @@ function tickRoom(room) {
 }
 
 function validateMove(player, newX, newY, newZ) {
-  const dx = newX - player.x;
-  const dz = newZ - player.z;
+  // Horizontal cap (XZ plane)
+  const dx   = newX - player.x;
+  const dz   = newZ - player.z;
   const dist = Math.sqrt(dx * dx + dz * dz);
-  if (dist > MOVE_SPEED_CAP) {
-    const scale = MOVE_SPEED_CAP / dist;
+  if (dist > MOVE_SPEED_CAP_XZ) {
+    const scale = MOVE_SPEED_CAP_XZ / dist;
     newX = player.x + dx * scale;
     newZ = player.z + dz * scale;
   }
+
+  // Vertical cap (Y axis — allows jetpack bursts)
+  const dy = Math.abs(newY - player.y);
+  if (dy > MOVE_SPEED_CAP_Y) {
+    newY = player.y + Math.sign(newY - player.y) * MOVE_SPEED_CAP_Y;
+  }
+
+  // Bounds
   newX = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, newX));
   newZ = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, newZ));
-  newY = Math.max(0, Math.min(20, newY));
+  newY = Math.max(0, Math.min(22, newY));  // raised ceiling for jetpack
   return { x: newX, y: newY, z: newZ };
 }
 
-const wss = new WebSocketServer({ port: PORT });
-console.log(`[server] nodeblast-game-server listening on :${PORT}`);
+// ── HTTP server for status endpoint ──
+const httpServer = http.createServer((req, res) => {
+  if (req.url === '/status' || req.url === '/') {
+    const status = {
+      server:  'nodeblast-game-server',
+      uptime:  Math.floor(process.uptime()),
+      rooms:   [],
+    };
+    rooms.forEach((room, id) => {
+      status.rooms.push({
+        id,
+        players: room.players.size,
+        playerIds: Array.from(room.players.values()).map(p => ({
+          id:       p.id,
+          username: p.username,
+          hex:      p.hex,
+        })),
+      });
+    });
+    res.writeHead(200, {
+      'Content-Type':                'application/json',
+      'Access-Control-Allow-Origin': '*',
+    });
+    res.end(JSON.stringify(status, null, 2));
+  } else {
+    res.writeHead(404);
+    res.end('not found');
+  }
+});
+
+// ── WebSocket server on same HTTP server ──
+const wss = new WebSocketServer({ server: httpServer });
+httpServer.listen(PORT, () => {
+  console.log(`[server] nodeblast-game-server listening on :${PORT} (HTTP + WS)`);
+});
 
 wss.on('connection', (ws) => {
   const socketId = uuidv4();
@@ -101,6 +145,7 @@ wss.on('connection', (ws) => {
           type: 'joined',
           roomId,
           playerId,
+          socketId:    socketId,  // always the socket UUID for self-filter
           playerCount: room.players.size,
         }));
         console.log(`[room:${roomId}] player joined: ${playerId} (${room.players.size} total)`);
@@ -139,9 +184,3 @@ wss.on('connection', (ws) => {
   });
 });
 
-const http = require('http');
-const healthServer = http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end('ok');
-});
-healthServer.listen(process.env.PORT_HTTP || 8080);

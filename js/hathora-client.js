@@ -59,7 +59,9 @@ export function initHathora({ roomId, username, hex, onSnapshot, onConnected, on
         break;
       case 'joined':
         _connected = true;
-        console.log(`[hathora] joined room: ${msg.roomId}, players: ${msg.playerCount}`);
+        // Use socketId from server if myId wasn't set by welcome yet
+        if (msg.socketId && !_myId) _myId = msg.socketId;
+        console.log(`[hathora] joined room: ${msg.roomId}, myId: ${_myId}, players: ${msg.playerCount}`);
         if (_onConnected) _onConnected(_myId);
         break;
       case 'snapshot':
