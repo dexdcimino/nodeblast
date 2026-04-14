@@ -44,7 +44,7 @@ import { getUserByUsernameHex } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './router.js';
 import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js';
 import { initNotifications, initHelpPanel } from './notifications.js';
-import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest } from './friends.js';
+import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest, applyInviteButtonStates } from './friends.js';
 import { renderSocialIconsHTML } from './social.js';
 import { renderPlayRoute, destroyPlayRoute } from './play-mode.js';
 import { getGame, SYSTEM_PROFILE, getGamesAsCatalysts, GAME_REGISTRY } from './game-registry.js';
@@ -1885,6 +1885,8 @@ async function renderRoute({ force = false } = {}) {
     }
   } finally {
     if (honey) honey.style.opacity = '1';
+    // NB-MD11: refresh Invite-to-game button states since /play toggled.
+    applyInviteButtonStates();
   }
 }
 
