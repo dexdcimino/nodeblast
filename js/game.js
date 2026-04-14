@@ -1111,7 +1111,7 @@ export function initGame(canvas){
   });
   initGunHUD();
   initPlasma(_scene, _camera, _colBlocks);
-  initEnemyNodes(_scene, _camera, _onPlayerDamaged);
+  initEnemyNodes(_scene, _camera, _onPlayerDamaged, _colBlocks);
   initNodeBlaster(_scene, _camera);
   window._nbEnemyPositions = null; // set by enemy-nodes.js
   window._nbDamageEnemy = (idx, dmg) => damageEnemyNode(idx, dmg);
@@ -1136,6 +1136,8 @@ export function initGame(canvas){
   _engine.runRenderLoop(()=>_scene.render());
   _resizeHandler=()=>_engine.resize();window.addEventListener('resize',_resizeHandler);
   window._nbGetPlayerState=getPlayerState;
+  // Expose current delta for enemy-nodes and other modules
+  Object.defineProperty(window, '_nbDelta', { get: () => _delta, configurable: true });
   return{engine:_engine,scene:_scene};
 }
 
