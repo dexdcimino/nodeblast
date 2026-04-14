@@ -58,6 +58,7 @@ import {
   setTrackedPublic,
   subscribeMyTracked,
   loadUserTracked,
+  loadFollowedAlchemistCatalysts,
 } from './tracked.js';
 
 let _currentCategory = 'all';
@@ -88,6 +89,9 @@ let _suppressNextDetailOpen = false;
 const _profileActiveTabs = new Set(['catalysts']);
 // NB-MD05: collapsed community cards — session-only, keyed by creator UID
 const _collapsedCards = new Set();
+// NB-MD08: tracked data for the currently-viewed non-own profile. Null when
+// viewing own profile (use _myTrackedAlchemists directly) or no profile open.
+let _viewedUserTracked = null;
 let _currentProfileView = null; // { user, catalysts, isOwn } — last rendered profile
 let _profileCache = new Map(); // "name#hex" or "name" -> { user, catalysts }
 let _viewingOther = null;       // { uid, displayName, hexCode } for the profile currently shown
@@ -594,20 +598,58 @@ function _renderProfileView(user, catalysts, isOwn) {
     }
   }
 
-  // Following column — followed alchemist chips
+  // NB-MD08: Following column — full community-style cards for each
+  // followed alchemist, showing their latest catalysts.
   const followingCol = document.getElementById('profile-col-following');
   if (followingCol && _profileActiveTabs.has('following')) {
     followingCol.innerHTML = '';
-    if (isOwn && _myTrackedAlchemists.length > 0) {
-      _myTrackedAlchemists.forEach((alch) => {
-        const chip = _buildFollowedChip(alch, { canRemove: true });
-        followingCol.appendChild(chip);
-      });
-    } else {
+    const alchemistsToShow = isOwn
+      ? _myTrackedAlchemists
+      : (_viewedUserTracked?.alchemists || []);
+
+    if (alchemistsToShow.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'hex-empty';
-      empty.textContent = isOwn ? 'Follow alchemists from the community hub' : 'Not following anyone yet';
+      empty.textContent = isOwn ? 'Follow alchemists from the community hub' : 'Not following anyone';
       followingCol.appendChild(empty);
+    } else {
+      const loading = document.createElement('div');
+      loading.className = 'hex-empty';
+      loading.textContent = 'Loading...';
+      followingCol.appendChild(loading);
+
+      // Capture user identity so we don't paint into a stale column
+      // after a route change.
+      const requestUid = user.uid;
+      loadFollowedAlchemistCatalysts(alchemistsToShow, 5).then((catMap) => {
+        // Abort if the profile view has moved on.
+        if (!_currentProfileView || _currentProfileView.user?.uid !== requestUid) return;
+        followingCol.innerHTML = '';
+        alchemistsToShow.forEach((alch) => {
+          const cats = catMap.get(alch.uid) || [];
+          const group = {
+            uid: alch.uid,
+            displayName: alch.username || 'anon',
+            hexCode: (alch.hex || '5aaa72').replace('#', '').toLowerCase(),
+            photoURL: alch.photoURL || '',
+            isAdmin: !!alch.isAdmin,
+            socialLinks: [],
+            catalysts: cats,
+            latestCreatedAt: 0,
+            oldestCreatedAt: 0,
+            totalFireCount: cats.reduce((s, c) => s + (c.fireCount || 0), 0),
+            totalFrostCount: cats.reduce((s, c) => s + (c.frostCount || 0), 0),
+          };
+          const card = _buildCommunityCard(group);
+          followingCol.appendChild(card);
+        });
+        if (followingCol.children.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'hex-empty';
+          empty.textContent = 'No catalysts from followed alchemists yet';
+          followingCol.appendChild(empty);
+        }
+      });
     }
   }
 
@@ -1573,6 +1615,9 @@ function _routeInternalIfNeeded(user, cat) {
 async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
   // Reset suppress flag if we're landing on a plain profile (no slug to open)
   if (!openSlug) _suppressNextDetailOpen = false;
+  // NB-MD08: clear stale viewed-user tracked data; will be populated for
+  // non-own profiles below when loadUserTracked resolves.
+  _viewedUserTracked = null;
   hideAllViews();
   setPageTitle([username]);
 
@@ -1669,6 +1714,12 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
       const hexMatch = (route.hex || '').toLowerCase() === (user.hexCode || '').toLowerCase();
       if (routeLower !== userLower || !hexMatch) return;
       _renderTrackedFooter({ catalysts, alchemists, trackedPublic, isOwn: false });
+      // NB-MD08: cache for the Following column, then re-render so it
+      // shows the viewed user's follow list (not the empty placeholder).
+      _viewedUserTracked = { catalysts, alchemists, trackedPublic };
+      if (_currentProfileView && _profileActiveTabs.has('following')) {
+        _renderProfileView(_currentProfileView.user, _currentProfileView.catalysts, _currentProfileView.isOwn);
+      }
     });
   }
 

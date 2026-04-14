@@ -23,6 +23,12 @@ import {
   setDoc,
   updateDoc,
   onSnapshot,
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  limit,
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 import State from './state.js';
 import { toast } from './ui-events.js';
@@ -290,4 +296,34 @@ export async function loadUserTracked(uid) {
     console.warn('[tracked] loadUserTracked failed:', err);
     return { catalysts: [], alchemists: [], trackedPublic: false };
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  NB-MD08: fetch catalysts for each followed alchemist so the
+//  profile Following column can render full community-style cards.
+//  Uses Promise.allSettled — one failing user doesn't block the rest.
+// ══════════════════════════════════════════════════════════════
+export async function loadFollowedAlchemistCatalysts(alchemists, maxPerUser = 5) {
+  if (!alchemists || alchemists.length === 0) return new Map();
+
+  const results = new Map();
+  await Promise.allSettled(
+    alchemists.map(async (alch) => {
+      try {
+        const q = query(
+          collection(db, 'catalysts'),
+          where('ownerId', '==', alch.uid),
+          orderBy('createdAt', 'desc'),
+          limit(maxPerUser)
+        );
+        const snap = await getDocs(q);
+        const cats = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        results.set(alch.uid, cats);
+      } catch (err) {
+        console.warn('[tracked] loadFollowedCatalysts failed for', alch.uid, err);
+        results.set(alch.uid, []);
+      }
+    })
+  );
+  return results;
 }
