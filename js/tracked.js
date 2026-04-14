@@ -148,8 +148,12 @@ export async function followAlchemist(group) {
     await setDoc(ref, { items: next, updatedAt: Date.now() }, { merge: true });
     return true;
   } catch (err) {
-    console.warn('[tracked] followAlchemist failed:', err);
-    toast('Follow failed');
+    console.error('[tracked] followAlchemist failed:', err?.code, err?.message, err);
+    if (err?.code === 'permission-denied') {
+      toast('Follow failed — permission denied. Rules may need updating.');
+    } else {
+      toast('Follow failed');
+    }
     return false;
   }
 }
@@ -167,8 +171,12 @@ export async function unfollowAlchemist(uid) {
     await updateDoc(ref, { items: next, updatedAt: Date.now() });
     return true;
   } catch (err) {
-    console.warn('[tracked] unfollowAlchemist failed:', err);
-    toast('Unfollow failed');
+    console.error('[tracked] unfollowAlchemist failed:', err?.code, err?.message, err);
+    if (err?.code === 'permission-denied') {
+      toast('Unfollow failed — permission denied. Rules may need updating.');
+    } else {
+      toast('Unfollow failed');
+    }
     return false;
   }
 }
