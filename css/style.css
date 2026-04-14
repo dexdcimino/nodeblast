@@ -1266,7 +1266,7 @@ body.cat-modal-open{overflow:hidden;}
 ══════════════════════════════════════ */
 #cat-detail-popup{display:none;position:fixed;inset:0;z-index:24000;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
 #cat-detail-popup.open{display:flex;}
-#cat-detail-card{background:var(--bg2);border:1px solid var(--bdr);border-top:2px solid var(--cat-accent,var(--clr));border-radius:14px;width:90%;max-width:360px;max-height:88vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.45);position:relative;animation:fadeup .22s ease both;--cat-accent:var(--clr);transition:border-top-color .2s ease;}
+#cat-detail-card{background:var(--bg2);border:1px solid var(--bdr);border-top:3px solid var(--cat-accent,var(--clr));border-radius:14px;width:90%;max-width:440px;max-height:88vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.45);position:relative;animation:fadeup .22s ease both;--cat-accent:var(--clr);transition:border-top-color .2s ease;}
 /* MD03: catalyst accent tinting — primary Open button + active vote pill pick up --cat-accent */
 #cat-detail-card #cat-detail-open.primary{background:var(--cat-accent);border-color:var(--cat-accent);}
 #cat-detail-card #cat-detail-open.primary:hover{filter:brightness(1.1);}
@@ -1278,13 +1278,16 @@ body.cat-modal-open{overflow:hidden;}
 #cat-detail-close{position:absolute;top:12px;right:12px;z-index:10;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border:none;border-radius:8px;color:#fff;cursor:pointer;padding:8px;display:inline-flex;align-items:center;justify-content:center;transition:background var(--ease);}
 #cat-detail-close:hover{background:rgba(0,0,0,0.80);}
 #cat-detail-thumb{width:100%;max-height:180px;height:180px;background-size:cover;background-position:center;background-color:var(--bg3);position:relative;border-radius:14px 14px 0 0;}
+/* MD09: no-thumb branded placeholder — accent gradient + logo watermark */
+#cat-detail-thumb.no-thumb{background-image:none !important;background:linear-gradient(135deg,color-mix(in srgb,var(--cat-accent,var(--clr-adj)) 18%,var(--bg3)) 0%,var(--bg3) 100%);display:flex;align-items:center;justify-content:center;}
+#cat-detail-thumb.no-thumb .cat-detail-thumb-placeholder{opacity:0.18;width:60px;height:auto;color:var(--cat-accent,var(--clr-adj));position:relative;z-index:1;}
 #cat-detail-thumb::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,var(--bg2) 98%);}
 #cat-detail-body{padding:16px 22px 22px;display:flex;flex-direction:column;gap:12px;}
 #cat-detail-title-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
 #cat-detail-title{font-size:20px;font-weight:700;color:var(--tx);line-height:1.25;flex:1;min-width:0;}
 .cat-detail-status{display:none;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0;}
 .cat-detail-status.visible{display:inline-flex;}
-.cat-detail-status[data-status="live"]{background:color-mix(in srgb,var(--clr) 20%,var(--bg3));color:var(--clr);}
+.cat-detail-status[data-status="live"]{background:color-mix(in srgb,var(--cat-accent,var(--clr)) 20%,var(--bg3));color:var(--cat-accent,var(--clr));}
 .cat-detail-status[data-status="early"]{background:rgba(232,133,58,.2);color:#f3a968;}
 .cat-detail-status[data-status="placeholder"]{background:rgba(130,132,143,.25);color:var(--tx2);}
 .cat-detail-status .cat-status-dot{width:6px;height:6px;}
@@ -1324,10 +1327,9 @@ body.cat-modal-open{overflow:hidden;}
 .cat-detail-collab-role{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--clr-adj);}
 .cat-detail-collab-hex{font-size:11px;font-weight:500;color:var(--tx3);font-family:var(--fn);}
 #cat-detail-desc{font-size:13px;color:var(--tx2);line-height:1.55;white-space:pre-wrap;}
-/* MD05: show a subtle italic placeholder when a catalyst has no description */
-#cat-detail-desc.empty::after{content:'No description provided.';color:var(--tx3);font-style:italic;font-size:13px;}
-/* Hide the row only when JS has explicitly NOT marked it .empty and it's also empty text */
-#cat-detail-desc:empty:not(.empty){display:none;}
+/* MD09: CSS-only empty state — renders an italic placeholder when the
+   element has no content, simpler than the MD05 JS-class approach. */
+#cat-detail-desc:empty::before{content:'No description.';color:var(--tx3);font-style:italic;}
 #cat-detail-url-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;}
 #cat-detail-url-row .cat-detail-url-globe{color:var(--tx3);flex-shrink:0;}
 #cat-detail-url-text{flex:1;min-width:0;color:var(--tx2);font-size:13px;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1897,7 +1899,7 @@ body.cat-modal-open{overflow:hidden;}
   .feed-mode-btn{padding:0 12px;height:26px;font-size:12px;}
   #feed-sort{padding:3px;height:34px;}
   .feed-sort-btn{padding:0 10px;height:26px;font-size:11px;}
-  #cat-detail-card{max-width:100%;width:92%;}
+  #cat-detail-card{max-width:100%;width:94%;}
   #cat-modal-card{max-width:100%;width:94%;padding:20px 18px 16px;}
   .cat-field-row{flex-direction:column;}
   /* Stack the hex preview above the form on narrow screens. */
