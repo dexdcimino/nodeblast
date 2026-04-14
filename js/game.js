@@ -559,7 +559,19 @@ function _buildGunPickups() {
       pt.diffuse   = new B.Color3(gc.r, gc.g, gc.b);
       pt.intensity = 0.8;
       pt.range     = 4;
-      _gunPickups.push({ base, orb, pt, slot: def.slot,
+      // Ground glow disc beneath each pickup
+      const glowDisc = B.MeshBuilder.CreateCylinder(
+        'pickup_glow_' + def.name + sp.z,
+        { diameter: 1.1, height: 0.02, tessellation: 14 }, _scene,
+      );
+      glowDisc.position.set(def.x, 0.02, sp.z);
+      const gdMat = new B.StandardMaterial('pgm_' + def.name + sp.z, _scene);
+      gdMat.emissiveColor   = new B.Color3(gc.r * 0.35, gc.g * 0.35, gc.b * 0.35);
+      gdMat.disableLighting = true;
+      gdMat.alpha           = 0.45;
+      glowDisc.material     = gdMat;
+
+      _gunPickups.push({ base, orb, pt, glowDisc, slot: def.slot,
         pos: new B.Vector3(def.x, 1.0, sp.z) });
     });
   });
@@ -875,6 +887,16 @@ function _physicsTick() {
         playPickup();
         _eHeld      = true;
         _eHoldTimer = 0;
+
+        // Flash the newly unlocked slot in the HUD
+        const slotEl = document.getElementById('gun-slot-' + _nearPickup.slot);
+        if (slotEl) {
+          slotEl.classList.remove('unlock-flash');
+          void slotEl.offsetWidth; // force reflow to restart animation
+          slotEl.classList.add('unlock-flash');
+          setTimeout(() => slotEl.classList.remove('unlock-flash'), 650);
+        }
+
         // Remove the picked-up pickup from world
         try {
           _nearPickup.base?.dispose();
@@ -900,11 +922,16 @@ function _physicsTick() {
     if (!_keys['KeyE']) { _eHeld = false; _eHoldTimer = 0; }
   }
 
-  // Animate pickup orbs
+  // Animate pickup orbs + pulse glow disc
   const pt = Date.now() * 0.002;
   _gunPickups.forEach((pu, i) => {
     pu.orb.position.y = 1.1 + Math.sin(pt + i * 1.2) * 0.12;
     pu.orb.rotation.y = pt * 0.8;
+    // Glow disc pulses in sync with orb height
+    if (pu.glowDisc?.material) {
+      const pulse = 0.3 + Math.sin(pt + i * 1.2) * 0.15;
+      pu.glowDisc.material.alpha = pulse;
+    }
   });
 
   // Color node pickup
@@ -953,6 +980,13 @@ function _physicsTick() {
   if (_camera) {
     const targetFov = _sprinting && ml > 0 ? 1.32 : 1.22;
     _camera.fov += (targetFov - _camera.fov) * 0.08;
+  }
+
+  // Sprint vignette
+  const sprintVig = document.getElementById('play-sprint-vignette');
+  if (sprintVig) {
+    if (_sprinting && ml > 0) sprintVig.classList.add('active');
+    else                       sprintVig.classList.remove('active');
   }
 
   if (_gunRoot && _camera) {
@@ -1256,7 +1290,7 @@ export function destroyGame(engine){
   if(_gunRoot){try{_gunRoot.getChildMeshes().forEach(m=>m.dispose());_gunRoot.dispose();}catch{}_gunRoot=null;}
   if(_jetpackPS){try{_jetpackPS.dispose();}catch{}_jetpackPS=null;}
   if(_jetpackNode){try{_jetpackNode.dispose();}catch{}_jetpackNode=null;}
-  _gunPickups.forEach(pu=>{try{pu.base?.dispose();pu.orb?.dispose();pu.pt?.dispose();pu.glow?.dispose();}catch{}});
+  _gunPickups.forEach(pu=>{try{pu.base?.dispose();pu.orb?.dispose();pu.pt?.dispose();pu.glow?.dispose();pu.glowDisc?.dispose();}catch{}});
   _gunPickups.length=0;_nearPickup=null;
   window._nbSetGunColor=null;
   resetGuns();
