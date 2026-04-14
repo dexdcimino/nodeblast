@@ -241,7 +241,12 @@ function _openEditPanel() {
   // span controlled by isAdmin.
   if (nameIn) { nameIn.value = stripDevSuffix(State.profile?.displayName || ''); nameIn.focus(); }
   if (hexIn) hexIn.value = '#' + (State.profile?.hexCode || '5AAA72').toUpperCase();
-  if (bioIn) bioIn.value = State.profile?.bio || '';
+  if (bioIn) {
+    // MD11: clear any previously dragged inline height so the textarea
+    // opens at the CSS default — the max-height rule still caps growth.
+    bioIn.style.height = '';
+    bioIn.value = State.profile?.bio || '';
+  }
   // Seed the working social links list from State. Clone objects so
   // the editing loop can mutate them without touching State.profile.
   _editingLinks = Array.isArray(State.profile?.socialLinks)
