@@ -1643,15 +1643,30 @@ async function _paintCatalystDetail(catalyst) {
     thumbEl.style.backgroundImage = '';
     thumbEl.style.display = 'none';
   }
-  thumbEl.style.setProperty('--accent', catalyst.accentColor || '#5AAA72');
-  // MD03: tint the detail card with the catalyst's accent so primary
-  // actions (Open button, active vote pill) reflect the catalyst's
-  // color rather than the global theme color.
+  const accent = catalyst.accentColor || '#5AAA72';
+  thumbEl.style.setProperty('--accent', accent);
+  // MD03/MD05: tint the detail card with the catalyst's accent so
+  // primary actions (Open button, active vote pill, status dot, top
+  // border) reflect the catalyst's color rather than the global theme.
   const cardEl = document.getElementById('cat-detail-card');
-  if (cardEl) cardEl.style.setProperty('--cat-accent', catalyst.accentColor || '#5AAA72');
+  if (cardEl) {
+    cardEl.style.setProperty('--cat-accent', accent);
+    cardEl.style.borderTopColor = accent;
+  }
 
   document.getElementById('cat-detail-title').textContent = catalyst.title;
-  document.getElementById('cat-detail-desc').textContent = catalyst.description || '';
+  // MD05: description empty state — show italic placeholder instead of
+  // silently collapsing the description row.
+  const descEl = document.getElementById('cat-detail-desc');
+  if (descEl) {
+    if (catalyst.description && catalyst.description.trim()) {
+      descEl.textContent = catalyst.description;
+      descEl.classList.remove('empty');
+    } else {
+      descEl.textContent = '';
+      descEl.classList.add('empty');
+    }
+  }
 
   // Status badge next to the title. Legacy catalysts without a status
   // default to 'live' so they don't suddenly render as WIP.
@@ -1659,7 +1674,8 @@ async function _paintCatalystDetail(catalyst) {
   const statusEl = document.getElementById('cat-detail-status');
   if (statusEl) {
     const labelMap = { live: 'Live', early: 'Early', placeholder: 'WIP' };
-    const colorMap = { live: 'var(--clr)', early: '#E8853A', placeholder: 'var(--tx3)' };
+    // MD05: live dot now picks up the catalyst's accent color.
+    const colorMap = { live: accent, early: '#E8853A', placeholder: 'var(--tx3)' };
     statusEl.dataset.status = status;
     statusEl.innerHTML = `<span class="cat-status-dot" style="background:${colorMap[status]}"></span>${labelMap[status]}`;
     statusEl.classList.add('visible');
