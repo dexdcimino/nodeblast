@@ -1682,34 +1682,47 @@ async function _paintCatalystDetail(catalyst) {
 
   const creator = document.getElementById('cat-detail-creator');
   const hex = catalyst.ownerHex || '5aaa72';
-  const unameHtml = renderUsername(catalyst.ownerName || 'anon', '#' + hex, !!catalyst.ownerIsAdmin);
-  // MD04: hex-shaped owner avatar (matches the design language used on
-  // community cards and profile bars). Falls back to the initial on the
-  // hex-color fill when there's no profile photo.
-  const ownerInitial = (catalyst.ownerName || 'A').charAt(0).toUpperCase();
-  const ownerAvatarContent = catalyst.ownerPhoto
-    ? `<img src="${catalyst.ownerPhoto}" alt="" class="cat-detail-creator-photo">`
-    : `<span class="cat-detail-creator-initial">${ownerInitial}</span>`;
-  creator.innerHTML = `
-    <div class="cat-detail-creator-hex-wrap">
-      <svg class="cat-detail-creator-hex-bg" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <polygon points="50,2 98,26.5 98,88.5 50,113 2,88.5 2,26.5" fill="#${hex}" stroke="none"/>
-      </svg>
-      <div class="cat-detail-creator-hex-inner">
-        ${ownerAvatarContent}
+  const isOwnCatalyst = !!(State.user && catalyst.ownerId === State.user.uid);
+  if (isOwnCatalyst) {
+    // MD10: for your own catalyst, show a compact "Your Catalyst" chip
+    // instead of the full creator row (no point rendering your own
+    // avatar + hex back at yourself).
+    creator.innerHTML = '<span class="cat-detail-own-badge">'
+      + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+      + 'Your Catalyst'
+      + '</span>';
+    creator.style.cursor = 'default';
+    creator.onclick = null;
+  } else {
+    const unameHtml = renderUsername(catalyst.ownerName || 'anon', '#' + hex, !!catalyst.ownerIsAdmin);
+    // MD04: hex-shaped owner avatar (matches the design language used on
+    // community cards and profile bars). Falls back to the initial on the
+    // hex-color fill when there's no profile photo.
+    const ownerInitial = (catalyst.ownerName || 'A').charAt(0).toUpperCase();
+    const ownerAvatarContent = catalyst.ownerPhoto
+      ? `<img src="${catalyst.ownerPhoto}" alt="" class="cat-detail-creator-photo">`
+      : `<span class="cat-detail-creator-initial">${ownerInitial}</span>`;
+    creator.innerHTML = `
+      <div class="cat-detail-creator-hex-wrap">
+        <svg class="cat-detail-creator-hex-bg" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <polygon points="50,2 98,26.5 98,88.5 50,113 2,88.5 2,26.5" fill="#${hex}" stroke="none"/>
+        </svg>
+        <div class="cat-detail-creator-hex-inner">
+          ${ownerAvatarContent}
+        </div>
       </div>
-    </div>
-    <div class="cat-detail-creator-info">
-      <span class="cat-detail-creator-name">${unameHtml}</span>
-      <span class="cat-detail-creator-hex-label" style="color:#${hex}">#${hex}</span>
-    </div>
-  `;
-  creator.style.cursor = 'pointer';
-  creator.onclick = () => {
-    const ownerName = (catalyst.ownerName || 'anon').toLowerCase();
-    closeCatalystDetail();
-    navigate('/' + buildUserSlug(ownerName, catalyst.ownerHex || ''));
-  };
+      <div class="cat-detail-creator-info">
+        <span class="cat-detail-creator-name">${unameHtml}</span>
+        <span class="cat-detail-creator-hex-label" style="color:#${hex}">#${hex}</span>
+      </div>
+    `;
+    creator.style.cursor = 'pointer';
+    creator.onclick = () => {
+      const ownerName = (catalyst.ownerName || 'anon').toLowerCase();
+      closeCatalystDetail();
+      navigate('/' + buildUserSlug(ownerName, catalyst.ownerHex || ''));
+    };
+  }
 
   document.getElementById('cat-detail-category').textContent = catalyst.category || 'sites';
   document.getElementById('cat-detail-platform').textContent = catalyst.platform || 'web';

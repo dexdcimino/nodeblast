@@ -1334,6 +1334,8 @@ function _buildCommunityCard(group) {
   const hexColor = '#' + hex;
   const card = document.createElement('div');
   card.className = 'community-card';
+  // MD10: flag own card so CSS can give it a subtle hex-colored glow.
+  if (State.user && group.uid === State.user.uid) card.classList.add('own-card');
   // NB-MD07: size tier based on catalyst count (6+ → full row)
   const catCount = group.catalysts.length;
   card.dataset.count = catCount >= 6 ? 'max' : String(Math.max(1, Math.min(catCount, 5)));

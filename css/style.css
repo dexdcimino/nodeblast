@@ -733,6 +733,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card[data-count="5"]{flex-basis:calc(60% - 14px);}
 .community-card[data-count="max"]{flex-basis:100%;}
 .community-card:hover{border-color:color-mix(in srgb,var(--clr-adj) 35%,var(--bdr));}
+/* MD10: own alchemist card — hex-colored glow ring so the user
+   immediately recognizes their own card in the community feed. */
+.community-card.own-card{border-color:color-mix(in srgb,var(--card-hex,var(--clr-adj)) 45%,var(--bdr));box-shadow:0 2px 10px rgba(0,0,0,.15),0 0 0 1px color-mix(in srgb,var(--card-hex,var(--clr-adj)) 20%,transparent);}
+.community-card.own-card .community-card-hdr{border-bottom-color:color-mix(in srgb,var(--card-hex,var(--clr-adj)) 20%,var(--bdr));}
 .community-card-hdr{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;padding-bottom:14px;border-bottom:1px solid var(--bdr);margin-bottom:16px;cursor:pointer;min-width:0;overflow:hidden;}
 .community-card-hdr:hover .community-card-name{color:var(--clr-adj);}
 .community-card-avatar{width:36px;height:36px;border-radius:50%;border:2px solid var(--card-hex,var(--clr-adj));background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:15px;font-weight:700;}
@@ -1308,6 +1312,9 @@ body.cat-modal-open{overflow:hidden;}
 .cat-detail-creator-info{display:flex;flex-direction:column;gap:3px;min-width:0;}
 .cat-detail-creator-name{font-size:14px;font-weight:700;color:var(--tx);}
 .cat-detail-creator-hex-label{font-size:12px;font-family:var(--fn);}
+/* MD10: "Your Catalyst" badge shown in lieu of the creator row on own catalysts */
+.cat-detail-own-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;background:color-mix(in srgb,var(--cat-accent,var(--clr-adj)) 15%,var(--bg3));color:var(--cat-accent,var(--clr-adj));font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;}
+.cat-detail-own-badge svg{flex-shrink:0;}
 #cat-detail-badges{display:flex;gap:6px;flex-wrap:wrap;}
 .cat-detail-badge{padding:4px 10px;border-radius:12px;background:var(--bg3);border:1px solid var(--bdr);color:var(--tx2);font-size:11px;font-weight:600;text-transform:capitalize;}
 #cat-detail-collab{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx3);user-select:none;}
