@@ -36,8 +36,9 @@ let _playerUsername='player',_playerHex='5aaa72';
 let _gunRoot=null,_muzzleOffset=null;
 let _jetpackPS=null,_jetpackNode=null;
 
-const WALK_SPEED  = 0.09;
-const SPRINT_MULT = 1.85;
+const WALK_SPEED    = 0.09;
+const SPRINT_MULT   = 2.8;   // was 1.85 — noticeably faster
+const SPRINT_INERTIA = 0.28; // higher acceleration during sprint for instant feel
 const JUMP_FORCE  = 0.28;
 const JUMP2_FORCE = 0.22;
 const GRAVITY     = 0.006;
@@ -655,9 +656,10 @@ function _physicsTick() {
   _sprinting = _keys['ShiftLeft'] || _keys['ShiftRight'] || false;
   const spd  = WALK_SPEED * (_sprinting ? SPRINT_MULT : 1);
   const ctrl = _onGround ? 1.0 : AIR_CONTROL;
+  const accel = _sprinting ? SPRINT_INERTIA : INERTIA;
 
-  _velX += ((mx * spd) - _velX) * INERTIA * ctrl * _delta;
-  _velZ += ((mz * spd) - _velZ) * INERTIA * ctrl * _delta;
+  _velX += ((mx * spd) - _velX) * accel * ctrl * _delta;
+  _velZ += ((mz * spd) - _velZ) * accel * ctrl * _delta;
   if (ml === 0 && _onGround) { const fd = Math.pow(FRICTION, _delta); _velX *= fd; _velZ *= fd; }
 
   _velY -= GRAVITY * (_velY < 0 ? FALL_MULT : 1.0) * _delta;
@@ -676,10 +678,15 @@ function _physicsTick() {
 
   const jpFromGround = _onGround && _jumpHeld && _jumpsLeft < 2;
   const jpInAir      = !_onGround && _jumpsLeft === 0;
+  const _jpWasActive = _jpActive;
   _jpActive = jumping && _jpFuel > 0 && (jpFromGround || jpInAir);
 
   if (_jpActive) {
     if (_camera.position.y < JP_MAX_Y) {
+      // If just activated from ground, give a strong launch burst
+      if (!_jpWasActive && _onGround) {
+        _velY = Math.max(_velY, 0.22);  // guaranteed liftoff velocity
+      }
       _velY += JP_FORCE * _delta;
       if (_velY < 0) _velY *= 0.7;
     }
@@ -690,7 +697,7 @@ function _physicsTick() {
   }
   playJetpack(_jpActive);
 
-  const SPRINT_FUEL_DRAIN = 0.055; // ~10s at 60fps before depleted
+  const SPRINT_FUEL_DRAIN = 0.30; // 180 fuel / 0.30 / 60fps = ~10s to deplete
   if (_sprinting && _onGround && ml > 0) {
     _jpFuel = Math.max(0, _jpFuel - SPRINT_FUEL_DRAIN * _delta);
   } else if ((_onGround || !_jpActive) && _jpFuel < JP_MAX_FUEL) {
@@ -854,6 +861,12 @@ function _physicsTick() {
     if (_keys['Digit' + k] && !_prevKeys['Digit' + k]) {
       setActiveSlot(k - 1);
     }
+  }
+
+  // FOV kick: sprint widens FOV slightly for speed feel
+  if (_camera) {
+    const targetFov = _sprinting && ml > 0 ? 1.32 : 1.22;
+    _camera.fov += (targetFov - _camera.fov) * 0.08;
   }
 
   if (_gunRoot && _camera) {
