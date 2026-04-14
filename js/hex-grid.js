@@ -295,7 +295,10 @@ export function renderHexGrid(state) {
 
 function _renderNow(state) {
   ensureClipPath();
-  const honey = document.getElementById('honeycomb');
+  // Allow callers to render into a custom container (e.g. profile
+  // column) by passing state.container — defaults to #honeycomb.
+  const honey = (state.container ? document.getElementById(state.container) : null)
+    || document.getElementById('honeycomb');
   if (!honey) return;
   honey.innerHTML = '';
   honey.classList.remove('reordering');

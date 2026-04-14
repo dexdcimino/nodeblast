@@ -84,6 +84,9 @@ let _currentShowAdd = false;
 let _currentEmptyMessage = '';
 let _firstRender = true;
 let _suppressNextDetailOpen = false;
+// NB-MD04: profile tab state — which columns are currently active
+const _profileActiveTabs = new Set(['catalysts']);
+let _currentProfileView = null; // { user, catalysts, isOwn } — last rendered profile
 let _profileCache = new Map(); // "name#hex" or "name" -> { user, catalysts }
 let _viewingOther = null;       // { uid, displayName, hexCode } for the profile currently shown
 
@@ -149,6 +152,14 @@ function hideAllViews() {
   document.getElementById('play-view')?.classList.remove('visible');
   // MD18: tracked footer is a profile-route-only feature.
   _hideTrackedFooter();
+  // NB-MD04: profile tabs + columns are profile-route-only
+  const tabsEl = document.getElementById('profile-tabs');
+  const colsEl = document.getElementById('profile-columns');
+  const honeyEl = document.getElementById('honeycomb');
+  if (tabsEl) tabsEl.style.display = 'none';
+  if (colsEl) colsEl.style.display = 'none';
+  if (honeyEl) honeyEl.style.display = '';
+  _currentProfileView = null;
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
   grid.classList.remove('with-filter', 'feed-mode');
@@ -471,7 +482,7 @@ async function handleReorder(orderedIds) {
   }
 }
 
-function renderGrid(tiles, { showAdd = false, emptyMessage = '' } = {}) {
+function renderGrid(tiles, { showAdd = false, emptyMessage = '', container = null } = {}) {
   _currentTiles = tiles;
   _currentShowAdd = showAdd;
   _currentEmptyMessage = emptyMessage;
@@ -479,11 +490,126 @@ function renderGrid(tiles, { showAdd = false, emptyMessage = '' } = {}) {
     tiles,
     showAdd,
     emptyMessage,
+    container,
     onTileClick: handleTileClick,
     onAddClick: _handleAddCatalystClick,
     onCreatorClick: handleCreatorClick,
     onReorder: showAdd ? handleReorder : null,
   });
+}
+
+// ══════════════════════════════════════════════════════════════
+// NB-MD04: Profile view tabs — My Catalysts / Pinned / Following
+// ══════════════════════════════════════════════════════════════
+function initProfileTabs() {
+  document.querySelectorAll('.profile-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      if (_profileActiveTabs.has(tab)) {
+        // Don't allow deselecting the last active tab
+        if (_profileActiveTabs.size === 1) return;
+        _profileActiveTabs.delete(tab);
+      } else {
+        _profileActiveTabs.add(tab);
+      }
+      _updateProfileColumns();
+      // Re-render the currently shown profile so the newly-revealed
+      // column actually gets populated.
+      if (_currentProfileView) {
+        _renderProfileView(_currentProfileView.user, _currentProfileView.catalysts, _currentProfileView.isOwn);
+      }
+    });
+  });
+}
+
+function _updateProfileColumns() {
+  ['catalysts', 'pinned', 'following'].forEach((tab) => {
+    const col = document.getElementById('profile-col-' + tab);
+    if (!col) return;
+    col.style.display = _profileActiveTabs.has(tab) ? '' : 'none';
+  });
+  document.querySelectorAll('.profile-tab').forEach((btn) => {
+    btn.classList.toggle('active', _profileActiveTabs.has(btn.dataset.tab));
+  });
+}
+
+function _renderProfileView(user, catalysts, isOwn) {
+  _currentProfileView = { user, catalysts, isOwn };
+  // Show tabs + columns, hide the flat honeycomb
+  const tabsEl = document.getElementById('profile-tabs');
+  const colsEl = document.getElementById('profile-columns');
+  const honeyEl = document.getElementById('honeycomb');
+  if (tabsEl) tabsEl.style.display = '';
+  if (colsEl) colsEl.style.display = 'flex';
+  if (honeyEl) honeyEl.style.display = 'none';
+
+  // My Catalysts column — hex grid rendered into the column container
+  if (_profileActiveTabs.has('catalysts')) {
+    _currentTiles = catalysts;
+    _currentShowAdd = isOwn;
+    _currentEmptyMessage = isOwn
+      ? 'Create your first catalyst'
+      : "This alchemist hasn't created any catalysts yet.";
+    renderHexGrid({
+      tiles: catalysts,
+      showAdd: isOwn,
+      emptyMessage: _currentEmptyMessage,
+      container: 'profile-col-catalysts',
+      onTileClick: handleTileClick,
+      onAddClick: _handleAddCatalystClick,
+      onCreatorClick: handleCreatorClick,
+      onReorder: isOwn ? handleReorder : null,
+    });
+  }
+
+  // Pinned column — only meaningful on own profile
+  const pinnedCol = document.getElementById('profile-col-pinned');
+  if (pinnedCol && _profileActiveTabs.has('pinned')) {
+    pinnedCol.innerHTML = '';
+    if (isOwn && _myTrackedCatalysts.length > 0) {
+      _myTrackedCatalysts.forEach((pinned) => {
+        const tile = createCatalystTileElement(
+          {
+            id: pinned.catId,
+            title: pinned.title,
+            thumbURL: pinned.thumbURL,
+            accentColor: pinned.accentColor,
+            status: pinned.status,
+            ownerName: pinned.ownerName,
+            ownerHex: pinned.ownerHex,
+            slug: pinned.slug,
+          },
+          { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, isPinned: true },
+          { onTileClick: handleTileClick }
+        );
+        pinnedCol.appendChild(tile);
+      });
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'hex-empty';
+      empty.textContent = isOwn ? 'Pin catalysts from the community hub' : 'Nothing pinned yet';
+      pinnedCol.appendChild(empty);
+    }
+  }
+
+  // Following column — followed alchemist chips
+  const followingCol = document.getElementById('profile-col-following');
+  if (followingCol && _profileActiveTabs.has('following')) {
+    followingCol.innerHTML = '';
+    if (isOwn && _myTrackedAlchemists.length > 0) {
+      _myTrackedAlchemists.forEach((alch) => {
+        const chip = _buildFollowedChip(alch, { canRemove: true });
+        followingCol.appendChild(chip);
+      });
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'hex-empty';
+      empty.textContent = isOwn ? 'Follow alchemists from the community hub' : 'Not following anyone yet';
+      followingCol.appendChild(empty);
+    }
+  }
+
+  _updateProfileColumns();
 }
 
 // MD13: guarded add-catalyst click. Opens the create modal only
@@ -571,6 +697,10 @@ function _startMyTrackedSub() {
           trackedPublic: !!State.profile?.trackedPublic,
           isOwn: true,
         });
+        // NB-MD04: refresh Pinned + Following profile columns if visible
+        if (_currentProfileView) {
+          _renderProfileView(_currentProfileView.user, _currentProfileView.catalysts, _currentProfileView.isOwn);
+        }
       }
     }
   });
@@ -1382,12 +1512,7 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
     } else {
       const isOwn = State.user && cached.user.uid === State.user.uid;
       showProfileBar(cached.user, cached.catalysts.length, isOwn);
-      renderGrid(cached.catalysts, {
-        showAdd: isOwn,
-        emptyMessage: isOwn
-          ? 'Create your first catalyst'
-          : 'This alchemist hasn\'t created any catalysts yet.',
-      });
+      _renderProfileView(cached.user, cached.catalysts, isOwn);
       if (cachedMatch && !_suppressNextDetailOpen) openCatalystDetail(cachedMatch);
     }
   } else {
@@ -1415,12 +1540,7 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
     // doesn't exist.
     if (openSlug && !match) {
       showProfileBar(user, catalysts.length, isOwn);
-      renderGrid(catalysts, {
-        showAdd: isOwn,
-        emptyMessage: isOwn
-          ? 'Create your first catalyst'
-          : 'This alchemist hasn\'t created any catalysts yet.',
-      });
+      _renderProfileView(user, catalysts, isOwn);
       return;
     }
     // MD12: route internal matches to the full-page view before
@@ -1430,12 +1550,7 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
       return;
     }
     showProfileBar(user, catalysts.length, isOwn);
-    renderGrid(catalysts, {
-      showAdd: isOwn,
-      emptyMessage: isOwn
-        ? 'Create your first catalyst'
-        : 'This alchemist hasn\'t created any catalysts yet.',
-    });
+    _renderProfileView(user, catalysts, isOwn);
     if (match) {
       setPageTitle([match.title, user.displayName || username]);
       if (!_suppressNextDetailOpen) openCatalystDetail(match);
@@ -2200,6 +2315,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // menu is usable before auth resolves (or if the user never signs in).
   paintGuestProfilePill();
 
+  // NB-MD04: wire up profile view tabs (My Catalysts / Pinned / Following)
+  initProfileTabs();
+
   // Category filter pills (feed route)
   document.querySelectorAll('.cat-filter-pill').forEach((pill) => {
     pill.addEventListener('click', () => {
@@ -2402,9 +2520,13 @@ document.addEventListener('DOMContentLoaded', () => {
   requestAnimationFrame(() => paintLogo(_logoTop, _logoBot));
 
   window.addEventListener('resize', () => {
+    // On profile routes, re-render the catalysts column; otherwise
+    // re-render the default #honeycomb grid.
+    const onProfile = !!_currentProfileView;
     renderHexGrid({
       tiles: _currentTiles,
       showAdd: _currentShowAdd,
+      container: onProfile ? 'profile-col-catalysts' : null,
       onTileClick: handleTileClick,
       onAddClick: _handleAddCatalystClick,
       onCreatorClick: handleCreatorClick,
