@@ -59,8 +59,10 @@ let _onGround  = true;
 let _sprinting = false;
 let _jumpHeld  = false;
 let _jumpsLeft = 2;
-let _jpFuel    = JP_MAX_FUEL;
-let _jpActive  = false;
+let _jpFuel      = JP_MAX_FUEL;
+let _jpActive    = false;
+let _jumpGrace   = 0;  // frames since last jump — prevents immediate re-land
+const JUMP_GRACE = 6;  // ~100ms at 60fps
 const _colBlocks=[];
 const _keys={};
 const _prevKeys={};
@@ -90,7 +92,8 @@ let _fpsValue=60;
 let _lastTickTime=0;
 let _delta=1.0;
 const TARGET_MS=1000/60;
-const MAX_DELTA=3.0;
+const MAX_DELTA=2.0;
+const MIN_DELTA=0.5;
 
 export function refreshPlayerIdentity(){_playerUsername=State.profile?.displayName||State.user?.displayName||'player';_playerHex=State.profile?.hexCode||'5aaa72';}
 export function getPlayerState(){if(!_camera)return null;return{x:_camera.position.x,y:_camera.position.y,z:_camera.position.z,rotY:_camera.rotation.y,pitch:_camera.rotation.x,username:_playerUsername,hex:_playerHex};}
@@ -586,7 +589,9 @@ function _physicsTick() {
 
   // Delta time — keeps physics speed consistent across all frame rates
   const _now = performance.now();
-  _delta = _lastTickTime ? Math.min(MAX_DELTA, (_now - _lastTickTime) / TARGET_MS) : 1.0;
+  _delta = _lastTickTime
+    ? Math.max(MIN_DELTA, Math.min(MAX_DELTA, (_now - _lastTickTime) / TARGET_MS))
+    : 1.0;
   _lastTickTime = _now;
 
   // Flush pending remote players now that scene is ready
@@ -664,8 +669,10 @@ function _physicsTick() {
     _jumpHeld  = true;
     _onGround  = false;
     _jpActive  = false;
+    _jumpGrace = JUMP_GRACE;
   }
   if (!jumping) _jumpHeld = false;
+  if (_jumpGrace > 0) _jumpGrace--;
 
   const jpFromGround = _onGround && _jumpHeld && _jumpsLeft < 2;
   const jpInAir      = !_onGround && _jumpsLeft === 0;
@@ -683,7 +690,10 @@ function _physicsTick() {
   }
   playJetpack(_jpActive);
 
-  if ((_onGround || !_jpActive) && _jpFuel < JP_MAX_FUEL) {
+  const SPRINT_FUEL_DRAIN = 0.055; // ~10s at 60fps before depleted
+  if (_sprinting && _onGround && ml > 0) {
+    _jpFuel = Math.max(0, _jpFuel - SPRINT_FUEL_DRAIN * _delta);
+  } else if ((_onGround || !_jpActive) && _jpFuel < JP_MAX_FUEL) {
     _jpFuel = Math.min(JP_MAX_FUEL, _jpFuel + JP_RECHARGE * _delta);
   }
 
@@ -726,12 +736,15 @@ function _physicsTick() {
     landed     = true;
   }
 
-  if (landed) {
+  if (landed && _jumpGrace === 0) {
     _camera.position.y = landHeight;
     _velY              = 0;
     _onGround          = true;
     _jumpsLeft         = 2;
     _jpActive          = false;
+  } else if (landed && _jumpGrace > 0) {
+    // Grace period — clamp to ground but don't kill jump/jetpack
+    _camera.position.y = Math.max(_camera.position.y, landHeight);
   }
 
   // ── Horizontal collision (after vertical is resolved) ──
@@ -1067,8 +1080,8 @@ export function initGame(canvas){
       if(window._nbOpenExitModal)window._nbOpenExitModal();
     }
   });
-  _keyDownHandler=e=>{_keys[e.code]=true;if(e.code==='ShiftLeft'||e.code==='ShiftRight')_sprinting=true;if(e.code==='Space')e.preventDefault();};
-  _keyUpHandler=e=>{_keys[e.code]=false;if(e.code==='ShiftLeft'||e.code==='ShiftRight')_sprinting=false;};
+  _keyDownHandler=e=>{_keys[e.code]=true;if(e.code==='Space')e.preventDefault();};
+  _keyUpHandler=e=>{delete _keys[e.code];};
   document.addEventListener('keydown',_keyDownHandler);document.addEventListener('keyup',_keyUpHandler);
   _mouseDownHandler=e=>{
     if(e.button===0&&_pointerLocked){
