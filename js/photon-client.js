@@ -49,7 +49,13 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlaye
 
     if (name === 'JoinedLobby') {
       setPhotonStatus('finding room...');
-      _client.joinRoom('nodeblast-main');
+      // Atomic join-or-create — eliminates race condition when two players
+      // join simultaneously and both see the room as not existing yet
+      _client.joinRoom(
+        'nodeblast-main',
+        { createIfNotExists: true },
+        { maxPlayers: MAX_PLAYERS_PER_ROOM, isVisible: true, isOpen: true },
+      );
     }
 
     if (name === 'Joined') {
@@ -57,12 +63,41 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlaye
       _inRoom = true;
       _myId = _client.myActor().actorNr;
       window._nbMyActorId = _myId;
-      const roomName = _client.myRoom()?.name || 'unknown';
-      const actorCount = _client.myRoomActorsCount?.() || '?';
+      const roomName    = _client.myRoom()?.name || 'unknown';
+      const actorCount  = _client.myRoomActorsCount?.() || '?';
       console.log(`[photon] ✅ in room "${roomName}", actor: ${_myId}, total actors: ${actorCount}`);
+
+      // Set actor custom properties so all room members can see our identity immediately
+      // (doesn't require waiting for first position event)
+      try {
+        const s = window._nbGetPlayerState?.();
+        if (s) {
+          _client.myActor().setCustomProperties({
+            username: s.username || 'player',
+            hex:      s.hex      || '5aaa72',
+          });
+        }
+      } catch (e) {
+        console.warn('[photon] could not set actor props:', e.message);
+      }
+
       _updatePlayerCount();
       if (_onConnected) _onConnected(_myId);
       _startSendLoop();
+
+      // Immediately broadcast position once to Others so existing room members
+      // can render us before our first 50ms loop tick
+      setTimeout(() => {
+        const s = window._nbGetPlayerState?.();
+        if (s && _inRoom && _client) {
+          const P = window.Photon;
+          _client.raiseEvent(1,
+            { x: s.x, y: s.y, z: s.z, rotY: s.rotY, pitch: s.pitch,
+              username: s.username || 'player', hex: s.hex || '5aaa72' },
+            { receivers: P.LoadBalancing.Constants.ReceiverGroup.Others },
+          );
+        }
+      }, 200);
     }
 
     if (name === 'Error' || name === 'Disconnected') {
@@ -72,9 +107,19 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlaye
   };
 
   _client.onJoinRoomFailed = (code, msg) => {
-    // Room doesn't exist yet — create the canonical shared room
-    console.log('[photon] join failed, creating canonical room:', code, msg);
-    _client.createRoom('nodeblast-main', { maxPlayers: MAX_PLAYERS_PER_ROOM });
+    // Should not happen with createIfNotExists — log for diagnostics only
+    console.warn('[photon] ⚠️ joinRoom failed even with createIfNotExists:', code, msg);
+    setPhotonStatus('room error — retrying...');
+    // Last-resort retry after 1s
+    setTimeout(() => {
+      if (!_inRoom && _client) {
+        _client.joinRoom(
+          'nodeblast-main',
+          { createIfNotExists: true },
+          { maxPlayers: MAX_PLAYERS_PER_ROOM },
+        );
+      }
+    }, 1000);
   };
 
   _client.onActorLeave = (actor) => {
@@ -86,6 +131,23 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlaye
   _client.onActorJoin = (actor) => {
     console.log(`[photon] 👤 actor joined: ${actor.actorNr} — room now has ${_client.myRoomActorsCount?.() || '?'} players`);
     _updatePlayerCount();
+
+    // When someone new joins, immediately send our position so they can place us
+    // without waiting up to 50ms for the next loop tick
+    const s = window._nbGetPlayerState?.();
+    if (s && _inRoom && _client) {
+      photonSendState(s.x, s.y, s.z, s.rotY, s.pitch, s.username || 'player', s.hex || '5aaa72');
+    }
+
+    // Also read their actor properties for immediate name/color display
+    try {
+      const props = actor.getCustomProperties?.() || {};
+      if (props.username && _onPlayerUpdate) {
+        // Trigger a player update with last known position (0,0,0) so the pill appears
+        // Their real position arrives with the next event
+        _onPlayerUpdate(actor.actorNr, 0, 1.8, 0, 0, 0, props.username, props.hex || '5aaa72');
+      }
+    } catch (e) {}
   };
 
   _client.onEvent = (code, content, actorNr) => {
@@ -169,3 +231,29 @@ export function destroyPhoton() {
 }
 
 export function isInRoom() { return _inRoom; }
+
+// ── Debug helper — call window._nbPhotonStatus() in console to diagnose ──
+window._nbPhotonStatus = () => {
+  if (!_client) { console.log('[photon] not initialized'); return; }
+  try {
+    const room    = _client.myRoom();
+    const actors  = _client.myRoomActors?.() || {};
+    const actorList = Object.values(actors).map(a => ({
+      nr:         a.actorNr,
+      isLocal:    a.isLocal,
+      userId:     a.userId,
+      customProps: a.getCustomProperties?.() || {},
+    }));
+    console.table({
+      inRoom:     _inRoom,
+      myActorNr:  _myId,
+      roomName:   room?.name,
+      isOpen:     room?.isOpen,
+      isVisible:  room?.isVisible,
+      playerCount: room?.playerCount,
+    });
+    console.log('[photon] actors in room:', actorList);
+  } catch (e) {
+    console.warn('[photon] status error:', e.message);
+  }
+};
