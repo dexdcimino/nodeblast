@@ -13,6 +13,10 @@ const GAP = 60;
 const GRID_TOP_PAD = 56;
 const ROUND_R = 0.08;
 
+// MD08: pin button icons — outlined when not pinned, filled+colored when pinned.
+const PIN_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>';
+const PIN_FILLED_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><line x1="12" y1="17" x2="12" y2="22" stroke="currentColor" stroke-width="2.5" fill="none"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>';
+
 // Pointy-top hex vertices (objectBoundingBox 0..1)
 const HEX_VERTS = [
   [0.5, 0.0],
@@ -690,7 +694,7 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
     pinBtn.setAttribute('data-pin-btn', '');
     pinBtn.setAttribute('data-tip', isPinned ? 'Unpin from profile' : 'Pin to profile');
     pinBtn.setAttribute('aria-label', isPinned ? 'Unpin' : 'Pin');
-    pinBtn.textContent = isPinned ? '−' : '+';
+    pinBtn.innerHTML = isPinned ? PIN_FILLED_ICON : PIN_ICON;
     pinBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       // Optimistic UI flip so the button responds instantly. The
@@ -698,7 +702,7 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
       // snapshot tick will re-render the tile definitively.
       const nowPinned = !pinBtn.classList.contains('pinned');
       pinBtn.classList.toggle('pinned', nowPinned);
-      pinBtn.textContent = nowPinned ? '−' : '+';
+      pinBtn.innerHTML = nowPinned ? PIN_FILLED_ICON : PIN_ICON;
       pinBtn.setAttribute('data-tip', nowPinned ? 'Unpin from profile' : 'Pin to profile');
       handlers.onPinClick?.(cat, nowPinned);
     });

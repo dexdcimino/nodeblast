@@ -422,7 +422,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-tile.mini-hex-tile .hex-creator-avatar,
 .hex-tile.mini-hex-tile .hex-status,
 .hex-tile.mini-hex-tile .hex-collab-badge,
-.hex-tile.mini-hex-tile .hex-vote{display:none;}
+.hex-tile.mini-hex-tile .hex-vote,
+.hex-tile.mini-hex-tile .hex-pin-btn{display:none;}
 /* Small "+" tile in the mini grid — scales the plus glyph down
    from the main grid's 48px to something that fits a 60px hex. */
 .hex-tile.mini-hex-tile.add-tile .add-tile-plus span.plus{font-size:26px;margin-bottom:0;}
@@ -799,10 +800,13 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    bottom-right corner inside the clipped hex, so it's visible over
    the fade layer but never overlaps the title. `.pinned` state swaps
    to the accent color so the toggle reads at a glance. */
-.hex-pin-btn{position:absolute;bottom:10px;right:10px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:18px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease);}
-.hex-pin-btn:hover{background:rgba(0,0,0,0.8);transform:scale(1.08);}
-.hex-pin-btn.pinned{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
-.hex-pin-btn.pinned:hover{background:color-mix(in srgb,var(--clr-adj) 80%,#000);}
+/* MD08: SVG pin button — percentage-positioned so it stays inside the
+   hex clip-path at any tile size; frosted bg + colored glow when pinned. */
+.hex-pin-btn{position:absolute;bottom:18%;right:16%;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease),box-shadow var(--ease);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.hex-pin-btn:hover{background:rgba(0,0,0,0.85);transform:scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,0.45);}
+.hex-pin-btn.pinned{background:var(--clr-adj);color:var(--clr-adj-on,#000);box-shadow:0 2px 8px color-mix(in srgb,var(--clr-adj) 50%,transparent);}
+.hex-pin-btn.pinned:hover{background:color-mix(in srgb,var(--clr-adj) 85%,#000);}
+.hex-pin-btn svg{pointer-events:none;flex-shrink:0;}
 
 /* Catalysts view: a flat flex-wrap of standalone hex tiles, no
    per-creator card frame. Same gap as the alchemist card body so
