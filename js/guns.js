@@ -40,8 +40,15 @@ export const GUNS = [
 ];
 
 // ── Active gun state ──
-let _activeSlot    = 0;
+let _activeSlot      = 0;
 let _projectileColor = { r: 0.1, g: 1.0, b: 0.4 };
+// Tracks which slots are unlocked — pistol (0) always unlocked
+const _unlockedSlots = new Set([0]);
+
+export function unlockSlot(slot) { _unlockedSlots.add(slot); _updateHUD(); }
+export function lockSlot(slot)   { if (slot === 0) return; _unlockedSlots.delete(slot); _updateHUD(); }
+export function isSlotUnlocked(slot) { return _unlockedSlots.has(slot); }
+export function getUnlockedSlots()   { return new Set(_unlockedSlots); }
 
 export function getActiveGun()       { return GUNS[_activeSlot]; }
 export function getActiveSlot()      { return _activeSlot; }
@@ -55,6 +62,7 @@ export function setProjectileColor(r, g, b) {
 
 export function setActiveSlot(slot) {
   if (slot < 0 || slot >= GUNS.length) return;
+  if (!_unlockedSlots.has(slot)) return;  // can't switch to locked slot
   _activeSlot = slot;
   _projectileColor = { ...GUNS[slot].color };
   _updateHUD();
@@ -86,11 +94,15 @@ export function initGunHUD() {
 
 function _updateHUD() {
   document.querySelectorAll('.gun-slot').forEach((el, i) => {
-    el.classList.toggle('active', i === _activeSlot);
+    el.classList.toggle('active',   i === _activeSlot);
+    el.classList.toggle('locked',   !_unlockedSlots.has(i));
+    el.classList.toggle('unlocked',  _unlockedSlots.has(i));
   });
 }
 
 export function resetGuns() {
   _activeSlot      = 0;
   _projectileColor = { r: 0.1, g: 1.0, b: 0.4 };
+  _unlockedSlots.clear();
+  _unlockedSlots.add(0);  // always start with pistol
 }

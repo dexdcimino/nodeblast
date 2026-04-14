@@ -5,7 +5,8 @@
 
 import State from './state.js';
 import { getActiveGun, getActiveSlot, setActiveSlot, setProjectileColor,
-         getProjectileColor, initGunHUD, resetGuns, GUNS } from './guns.js';
+         getProjectileColor, initGunHUD, resetGuns, GUNS,
+         unlockSlot, lockSlot, isSlotUnlocked } from './guns.js';
 import { initPlasma, updatePlasma, destroyPlasma } from './plasma.js';
 import { initEnemyNodes, updateEnemyNodes, damageEnemyNode,
          checkEnemyHit, destroyEnemyNodes } from './enemy-nodes.js';
@@ -385,10 +386,11 @@ function _buildGun(){
           const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.06,height:0.12,depth:0.07},_scene);grip.parent=_gunRoot;grip.position.set(0,-0.09,0.05);_applyMat(grip,'grip',0.10,0.08,0.16);
           break;}
         case 'nodeblaster':{
-          const body=B.MeshBuilder.CreateSphere('gun_body',{diameter:0.11,segments:5},_scene);body.parent=_gunRoot;body.scaling.z=2.2;body.position.set(0,0,0.08);_applyMat(body,'body',0.15,0.05,0.05);
-          for(let i=0;i<3;i++){const fin=B.MeshBuilder.CreateBox('gun_fin_'+i,{width:0.015,height:0.06,depth:0.08},_scene);fin.parent=_gunRoot;const a=(i/3)*Math.PI*2+Math.PI/6;fin.position.set(Math.cos(a)*0.065,Math.sin(a)*0.065,0.08);fin.rotation.z=a;_applyMat(fin,'fin'+i,0.20,0.06,0.06);}
-          const tube=B.MeshBuilder.CreateCylinder('gun_tube',{diameter:0.06,height:0.18,tessellation:8},_scene);tube.parent=_gunRoot;tube.rotation.x=Math.PI/2;tube.position.set(0,0,0.20);_applyMat(tube,'tube',0.18,0.06,0.06);
-          const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.05,height:0.10,depth:0.06},_scene);grip.parent=_gunRoot;grip.position.set(0,-0.08,0.03);_applyMat(grip,'grip',0.12,0.04,0.04);
+          // Neutral dark base colors — no red tint
+          const body=B.MeshBuilder.CreateSphere('gun_body',{diameter:0.11,segments:5},_scene);body.parent=_gunRoot;body.scaling.z=2.2;body.position.set(0,0,0.08);_applyMat(body,'body',0.12,0.13,0.16);
+          for(let i=0;i<3;i++){const fin=B.MeshBuilder.CreateBox('gun_fin_'+i,{width:0.015,height:0.06,depth:0.08},_scene);fin.parent=_gunRoot;const a=(i/3)*Math.PI*2+Math.PI/6;fin.position.set(Math.cos(a)*0.065,Math.sin(a)*0.065,0.08);fin.rotation.z=a;_applyMat(fin,'fin'+i,0.16,0.16,0.20);}
+          const tube=B.MeshBuilder.CreateCylinder('gun_tube',{diameter:0.06,height:0.18,tessellation:8},_scene);tube.parent=_gunRoot;tube.rotation.x=Math.PI/2;tube.position.set(0,0,0.20);_applyMat(tube,'tube',0.14,0.14,0.18);
+          const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.05,height:0.10,depth:0.06},_scene);grip.parent=_gunRoot;grip.position.set(0,-0.08,0.03);_applyMat(grip,'grip',0.10,0.10,0.13);
           const orb=B.MeshBuilder.CreateSphere('gun_orb',{diameter:0.04,segments:6},_scene);orb.parent=_gunRoot;orb.position.set(0,0,0.30);_applyGlowMat(orb,'orb',pc);
           break;}
       }
@@ -480,6 +482,51 @@ function _updateProjectiles(){
     if(hit||p.life<=0){const pc=getProjectileColor();if(hit&&hitPos)_spawnGooSplat(hitPos,hitNormal,pc);try{p.mesh.dispose();}catch{}dead.push(i);}
   }
   for(let i=dead.length-1;i>=0;i--)_projectiles.splice(dead[i],1);
+}
+
+function _spawnDroppedGun(slot, gun, pos) {
+  const B  = window.BABYLON;
+  const gc = gun.color;
+  const dropY = 1.2; // waist/shoulder height
+
+  const base = B.MeshBuilder.CreateBox('drop_base_' + slot + '_' + Date.now(),
+    { width: 0.55, height: 0.18, depth: 0.55 }, _scene);
+  base.position.set(pos.x, dropY - 0.2, pos.z);
+  const bm = new B.StandardMaterial('drop_bm_' + slot, _scene);
+  bm.diffuseColor  = new B.Color3(gc.r * 0.3, gc.g * 0.3, gc.b * 0.3);
+  bm.emissiveColor = new B.Color3(gc.r * 0.5, gc.g * 0.5, gc.b * 0.5);
+  base.material = bm;
+
+  const orb = B.MeshBuilder.CreateSphere('drop_orb_' + slot + '_' + Date.now(),
+    { diameter: 0.32, segments: 7 }, _scene);
+  orb.position.set(pos.x, dropY, pos.z);
+  const om = new B.StandardMaterial('drop_om_' + slot, _scene);
+  om.emissiveColor   = new B.Color3(gc.r, gc.g, gc.b);
+  om.disableLighting = true;
+  orb.material = om;
+
+  const light = new B.PointLight('drop_pt_' + slot + '_' + Date.now(),
+    new B.Vector3(pos.x, dropY, pos.z), _scene);
+  light.diffuse   = new B.Color3(gc.r, gc.g, gc.b);
+  light.intensity = 0.7;
+  light.range     = 4;
+
+  // Ground glow disc
+  const glow = B.MeshBuilder.CreateCylinder('drop_glow_' + slot + '_' + Date.now(),
+    { diameter: 0.8, height: 0.02, tessellation: 12 }, _scene);
+  glow.position.set(pos.x, 0.02, pos.z);
+  const gm = new B.StandardMaterial('drop_gm_' + slot, _scene);
+  gm.emissiveColor   = new B.Color3(gc.r * 0.4, gc.g * 0.4, gc.b * 0.4);
+  gm.disableLighting = true;
+  gm.alpha = 0.5;
+  glow.material = gm;
+
+  _gunPickups.push({
+    base, orb, pt: light, glow,
+    slot,
+    pos: new B.Vector3(pos.x, dropY, pos.z),
+    _isDropped: true,
+  });
 }
 
 function _buildGunPickups() {
@@ -809,24 +856,47 @@ function _physicsTick() {
     const dist = Math.sqrt(dx*dx + dz*dz);
     if (dist < 2.2) { _nearPickup = pu; break; }
   }
-  const equipTip = document.getElementById('play-equip-tip');
+  const eRingWrap = document.getElementById('play-e-ring-wrap');
+  const eRingFill = document.getElementById('play-e-ring-fill');
+  const RING_CIRC = 113; // 2π × 18
+
   if (_nearPickup) {
-    if (equipTip) equipTip.classList.add('visible');
     if (_keys['KeyE'] && !_eHeld) {
       _eHoldTimer++;
+      const prog = _eHoldTimer / E_HOLD_TIME;
+
+      // Update ring UI
+      if (eRingWrap) eRingWrap.classList.add('visible');
+      if (eRingFill) eRingFill.style.strokeDashoffset = RING_CIRC * (1 - prog);
+
       if (_eHoldTimer >= E_HOLD_TIME) {
+        unlockSlot(_nearPickup.slot);
         setActiveSlot(_nearPickup.slot);
         playPickup();
         _eHeld      = true;
         _eHoldTimer = 0;
-        if (equipTip) equipTip.classList.remove('visible');
+        // Remove the picked-up pickup from world
+        try {
+          _nearPickup.base?.dispose();
+          _nearPickup.orb?.dispose();
+          _nearPickup.pt?.dispose();
+          _nearPickup.glow?.dispose();
+        } catch {}
+        const pickedIdx = _gunPickups.indexOf(_nearPickup);
+        if (pickedIdx >= 0) _gunPickups.splice(pickedIdx, 1);
+        _nearPickup = null;
+        if (eRingWrap) eRingWrap.classList.remove('visible');
+        if (eRingFill) eRingFill.style.strokeDashoffset = RING_CIRC;
       }
     } else if (!_keys['KeyE']) {
       _eHeld      = false;
       _eHoldTimer = 0;
+      if (eRingWrap) eRingWrap.classList.remove('visible');
+      if (eRingFill) eRingFill.style.strokeDashoffset = RING_CIRC;
     }
   } else {
-    if (equipTip) equipTip.classList.remove('visible');
+    if (eRingWrap) eRingWrap.classList.remove('visible');
+    if (eRingFill) eRingFill.style.strokeDashoffset = RING_CIRC;
     if (!_keys['KeyE']) { _eHeld = false; _eHoldTimer = 0; }
   }
 
@@ -856,11 +926,27 @@ function _physicsTick() {
     }
   }
 
-  // 1-4 key switching
+  // 1-4 key switching (only switch to unlocked slots)
   for (let k = 1; k <= 4; k++) {
     if (_keys['Digit' + k] && !_prevKeys['Digit' + k]) {
       setActiveSlot(k - 1);
     }
+  }
+
+  // G key — drop current gun (except pistol slot 0)
+  const dropTip = document.getElementById('play-drop-tip');
+  if (getActiveSlot() > 0) {
+    if (dropTip) dropTip.style.opacity = '1';
+    if (_keys['KeyG'] && !_prevKeys['KeyG']) {
+      const droppedSlot = getActiveSlot();
+      const droppedGun  = getActiveGun();
+      // Place a new pickup orb at current player position
+      _spawnDroppedGun(droppedSlot, droppedGun, _camera.position.clone());
+      lockSlot(droppedSlot);
+      setActiveSlot(0);  // fall back to pistol
+    }
+  } else {
+    if (dropTip) dropTip.style.opacity = '0';
   }
 
   // FOV kick: sprint widens FOV slightly for speed feel
@@ -1170,7 +1256,7 @@ export function destroyGame(engine){
   if(_gunRoot){try{_gunRoot.getChildMeshes().forEach(m=>m.dispose());_gunRoot.dispose();}catch{}_gunRoot=null;}
   if(_jetpackPS){try{_jetpackPS.dispose();}catch{}_jetpackPS=null;}
   if(_jetpackNode){try{_jetpackNode.dispose();}catch{}_jetpackNode=null;}
-  _gunPickups.forEach(pu=>{try{pu.base.dispose();pu.orb.dispose();pu.pt.dispose();}catch{}});
+  _gunPickups.forEach(pu=>{try{pu.base?.dispose();pu.orb?.dispose();pu.pt?.dispose();pu.glow?.dispose();}catch{}});
   _gunPickups.length=0;_nearPickup=null;
   window._nbSetGunColor=null;
   resetGuns();
