@@ -1668,11 +1668,26 @@ async function _paintCatalystDetail(catalyst) {
   const creator = document.getElementById('cat-detail-creator');
   const hex = catalyst.ownerHex || '5aaa72';
   const unameHtml = renderUsername(catalyst.ownerName || 'anon', '#' + hex, !!catalyst.ownerIsAdmin);
+  // MD04: hex-shaped owner avatar (matches the design language used on
+  // community cards and profile bars). Falls back to the initial on the
+  // hex-color fill when there's no profile photo.
+  const ownerInitial = (catalyst.ownerName || 'A').charAt(0).toUpperCase();
+  const ownerAvatarContent = catalyst.ownerPhoto
+    ? `<img src="${catalyst.ownerPhoto}" alt="" class="cat-detail-creator-photo">`
+    : `<span class="cat-detail-creator-initial">${ownerInitial}</span>`;
   creator.innerHTML = `
-    <div class="cat-detail-creator-avatar" style="border-color:#${hex}">
-      ${catalyst.ownerPhoto ? `<img src="${catalyst.ownerPhoto}" alt="">` : ''}
+    <div class="cat-detail-creator-hex-wrap">
+      <svg class="cat-detail-creator-hex-bg" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <polygon points="50,2 98,26.5 98,88.5 50,113 2,88.5 2,26.5" fill="#${hex}" stroke="none"/>
+      </svg>
+      <div class="cat-detail-creator-hex-inner">
+        ${ownerAvatarContent}
+      </div>
     </div>
-    <span>${unameHtml}<span style="color:#${hex}">#${hex}</span></span>
+    <div class="cat-detail-creator-info">
+      <span class="cat-detail-creator-name">${unameHtml}</span>
+      <span class="cat-detail-creator-hex-label" style="color:#${hex}">#${hex}</span>
+    </div>
   `;
   creator.style.cursor = 'pointer';
   creator.onclick = () => {

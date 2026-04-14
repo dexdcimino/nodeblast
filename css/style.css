@@ -1282,9 +1282,21 @@ body.cat-modal-open{overflow:hidden;}
 .cat-detail-status[data-status="early"]{background:rgba(232,133,58,.2);color:#f3a968;}
 .cat-detail-status[data-status="placeholder"]{background:rgba(130,132,143,.25);color:var(--tx2);}
 .cat-detail-status .cat-status-dot{width:6px;height:6px;}
-#cat-detail-creator{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
+#cat-detail-creator{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 0;border-radius:8px;transition:background var(--ease);}
+#cat-detail-creator:hover{background:rgba(255,255,255,0.04);}
+/* Old circular avatar — kept as fallback for internal-catalyst-view which
+   still uses this class. The detail popup now uses the hex avatar below. */
 .cat-detail-creator-avatar{width:22px;height:22px;border-radius:50%;border:2px solid var(--clr-adj);overflow:hidden;background:var(--bg3);flex-shrink:0;}
 .cat-detail-creator-avatar img{width:100%;height:100%;object-fit:cover;}
+/* MD04: hex-shaped creator avatar in the catalyst detail popup */
+.cat-detail-creator-hex-wrap{position:relative;width:48px;height:55px;flex-shrink:0;}
+.cat-detail-creator-hex-bg{width:100%;height:100%;display:block;}
+.cat-detail-creator-hex-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;clip-path:polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);}
+.cat-detail-creator-photo{width:100%;height:100%;object-fit:cover;}
+.cat-detail-creator-initial{font-size:18px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4);}
+.cat-detail-creator-info{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.cat-detail-creator-name{font-size:14px;font-weight:700;color:var(--tx);}
+.cat-detail-creator-hex-label{font-size:12px;font-family:var(--fn);}
 #cat-detail-badges{display:flex;gap:6px;flex-wrap:wrap;}
 .cat-detail-badge{padding:4px 10px;border-radius:12px;background:var(--bg3);border:1px solid var(--bdr);color:var(--tx2);font-size:11px;font-weight:600;text-transform:capitalize;}
 #cat-detail-collab{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx3);user-select:none;}

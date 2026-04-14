@@ -719,7 +719,7 @@ function _renderProfileView(user, catalysts, isOwn) {
     if (alchemistsToShow.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'hex-empty';
-      empty.textContent = isOwn ? 'Follow alchemists from the community hub' : 'Not following anyone';
+      empty.textContent = isOwn ? 'Pin alchemists from the community hub' : 'No pinned alchemists yet';
       followingCol.appendChild(empty);
     } else {
       const loading = document.createElement('div');
@@ -1164,7 +1164,7 @@ function _renderTrackedFooter({ catalysts, alchemists, trackedPublic, isOwn }) {
       alchSection.style.display = '';
       const hint = document.createElement('div');
       hint.className = 'tracked-empty-hint';
-      hint.textContent = 'Follow alchemists from the community hub to show them here.';
+      hint.textContent = 'Pin alchemists from the community hub to show them here.';
       alchBody.appendChild(hint);
     } else {
       alchSection.style.display = 'none';
@@ -1470,15 +1470,15 @@ function _buildCommunityCard(group) {
     followBtn.type = 'button';
     const isFollowing = _myTrackedAlchUids.has(group.uid);
     followBtn.className = 'community-card-follow' + (isFollowing ? ' following' : '');
-    followBtn.setAttribute('data-tip', isFollowing ? 'Unfollow' : 'Follow');
-    followBtn.setAttribute('aria-label', isFollowing ? 'Unfollow' : 'Follow');
-    followBtn.textContent = isFollowing ? 'Following' : '+ Follow';
+    followBtn.setAttribute('data-tip', isFollowing ? 'Unpin Alchemist' : 'Pin Alchemist');
+    followBtn.setAttribute('aria-label', isFollowing ? 'Unpin Alchemist' : 'Pin Alchemist');
+    followBtn.textContent = isFollowing ? 'Pinned' : '+ Pin';
     followBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const nowFollowing = !followBtn.classList.contains('following');
       followBtn.classList.toggle('following', nowFollowing);
-      followBtn.textContent = nowFollowing ? 'Following' : '+ Follow';
-      followBtn.setAttribute('data-tip', nowFollowing ? 'Unfollow' : 'Follow');
+      followBtn.textContent = nowFollowing ? 'Pinned' : '+ Pin';
+      followBtn.setAttribute('data-tip', nowFollowing ? 'Unpin Alchemist' : 'Pin Alchemist');
       handleFollowToggle(group, nowFollowing);
     });
     hdr.appendChild(followBtn);
