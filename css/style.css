@@ -247,6 +247,26 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-bio-input{width:100%;box-sizing:border-box;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:13px;line-height:1.4;padding:8px 10px 18px;outline:none;resize:vertical;min-height:52px;max-height:min(160px,30vh);overflow-y:auto;transition:border-color var(--ease);}
 #acct-bio-input:focus{border-color:var(--tx3);}
 #acct-bio-input::placeholder{color:var(--tx3);}
+
+/* MD12: emoji picker (bio textarea) */
+.acct-emoji-picker{position:absolute;bottom:calc(100% + 4px);left:0;right:0;background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.35);display:flex;align-items:center;gap:4px;padding:4px 6px;z-index:100;flex-wrap:wrap;}
+.acct-emoji-suggestions{display:flex;flex-wrap:wrap;gap:2px;flex:1;}
+.acct-emoji-suggestion{background:none;border:none;font-size:20px;padding:3px 4px;border-radius:6px;cursor:pointer;line-height:1;transition:background var(--ease);}
+.acct-emoji-suggestion:hover,.acct-emoji-suggestion.selected{background:var(--bg3);}
+.acct-emoji-expand-btn{background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--tx3);cursor:pointer;padding:4px 6px;display:flex;align-items:center;flex-shrink:0;transition:color var(--ease),border-color var(--ease);}
+.acct-emoji-expand-btn:hover{color:var(--tx);border-color:var(--tx3);}
+.acct-emoji-full-panel{position:fixed;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:10000;width:280px;max-height:320px;display:flex;flex-direction:column;overflow:hidden;}
+.acct-emoji-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.acct-emoji-panel-title{font-size:13px;font-weight:700;color:var(--tx2);}
+.acct-emoji-panel-close{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:color var(--ease);}
+.acct-emoji-panel-close:hover{color:var(--tx);}
+.acct-emoji-panel-cats{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--bdr);flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.acct-emoji-panel-cats::-webkit-scrollbar{display:none;}
+.acct-emoji-cat-btn{background:none;border:none;font-size:18px;padding:3px 5px;border-radius:6px;cursor:pointer;transition:background var(--ease);flex-shrink:0;}
+.acct-emoji-cat-btn:hover,.acct-emoji-cat-btn.active{background:var(--bg3);}
+.acct-emoji-panel-grid{display:flex;flex-wrap:wrap;gap:2px;padding:6px 8px;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;}
+.acct-emoji-grid-btn{background:none;border:none;font-size:20px;padding:4px;border-radius:6px;cursor:pointer;line-height:1;transition:background var(--ease);flex-shrink:0;}
+.acct-emoji-grid-btn:hover{background:var(--bg3);}
 #acct-bio-count{position:absolute;right:8px;bottom:5px;font-size:10px;color:var(--tx3);font-family:var(--fn);pointer-events:none;}
 
 /* Social links editor in the edit profile panel. Each link is a row

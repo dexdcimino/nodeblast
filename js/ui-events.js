@@ -17,6 +17,229 @@ export function isSigningIn() { return _signingIn; }
 // Re-export showModal so existing importers (catalysts.js, init.js) keep working.
 export const showModal = _showModal;
 
+// ══════════════════════════════════════════════════════════════
+// MD12: colon-triggered emoji picker for the bio textarea
+// ══════════════════════════════════════════════════════════════
+const EMOJI_CATEGORIES = [
+  { icon: '😀', label: 'Smileys', emojis: ['😀','😂','😊','😍','🥰','😎','🤔','😅','😭','😤','🤯','🥳','😴','🤩','😏','🙄','😬','🤗','😇','🥺','😈','💀','👻','🤖','🎃'] },
+  { icon: '👍', label: 'Gestures', emojis: ['👍','👎','👋','🤝','✌️','🤞','👌','🤌','💪','🙏','🫶','👏','🫡','🤙','☝️','🫵','🤘','✊','👊'] },
+  { icon: '❤️', label: 'Hearts', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','💕','💞','💓','💗','💖','💝','💘','🫀'] },
+  { icon: '🔥', label: 'Popular', emojis: ['🔥','✨','⚡','💥','🎉','🎊','🏆','💎','🚀','⭐','🌟','💯','🎯','💡','🔑','⚔️','🛡️','💰','👑','🎮'] },
+  { icon: '🌙', label: 'Nature', emojis: ['🌙','☀️','🌈','⛅','🌊','🌸','🍀','🌿','🍄','🌺','🦋','🐉','🦄','🐺','🦅','🐬','🌻','🍁','❄️','🌋'] },
+  { icon: '💻', label: 'Objects', emojis: ['💻','📱','🎧','🎮','🕹️','📷','🎨','✏️','📚','🔭','🧪','⚙️','🔧','💾','📡','🎵','🎤','🎸','🥁','🎹'] },
+  { icon: '🍕', label: 'Food', emojis: ['🍕','🍔','🌮','🍜','🍣','🍩','🍪','☕','🧃','🍺','🥂','🍰','🧁','🍭','🥤','🧋','🍦','🥐','🍟','🌯'] },
+];
+
+const EMOJI_SHORTCODE_LIST = [
+  ['smile','😊'],['laugh','😂'],['heart','❤️'],['fire','🔥'],['star','⭐'],
+  ['rocket','🚀'],['thumbsup','👍'],['thumbsdown','👎'],['wave','👋'],
+  ['clap','👏'],['pray','🙏'],['muscle','💪'],['ok','👌'],['check','✅'],
+  ['x','❌'],['warning','⚠️'],['lightning','⚡'],['sparkles','✨'],
+  ['party','🎉'],['tada','🎊'],['trophy','🏆'],['gem','💎'],['crown','👑'],
+  ['target','🎯'],['key','🔑'],['lock','🔒'],['bulb','💡'],['brain','🧠'],
+  ['eyes','👀'],['100','💯'],['cool','😎'],['think','🤔'],['cry','😭'],
+  ['wow','🤯'],['hug','🤗'],['love','🥰'],['gun','🔫'],['sword','⚔️'],
+  ['shield','🛡️'],['moon','🌙'],['sun','☀️'],['rainbow','🌈'],['snow','❄️'],
+  ['tree','🌿'],['flower','🌸'],['dragon','🐉'],['wolf','🐺'],['cat','🐱'],
+  ['dog','🐶'],['penguin','🐧'],['snake','🐍'],['pizza','🍕'],['coffee','☕'],
+  ['code','💻'],['phone','📱'],['music','🎵'],['game','🎮'],['art','🎨'],
+  ['book','📚'],['camera','📷'],['globe','🌍'],['ghost','👻'],['skull','💀'],
+  ['robot','🤖'],['alien','👽'],['poop','💩'],['nerd','🤓'],
+];
+
+let _emojiPickerOpen = false;
+let _emojiFullPanelOpen = false;
+let _emojiSelectedIdx = 0;
+
+function _searchEmojis(query) {
+  if (!query) return [];
+  const q = query.toLowerCase();
+  const results = [];
+  for (const [name, emoji] of EMOJI_SHORTCODE_LIST) {
+    if (name.startsWith(q)) results.push(emoji);
+    if (results.length >= 8) break;
+  }
+  if (results.length < 8) {
+    for (const [name, emoji] of EMOJI_SHORTCODE_LIST) {
+      if (!name.startsWith(q) && name.includes(q) && !results.includes(emoji)) {
+        results.push(emoji);
+        if (results.length >= 8) break;
+      }
+    }
+  }
+  return results;
+}
+
+function _showEmojiSuggestions(emojis) {
+  const picker = document.getElementById('acct-emoji-picker');
+  const suggestions = document.getElementById('acct-emoji-suggestions');
+  if (!picker || !suggestions) return;
+  suggestions.innerHTML = '';
+  if (emojis.length === 0) { _hideEmojiPicker(); return; }
+  emojis.forEach((emoji, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'acct-emoji-suggestion' + (i === _emojiSelectedIdx ? ' selected' : '');
+    btn.textContent = emoji;
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // keep textarea focused
+      _insertEmoji(emoji);
+    });
+    suggestions.appendChild(btn);
+  });
+  picker.style.display = 'flex';
+  _emojiPickerOpen = true;
+}
+
+function _hideEmojiPicker() {
+  const picker = document.getElementById('acct-emoji-picker');
+  if (picker) picker.style.display = 'none';
+  _emojiPickerOpen = false;
+  _emojiSelectedIdx = 0;
+}
+
+function _insertEmoji(emoji) {
+  const ta = document.getElementById('acct-bio-input');
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const val = ta.value;
+  const colonPos = val.lastIndexOf(':', start - 1);
+  if (colonPos !== -1 && !/\s/.test(val.slice(colonPos + 1, start))) {
+    ta.value = val.slice(0, colonPos) + emoji + val.slice(end);
+    const newPos = colonPos + [...emoji].length;
+    ta.selectionStart = ta.selectionEnd = newPos;
+  } else {
+    ta.value = val.slice(0, start) + emoji + val.slice(end);
+    ta.selectionStart = ta.selectionEnd = start + [...emoji].length;
+  }
+  _hideEmojiPicker();
+  _updateBioCount();
+  ta.focus();
+}
+
+function _openFullEmojiPanel() {
+  const panel = document.getElementById('acct-emoji-full-panel');
+  if (!panel) return;
+  _hideEmojiPicker();
+  _renderFullEmojiPanel(0);
+  const wrap = document.getElementById('acct-bio-wrap');
+  if (wrap) {
+    const rect = wrap.getBoundingClientRect();
+    const panelH = 320;
+    const panelW = 280;
+    let top = rect.top - panelH - 6;
+    let left = rect.left;
+    if (top < 8) top = rect.bottom + 6;
+    if (left + panelW > window.innerWidth - 8) left = window.innerWidth - panelW - 8;
+    top = Math.max(8, Math.min(top, window.innerHeight - panelH - 8));
+    left = Math.max(8, left);
+    panel.style.top = top + 'px';
+    panel.style.left = left + 'px';
+  }
+  panel.style.display = 'flex';
+  _emojiFullPanelOpen = true;
+}
+
+function _renderFullEmojiPanel(catIdx) {
+  const catsEl = document.getElementById('acct-emoji-panel-cats');
+  const gridEl = document.getElementById('acct-emoji-panel-grid');
+  if (!catsEl || !gridEl) return;
+  catsEl.innerHTML = '';
+  EMOJI_CATEGORIES.forEach((cat, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'acct-emoji-cat-btn' + (i === catIdx ? ' active' : '');
+    btn.textContent = cat.icon;
+    btn.setAttribute('data-tip', cat.label);
+    btn.addEventListener('click', () => _renderFullEmojiPanel(i));
+    catsEl.appendChild(btn);
+  });
+  gridEl.innerHTML = '';
+  const currentCat = EMOJI_CATEGORIES[catIdx];
+  currentCat.emojis.forEach((emoji) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'acct-emoji-grid-btn';
+    btn.textContent = emoji;
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      _insertEmoji(emoji);
+      _closeFullEmojiPanel();
+    });
+    gridEl.appendChild(btn);
+  });
+}
+
+function _closeFullEmojiPanel() {
+  const panel = document.getElementById('acct-emoji-full-panel');
+  if (panel) panel.style.display = 'none';
+  _emojiFullPanelOpen = false;
+}
+
+export function initBioEmojiPicker() {
+  const ta = document.getElementById('acct-bio-input');
+  if (!ta) return;
+
+  ta.addEventListener('input', () => {
+    const val = ta.value;
+    const pos = ta.selectionStart;
+    const colonPos = val.lastIndexOf(':', pos - 1);
+    if (colonPos === -1) { _hideEmojiPicker(); return; }
+    const fragment = val.slice(colonPos + 1, pos);
+    if (/\s/.test(fragment) || fragment.length === 0) { _hideEmojiPicker(); return; }
+    _emojiSelectedIdx = 0;
+    _showEmojiSuggestions(_searchEmojis(fragment));
+  });
+
+  ta.addEventListener('keydown', (e) => {
+    if (!_emojiPickerOpen) return;
+    const suggestions = document.querySelectorAll('.acct-emoji-suggestion');
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      _hideEmojiPicker();
+    } else if (e.key === 'Enter' && suggestions.length > 0) {
+      e.preventDefault();
+      const selected = suggestions[_emojiSelectedIdx];
+      if (selected) selected.dispatchEvent(new MouseEvent('mousedown'));
+    } else if (e.key === 'ArrowRight' || e.key === 'Tab') {
+      e.preventDefault();
+      _emojiSelectedIdx = (_emojiSelectedIdx + 1) % suggestions.length;
+      suggestions.forEach((s, i) => s.classList.toggle('selected', i === _emojiSelectedIdx));
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      _emojiSelectedIdx = (_emojiSelectedIdx - 1 + suggestions.length) % suggestions.length;
+      suggestions.forEach((s, i) => s.classList.toggle('selected', i === _emojiSelectedIdx));
+    }
+  });
+
+  ta.addEventListener('blur', () => {
+    // Delay so a mousedown on a suggestion gets to fire first.
+    setTimeout(() => { if (!_emojiFullPanelOpen) _hideEmojiPicker(); }, 150);
+  });
+
+  document.getElementById('acct-emoji-expand-btn')?.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    _openFullEmojiPanel();
+  });
+  document.getElementById('acct-emoji-panel-close')?.addEventListener('click', _closeFullEmojiPanel);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && _emojiFullPanelOpen) {
+      _closeFullEmojiPanel();
+      document.getElementById('acct-bio-input')?.focus();
+    }
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    const panel = document.getElementById('acct-emoji-full-panel');
+    const expandBtn = document.getElementById('acct-emoji-expand-btn');
+    if (_emojiFullPanelOpen && panel && !panel.contains(e.target) && !expandBtn?.contains(e.target)) {
+      _closeFullEmojiPanel();
+    }
+  });
+}
+
 /* ── Shared helpers ── */
 export function escapeHtml(s) {
   return String(s ?? '')
@@ -464,6 +687,9 @@ export function initAccountMenu(handlers) {
   document.getElementById('settings-back-btn')?.addEventListener('click', _hideSettingsView);
   document.getElementById('acct-signout-btn')?.addEventListener('click', () => onSignOut?.());
   document.getElementById('settings-signout-btn')?.addEventListener('click', () => onSignOut?.());
+
+  // MD12: colon-triggered emoji picker for the bio textarea
+  initBioEmojiPicker();
 }
 
 /* ══════════════════════════════════════
