@@ -1045,6 +1045,13 @@ function _hideTrackedFooter() {
 // denormalized owner fields we can read from any of that creator's
 // catalysts (all of their tiles should agree, so reading from the
 // first one is fine; the freshest tile wins if there's drift).
+// NB-MD06: compact vote count formatter for community card totals.
+function _formatVoteCount(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return String(n);
+}
+
 function _groupCatalystsByCreator(catalysts) {
   const groups = new Map();
   for (const cat of catalysts) {
@@ -1062,6 +1069,7 @@ function _groupCatalystsByCreator(catalysts) {
         latestCreatedAt: 0,
         oldestCreatedAt: Number.POSITIVE_INFINITY,
         totalFireCount: 0,
+        totalFrostCount: 0,
       };
       groups.set(ownerId, g);
     }
@@ -1070,6 +1078,7 @@ function _groupCatalystsByCreator(catalysts) {
     if (ts > g.latestCreatedAt) g.latestCreatedAt = ts;
     if (ts && ts < g.oldestCreatedAt) g.oldestCreatedAt = ts;
     g.totalFireCount += (cat.fireCount || 0);
+    g.totalFrostCount += (cat.frostCount || 0);
   }
   // Normalize groups that had no dated catalysts so the oldest sort
   // doesn't leave +Infinity sentinels in place.
@@ -1302,6 +1311,24 @@ function _buildCommunityCard(group) {
     body.appendChild(tile);
   });
   card.appendChild(body);
+
+  // NB-MD06: aggregate fire / poop vote totals for this creator.
+  // Only rendered when at least one vote exists.
+  const totalFire = group.totalFireCount || 0;
+  const totalFrost = group.totalFrostCount || 0;
+  if (totalFire > 0 || totalFrost > 0) {
+    const footer = document.createElement('div');
+    footer.className = 'community-card-vote-footer';
+    footer.innerHTML = `
+      <span class="community-card-vote-chip fire" data-tip="Total fire votes across all catalysts">
+        🔥 <span class="community-card-vote-num">${_formatVoteCount(totalFire)}</span>
+      </span>
+      <span class="community-card-vote-chip frost" data-tip="Total poop votes across all catalysts">
+        💩 <span class="community-card-vote-num">${_formatVoteCount(totalFrost)}</span>
+      </span>
+    `;
+    card.appendChild(footer);
+  }
 
   return card;
 }

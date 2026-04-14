@@ -753,6 +753,13 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-collapse{flex-shrink:0;background:transparent;border:none;color:var(--tx3);cursor:pointer;padding:6px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
 .community-card-collapse:hover{color:var(--tx);background:rgba(255,255,255,0.07);}
 .community-card.collapsed .community-tiles > *:not(:first-child){display:none;}
+
+/* NB-MD06: aggregate fire / poop vote footer on each creator card */
+.community-card-vote-footer{display:flex;gap:8px;padding:8px 14px 10px;border-top:1px solid rgba(255,255,255,0.05);}
+.community-card-vote-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,0.05);color:var(--tx2);cursor:default;user-select:none;}
+.community-card-vote-chip.fire{background:rgba(255,100,0,0.1);}
+.community-card-vote-chip.frost{background:rgba(100,80,60,0.1);}
+.community-card-vote-num{font-weight:600;font-variant-numeric:tabular-nums;}
 .community-empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px;}
 
 /* MD18: pin button on community-view hex tiles. Positioned in the
