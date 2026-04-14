@@ -163,9 +163,9 @@ export async function followAlchemist(group) {
   } catch (err) {
     console.error('[tracked] followAlchemist failed:', err?.code, err?.message, err);
     if (err?.code === 'permission-denied') {
-      toast('Follow failed — permission denied. Rules may need updating.');
+      toast('Pin failed — permission denied. Rules may need updating.');
     } else {
-      toast('Follow failed');
+      toast('Pin failed');
     }
     return false;
   }
@@ -186,9 +186,9 @@ export async function unfollowAlchemist(uid) {
   } catch (err) {
     console.error('[tracked] unfollowAlchemist failed:', err?.code, err?.message, err);
     if (err?.code === 'permission-denied') {
-      toast('Unfollow failed — permission denied. Rules may need updating.');
+      toast('Unpin failed — permission denied. Rules may need updating.');
     } else {
-      toast('Unfollow failed');
+      toast('Unpin failed');
     }
     return false;
   }

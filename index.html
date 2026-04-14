@@ -198,8 +198,8 @@
         Pinned
       </button>
       <button class="profile-tab" data-tab="following">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Following
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>
+        Pinned Alchemists
       </button>
     </div>
     <!-- Profile content columns — used on profile routes instead of #honeycomb -->
@@ -219,7 +219,7 @@
           <span class="tracked-hdr-line"></span>
           <span class="tracked-hdr-title">Pinned Catalysts</span>
           <span class="tracked-hdr-line"></span>
-          <button class="tracked-privacy" id="tracked-privacy-btn" data-tip="Let other users see what you're following">
+          <button class="tracked-privacy" id="tracked-privacy-btn" data-tip="Let other users see your pinned content">
             <svg class="tracked-lock-closed" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <svg class="tracked-lock-open" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
             <span class="tracked-privacy-label">Private</span>
@@ -230,7 +230,7 @@
       <div class="tracked-section" id="tracked-alchemists-section">
         <div class="tracked-hdr">
           <span class="tracked-hdr-line"></span>
-          <span class="tracked-hdr-title">Following</span>
+          <span class="tracked-hdr-title">Pinned Alchemists</span>
           <span class="tracked-hdr-line"></span>
         </div>
         <div class="tracked-body" id="tracked-alchemists-body"></div>
@@ -356,6 +356,8 @@
       <div id="play-latency" data-tip="Server latency"></div>
       <!-- Damage vignette -->
       <div id="play-vignette"></div>
+      <!-- Sprint vignette -->
+      <div id="play-sprint-vignette"></div>
       <!-- Death screen -->
       <div id="play-death-screen">
         <div id="play-death-box">

@@ -758,7 +758,7 @@ function _renderProfileView(user, catalysts, isOwn) {
         if (followingCol.children.length === 0) {
           const empty = document.createElement('div');
           empty.className = 'hex-empty';
-          empty.textContent = 'No catalysts from followed alchemists yet';
+          empty.textContent = 'No catalysts from pinned alchemists yet';
           followingCol.appendChild(empty);
         }
       });
@@ -1068,7 +1068,7 @@ function _buildPinnedFooterTile(pinned, { canRemove }) {
   return tile;
 }
 
-// Small circular avatar chip used in the profile footer's "Following"
+// Small circular avatar chip used in the profile footer's "Pinned Alchemists"
 // row. Clicking navigates to that alchemist's profile. Own-profile
 // viewers get a remove "×" in the corner.
 function _buildFollowedChip(alch, { canRemove }) {
@@ -1101,8 +1101,8 @@ function _buildFollowedChip(alch, { canRemove }) {
     const rm = document.createElement('button');
     rm.type = 'button';
     rm.className = 'tracked-remove-btn';
-    rm.setAttribute('data-tip', 'Unfollow');
-    rm.setAttribute('aria-label', 'Unfollow');
+    rm.setAttribute('data-tip', 'Unpin Alchemist');
+    rm.setAttribute('aria-label', 'Unpin Alchemist');
     rm.textContent = '×';
     rm.addEventListener('click', (e) => {
       e.stopPropagation();
