@@ -1445,6 +1445,59 @@ body.cat-modal-open{overflow:hidden;}
 /* MD04: header hidden in play mode */
 #hdr.play-mode{background:transparent !important;border-bottom:none !important;box-shadow:none !important;visibility:hidden;}
 #play-exit-btn{z-index:220;}
+/* ── Game Loading Overlay ── */
+#play-loading-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(4,4,10,0.97);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:200;
+  transition:opacity 0.5s ease;
+}
+#play-loading-overlay.hidden{
+  opacity:0;
+  pointer-events:none;
+}
+#play-loading-inner{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:18px;
+}
+#play-loading-logo{
+  animation:loading-spin 2s linear infinite;
+  filter:drop-shadow(0 0 10px #5aaa72);
+}
+@keyframes loading-spin{
+  from{transform:rotate(0deg);}
+  to{transform:rotate(360deg);}
+}
+#play-loading-label{
+  font-family:'Outfit',sans-serif;
+  font-size:14px;
+  font-weight:500;
+  color:rgba(255,255,255,0.5);
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+#play-loading-bar-wrap{
+  width:160px;
+  height:3px;
+  background:rgba(255,255,255,0.08);
+  border-radius:2px;
+  overflow:hidden;
+}
+#play-loading-bar{
+  height:100%;
+  width:0%;
+  background:#5aaa72;
+  border-radius:2px;
+  transition:width 0.3s ease;
+  box-shadow:0 0 8px #5aaa72;
+}
+
 /* MD04: exit confirmation modal (matches DexNote pm-exit-confirm) */
 #play-exit-modal{display:none;position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:16px;}
 #play-exit-modal.open{display:flex;}

@@ -307,6 +307,22 @@
        ══════════════════════════════════════ -->
   <div id="play-view">
     <canvas id="play-canvas" style="touch-action:none"></canvas>
+
+    <!-- Game loading overlay — shown during Babylon init, hidden when ready -->
+    <div id="play-loading-overlay">
+      <div id="play-loading-inner">
+        <svg id="play-loading-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="52" height="52">
+          <polygon points="24,4 44,14 44,34 24,44 4,34 4,14" stroke="#5aaa72" stroke-width="2.5" fill="none" opacity="0.9"/>
+          <polygon points="24,12 36,18 36,30 24,36 12,30 12,18" stroke="#5aaa72" stroke-width="1.5" fill="none" opacity="0.5"/>
+          <circle cx="24" cy="24" r="4" fill="#5aaa72" opacity="0.9"/>
+        </svg>
+        <div id="play-loading-label">Loading Arena...</div>
+        <div id="play-loading-bar-wrap">
+          <div id="play-loading-bar"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="play-hud">
       <button id="play-exit-btn" data-tip="Exit play mode">✕ Exit</button>
       <button id="play-audio-btn" data-tip="Toggle audio">🔊</button>

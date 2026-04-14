@@ -160,6 +160,30 @@ export async function renderPlayRoute(gameId) {
   view.classList.add('visible');
   document.getElementById('hdr')?.classList.add('play-mode');
 
+  // Show loading overlay immediately — hides the broken pre-init canvas
+  const loadOverlay = document.getElementById('play-loading-overlay');
+  const loadBar     = document.getElementById('play-loading-bar');
+  const loadLabel   = document.getElementById('play-loading-label');
+  if (loadOverlay) {
+    loadOverlay.style.display = '';
+    loadOverlay.classList.remove('hidden');
+    if (loadBar) loadBar.style.width = '0%';
+  }
+
+  function _setLoadProgress(pct, label) {
+    if (loadBar)   loadBar.style.width   = pct + '%';
+    if (loadLabel) loadLabel.textContent = label || 'Loading Arena...';
+  }
+
+  function _hideLoadOverlay() {
+    if (!loadOverlay) return;
+    loadOverlay.classList.add('hidden');
+    // Remove from DOM after transition so it doesn't intercept clicks
+    setTimeout(() => {
+      if (loadOverlay.parentNode) loadOverlay.style.display = 'none';
+    }, 600);
+  }
+
   // Window bridge for init.js Escape handler
   window._nbOpenExitModal = openExitModal;
   window._nbCloseExitModal = closeExitModal;
@@ -190,7 +214,9 @@ export async function renderPlayRoute(gameId) {
   }
 
   try {
+    _setLoadProgress(15, 'Loading Engine...');
     await _ensureBabylon();
+    _setLoadProgress(45, 'Building Arena...');
     const result = initGame(canvas);
     _engine = result.engine;
 
@@ -198,6 +224,8 @@ export async function renderPlayRoute(gameId) {
     window._nbSendDamage = (targetId, dmg, name) => {
       photonSendDamage(targetId, dmg, name);
     };
+
+    _setLoadProgress(75, 'Connecting...');
 
     // Request pointer lock immediately — the Play button click is
     // the required user gesture, so this fires without needing
@@ -221,10 +249,13 @@ export async function renderPlayRoute(gameId) {
     window._nbHathoraConnected = isHathoraConnected;
     window._nbHathoraSendMove = hathoraSendMove;
 
+    _setLoadProgress(88, 'Joining Server...');
     await _ensurePhoton();
     initPhoton({
       onConnected: (myId) => {
         console.log('[play] photon connected, actor:', myId);
+        _setLoadProgress(100, 'Ready!');
+        setTimeout(_hideLoadOverlay, 400);
         // Assign spawn based on actor number
         const spawnZ = (myId % 2 === 1) ? -48 : 48;
         const spawnX = (Math.random() - 0.5) * 6;
@@ -280,6 +311,7 @@ export async function renderPlayRoute(gameId) {
     window._nbPhotonInRoom = isInRoom;
   } catch (err) {
     console.error('[play] failed to init:', err);
+    if (loadOverlay) loadOverlay.style.display = 'none';
     view.innerHTML = '<div style="color:#f66;padding:2rem;font:14px monospace">Failed to load: ' + (err.message || err) + '</div>';
   }
 }

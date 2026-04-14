@@ -29,7 +29,19 @@ export function buildUserSlug(username, hex) {
 export function getRoute() {
   const path = window.location.pathname;
   if (path === '/' || path === '') return { page: 'feed' };
-  if (path === '/play') return { page: 'play', gameId: 'arena1' };
+
+  // Hard refresh on /play — redirect to /games instead of hanging
+  // A hard refresh means no previous pushState entry (navigation type 'reload' or 'navigate' from address bar)
+  if (path === '/play') {
+    const navType = performance?.getEntriesByType?.('navigation')?.[0]?.type;
+    const isHardRefresh = navType === 'reload' || navType === 'navigate';
+    if (isHardRefresh) {
+      // Replace history so Back button works correctly
+      history.replaceState({}, '', '/games');
+      return { page: 'games' };
+    }
+    return { page: 'play', gameId: 'arena1' };
+  }
   if (path === '/games') return { page: 'games' };
   if (path === '/nodesplit') return { page: 'nodesplit' };
   if (path === '/dotsim') return { page: 'dotsim' };
