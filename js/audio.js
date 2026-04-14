@@ -224,6 +224,60 @@ export function playGooImpact() {
   _burst(60, 'sine', 0.06, VOL_SHOOT * 0.4);
 }
 
+export function playBlockBreak() {
+  if (!_ctx || !_enabled) return;
+  try {
+    const now = _ctx.currentTime;
+
+    // Impact transient — short noise burst
+    const bufLen = _ctx.sampleRate * 0.08;
+    const buf    = _ctx.createBuffer(1, bufLen, _ctx.sampleRate);
+    const data   = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufLen, 2.5);
+    }
+    const src    = _ctx.createBufferSource();
+    src.buffer   = buf;
+
+    const lpf    = _ctx.createBiquadFilter();
+    lpf.type     = 'lowpass';
+    lpf.frequency.setValueAtTime(800, now);
+    lpf.frequency.linearRampToValueAtTime(200, now + 0.08);
+
+    const gain   = _ctx.createGain();
+    gain.gain.setValueAtTime(0.55, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    src.connect(lpf);
+    lpf.connect(gain);
+    gain.connect(_master);
+    src.start(now);
+    src.stop(now + 0.35);
+
+    // Rubble tail — slightly pitched noise
+    const buf2   = _ctx.createBuffer(1, _ctx.sampleRate * 0.25, _ctx.sampleRate);
+    const d2     = buf2.getChannelData(0);
+    for (let i = 0; i < d2.length; i++) {
+      d2[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d2.length, 1.2) * 0.4;
+    }
+    const src2   = _ctx.createBufferSource();
+    src2.buffer  = buf2;
+    const hpf    = _ctx.createBiquadFilter();
+    hpf.type     = 'highpass';
+    hpf.frequency.value = 300;
+    const gain2  = _ctx.createGain();
+    gain2.gain.setValueAtTime(0.25, now + 0.04);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    src2.connect(hpf);
+    hpf.connect(gain2);
+    gain2.connect(_master);
+    src2.start(now + 0.04);
+    src2.stop(now + 0.5);
+  } catch (e) {
+    console.warn('[audio] playBlockBreak error:', e.message);
+  }
+}
+
 export function destroyAudio() {
   try {
     if (_jetpackNode)    { _jetpackNode.stop();    _jetpackNode    = null; }

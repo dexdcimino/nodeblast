@@ -5,6 +5,7 @@
 
 import { getProjectileColor } from './guns.js';
 import { checkEnemyHit, damageEnemyNode } from './enemy-nodes.js';
+import { playBlockBreak } from './audio.js';
 
 let _scene     = null;
 let _camera    = null;
@@ -224,29 +225,54 @@ function _destroyBlock(block) {
   const d = block.maxZ - block.minZ;
   const h = block.maxY;
 
+  // Get current beam color for edge highlight
+  const pc   = typeof getProjectileColor === 'function' ? getProjectileColor() : { r: 0.7, g: 0.1, b: 1.0 };
+  const cr   = pc.r, cg = pc.g, cb = pc.b;
+
   const fragments = [];
   for (let fx = 0; fx < 2; fx++) {
     for (let fz = 0; fz < 2; fz++) {
       for (let fy = 0; fy < 2; fy++) {
+        const fw = w / 2 * (0.65 + Math.random() * 0.45);
+        const fh = h / 2 * (0.65 + Math.random() * 0.45);
+        const fd = d / 2 * (0.65 + Math.random() * 0.45);
+
         const frag = B.MeshBuilder.CreateBox('frag_' + Date.now() + '_' + fx + fz + fy, {
-          width:  w / 2 * (0.7 + Math.random() * 0.4),
-          height: h / 2 * (0.7 + Math.random() * 0.4),
-          depth:  d / 2 * (0.7 + Math.random() * 0.4),
+          width: fw, height: fh, depth: fd,
         }, _scene);
         frag.position.copyFrom(mesh.position);
         frag.position.x += (fx - 0.5) * w * 0.4;
         frag.position.y += (fy - 0.5) * h * 0.4 + h / 2;
         frag.position.z += (fz - 0.5) * d * 0.4;
-        frag.material   = mesh.material;
+
+        // Clone material so we can set emissive independently per fragment
+        const fragMat = mesh.material ? mesh.material.clone('frag_mat_' + Date.now()) : new B.StandardMaterial('fm_' + Date.now(), _scene);
+        fragMat.emissiveColor = new B.Color3(cr * 0.55, cg * 0.55, cb * 0.55);
+        frag.material = fragMat;
+
+        // Edge highlight mesh (slightly scaled-up wireframe-look box)
+        const edge = B.MeshBuilder.CreateBox('frag_edge_' + Date.now(), {
+          width: fw * 1.04, height: fh * 1.04, depth: fd * 1.04,
+        }, _scene);
+        edge.parent = frag;
+        const edgeMat = new B.StandardMaterial('frag_em_' + Date.now(), _scene);
+        edgeMat.emissiveColor = new B.Color3(cr, cg, cb);
+        edgeMat.wireframe     = true;
+        edgeMat.disableLighting = true;
+        edgeMat.alpha = 0.6;
+        edge.material = edgeMat;
+        frag._edgeMesh = edge;
+
+        // Slower initial velocity — more dramatic tumble, less explosive scatter
         frag._vel = new B.Vector3(
-          (fx - 0.5) * 0.15 + (Math.random() - 0.5) * 0.1,
-          0.15 + Math.random() * 0.15,
-          (fz - 0.5) * 0.15 + (Math.random() - 0.5) * 0.1,
+          (fx - 0.5) * 0.08 + (Math.random() - 0.5) * 0.06,
+          0.08 + Math.random() * 0.10,
+          (fz - 0.5) * 0.08 + (Math.random() - 0.5) * 0.06,
         );
         frag._rot = new B.Vector3(
-          (Math.random() - 0.5) * 0.1,
-          (Math.random() - 0.5) * 0.1,
-          (Math.random() - 0.5) * 0.1,
+          (Math.random() - 0.5) * 0.06,
+          (Math.random() - 0.5) * 0.08,
+          (Math.random() - 0.5) * 0.06,
         );
         fragments.push(frag);
       }
@@ -254,45 +280,68 @@ function _destroyBlock(block) {
   }
 
   mesh.setEnabled(false);
+  playBlockBreak();  // 🔊 crack sound
 
   _destroyedBlocks.set(block, {
     mesh,
     fragments,
     timer: 0,
-    reformTime: 480,
+    reformTime: 560,  // slightly longer before reform
   });
 }
 
 function _updateDestroyedBlocks() {
   _destroyedBlocks.forEach((data, block) => {
     data.timer++;
+    const t = data.timer;
 
-    if (data.timer < 60) {
+    if (t < 90) {
+      // Phase 1: active tumble — slower gravity, longer hang time
       data.fragments.forEach(f => {
-        f._vel.y -= 0.008;
+        f._vel.y  -= 0.006;  // slower gravity for drama
         f.position.addInPlace(f._vel);
         f.rotation.addInPlace(f._rot);
-        f._vel.scaleInPlace(0.95);
+        f._vel.scaleInPlace(0.97);  // less friction = longer slide
+        f._rot.scaleInPlace(0.98);
+        // Edge highlight fades from bright to dim over this phase
+        if (f._edgeMesh?.material) {
+          f._edgeMesh.material.alpha = Math.max(0.1, 0.6 - (t / 90) * 0.45);
+        }
       });
-    } else if (data.timer >= data.reformTime - 60) {
-      const t = (data.timer - (data.reformTime - 60)) / 60;
+    } else if (t >= data.reformTime - 80) {
+      // Phase 3: reform — fragments fly back together, flicker on arrival
+      const prog = (t - (data.reformTime - 80)) / 80;
       data.fragments.forEach((f, i) => {
-        f.position.x += (data.mesh.position.x - f.position.x) * 0.08;
-        f.position.y += (data.mesh.position.y - f.position.y) * 0.08;
-        f.position.z += (data.mesh.position.z - f.position.z) * 0.08;
-        f.rotation.scaleInPlace(0.9);
-        if (f.material) f.material.alpha = Math.max(0, 1 - t);
+        const lerpSpeed = 0.06 + prog * 0.06;
+        f.position.x += (data.mesh.position.x - f.position.x) * lerpSpeed;
+        f.position.y += (data.mesh.position.y - f.position.y) * lerpSpeed;
+        f.position.z += (data.mesh.position.z - f.position.z) * lerpSpeed;
+        f.rotation.scaleInPlace(0.88);
+        if (f.material) f.material.alpha = Math.max(0, 1 - prog);
+        if (f._edgeMesh) f._edgeMesh.setEnabled(false);
       });
 
-      if (t >= 0.95) {
+      if (prog >= 0.95) {
         data.mesh.setEnabled(true);
-        if (data.mesh.material) data.mesh.material.alpha = 1;
+        // Brief flicker on reform
+        if (data.mesh.material) {
+          data.mesh.material.alpha = 1;
+          const om = data.mesh.material;
+          let fc = 0;
+          const flicker = setInterval(() => {
+            fc++;
+            if (om.alpha !== undefined) om.alpha = fc % 2 === 0 ? 1.0 : 0.4;
+            if (fc >= 6) { clearInterval(flicker); if (om.alpha !== undefined) om.alpha = 1; }
+          }, 60);
+        }
         data.fragments.forEach(f => { try { f.dispose(); } catch {} });
         _destroyedBlocks.delete(block);
       }
-    } else if (data.timer >= 60) {
+    } else {
+      // Phase 2: drift / float (between tumble end and reform start)
       data.fragments.forEach((f, i) => {
-        f.position.y += Math.sin(data.timer * 0.05 + i) * 0.003;
+        f.position.y += Math.sin(t * 0.04 + i * 1.1) * 0.002;
+        f._vel.scaleInPlace(0.98);
       });
     }
   });
