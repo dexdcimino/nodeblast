@@ -1159,6 +1159,9 @@ function _buildCommunityCard(group) {
   const hexColor = '#' + hex;
   const card = document.createElement('div');
   card.className = 'community-card';
+  // NB-MD07: size tier based on catalyst count (6+ → full row)
+  const catCount = group.catalysts.length;
+  card.dataset.count = catCount >= 6 ? 'max' : String(Math.max(1, Math.min(catCount, 5)));
   card.style.setProperty('--card-hex', hexColor);
 
   // Header row — avatar + name + hex + count. Clicking anywhere in the
@@ -1296,7 +1299,14 @@ function _buildCommunityCard(group) {
   // Pin button hidden on own tiles (you can't pin yourself), shown
   // everywhere else in the community hub.
   const hideOwnPin = State.user && group.uid === State.user.uid;
-  _sortCardTiles(group.catalysts).forEach((cat) => {
+  // NB-MD07: cap visible tiles per card; render +N overflow badge for the rest.
+  const MAX_VISIBLE_TILES = 5;
+  const sortedTiles = _sortCardTiles(group.catalysts);
+  const tilesToShow = sortedTiles.slice(0, MAX_VISIBLE_TILES);
+  const overflow = sortedTiles.length > MAX_VISIBLE_TILES
+    ? sortedTiles.length - MAX_VISIBLE_TILES
+    : 0;
+  tilesToShow.forEach((cat) => {
     const tile = createCatalystTileElement(
       cat,
       {
@@ -1310,6 +1320,17 @@ function _buildCommunityCard(group) {
     );
     body.appendChild(tile);
   });
+  if (overflow > 0) {
+    const overflowEl = document.createElement('div');
+    overflowEl.className = 'community-overflow-badge';
+    overflowEl.setAttribute('data-tip', `${overflow} more catalyst${overflow === 1 ? '' : 's'} — click to view profile`);
+    overflowEl.style.cssText = `width:${COMMUNITY_TILE_W}px;height:${COMMUNITY_TILE_H}px`;
+    overflowEl.innerHTML = `<span>+${overflow}</span>`;
+    overflowEl.addEventListener('click', () => {
+      navigate('/' + buildUserSlug((group.displayName || '').toLowerCase(), group.hexCode));
+    });
+    body.appendChild(overflowEl);
+  }
   card.appendChild(body);
 
   // NB-MD06: aggregate fire / poop vote totals for this creator.
