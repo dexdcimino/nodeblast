@@ -628,10 +628,13 @@ function _renderProfileView(user, catalysts, isOwn) {
         followingCol.innerHTML = '';
         alchemistsToShow.forEach((alch) => {
           const cats = catMap.get(alch.uid) || [];
+          // INFRA-MD01: canonical-first read with legacy fallback
+          const alchName = alch.displayName || alch.username || 'anon';
+          const alchHex = (alch.hexCode || alch.hex || '5aaa72').replace('#', '').toLowerCase();
           const group = {
             uid: alch.uid,
-            displayName: alch.username || 'anon',
-            hexCode: (alch.hex || '5aaa72').replace('#', '').toLowerCase(),
+            displayName: alchName,
+            hexCode: alchHex,
             photoURL: alch.photoURL || '',
             isAdmin: !!alch.isAdmin,
             socialLinks: [],
@@ -961,9 +964,12 @@ function _buildPinnedFooterTile(pinned, { canRemove }) {
 // row. Clicking navigates to that alchemist's profile. Own-profile
 // viewers get a remove "×" in the corner.
 function _buildFollowedChip(alch, { canRemove }) {
+  // INFRA-MD01: canonical-first read with legacy fallback
+  const aName = alch.displayName || alch.username || 'anon';
+  const aHex = alch.hexCode || alch.hex || '5aaa72';
   const chip = document.createElement('div');
   chip.className = 'tracked-alch-chip';
-  chip.style.setProperty('--chip-hex', '#' + (alch.hex || '5aaa72'));
+  chip.style.setProperty('--chip-hex', '#' + aHex);
   const avatar = document.createElement('div');
   avatar.className = 'tracked-alch-avatar';
   if (alch.photoURL) {
@@ -972,16 +978,16 @@ function _buildFollowedChip(alch, { canRemove }) {
     img.alt = '';
     avatar.appendChild(img);
   } else {
-    avatar.textContent = (alch.username || 'A').charAt(0).toUpperCase();
+    avatar.textContent = aName.charAt(0).toUpperCase();
   }
   chip.appendChild(avatar);
   const nameEl = document.createElement('span');
   nameEl.className = 'tracked-alch-name';
-  nameEl.innerHTML = renderUsername(alch.username || 'anon', null, !!alch.isAdmin);
+  nameEl.innerHTML = renderUsername(aName, null, !!alch.isAdmin);
   chip.appendChild(nameEl);
   chip.addEventListener('click', () => {
-    const lower = (alch.username || '').toLowerCase();
-    if (lower && alch.hex) navigate('/' + buildUserSlug(lower, alch.hex));
+    const lower = aName.toLowerCase();
+    if (lower && aHex) navigate('/' + buildUserSlug(lower, aHex));
   });
   if (canRemove) {
     const rm = document.createElement('button');

@@ -104,10 +104,16 @@ function _noHash(h) {
 
 function _mySelf() {
   const name = State.profile?.displayName || 'anon';
+  const hexNoHash = _noHash(State.profile?.hexCode || '5aaa72');
   return {
     uid: State.user?.uid || '',
+    // CANONICAL cross-site fields (INFRA-MD01).
+    displayName: name,
+    hexCode: hexNoHash,
+    // Legacy NodeBlast-internal aliases — kept so any lingering readers
+    // work. Remove in a future cleanup once all stored data is refreshed.
     username: name,
-    hexColor: _withHash(State.profile?.hexCode || '5aaa72'),
+    hexColor: _withHash(hexNoHash),
   };
 }
 
@@ -142,9 +148,11 @@ export function getFriends() {
  * ══════════════════════════════════════════════════════════════ */
 
 function _friendCardHTML(f) {
-  const hex = _noHash(f.hexColor);
+  // INFRA-MD01: prefer canonical displayName/hexCode; fall back to the
+  // legacy username/hexColor for docs written before the schema flip.
+  const hex = _noHash(f.hexCode || f.hexColor || '5aaa72');
   const color = '#' + hex;
-  const name = f.username || 'anon';
+  const name = f.displayName || f.username || 'anon';
   const nameHtml = renderUsername(name, color, false);
   const presence = _presenceState.get(f.uid) || 'offline';
   const favClass = f.favorite ? 'active' : '';
@@ -289,8 +297,9 @@ function _stopRequestsSub() {
 
 function _pushRequestNotif(requestId, req) {
   if (typeof window._nbAddNotif !== 'function') return;
-  const fromName = req.fromUsername || 'Someone';
-  const fromHex = _noHash(req.fromHex || '5aaa72');
+  // INFRA-MD01: canonical-first, legacy fallback
+  const fromName = req.fromDisplayName || req.fromUsername || 'Someone';
+  const fromHex = _noHash(req.fromHexCode || req.fromHex || '5aaa72');
   const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#${fromHex}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3.5"/><path d="M2 21c0-3.5 3-6.5 7-6.5s7 3 7 6.5"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>`;
   window._nbAddNotif({
     text: `<b>${escapeHtml(fromName)}</b> wants to be friends <span style="color:#${escapeHtml(fromHex)}">#${escapeHtml(fromHex)}</span>
@@ -412,6 +421,9 @@ export async function sendFriendRequest(targetUid) {
     const me = _mySelf();
     await setDoc(doc(db, 'users', targetUid, 'friend_requests', State.user.uid), {
       fromUid: me.uid,
+      // INFRA-MD01: canonical + legacy dual-write
+      fromDisplayName: me.displayName,
+      fromHexCode: me.hexCode,
       fromUsername: me.username,
       fromHex: me.hexColor,
       status: 'pending',
@@ -453,11 +465,16 @@ export async function acceptFriendRequest(requestId) {
     if (!reqSnap.exists()) { toast('Request not found'); return; }
     const req = reqSnap.data() || {};
     const fromUid = req.fromUid || requestId;
-    const fromUsername = req.fromUsername || 'anon';
-    const fromHex = _withHash(req.fromHex || '#5aaa72');
+    // INFRA-MD01: prefer canonical displayName/hexCode from the request.
+    const fromUsername = req.fromDisplayName || req.fromUsername || 'anon';
+    const fromHexRaw = req.fromHexCode || _noHash(req.fromHex || '5aaa72');
+    const fromHex = _withHash(fromHexRaw);
 
     await setDoc(doc(db, 'users', State.user.uid, 'friends', fromUid), {
       uid: fromUid,
+      // INFRA-MD01: canonical + legacy dual-write
+      displayName: fromUsername,
+      hexCode: _noHash(fromHex),
       username: fromUsername,
       hexColor: fromHex,
       addedAt: serverTimestamp(),
@@ -466,6 +483,8 @@ export async function acceptFriendRequest(requestId) {
     const me = _mySelf();
     await setDoc(doc(db, 'users', fromUid, 'friends', State.user.uid), {
       uid: me.uid,
+      displayName: me.displayName,
+      hexCode: me.hexCode,
       username: me.username,
       hexColor: me.hexColor,
       addedAt: serverTimestamp(),
@@ -530,8 +549,17 @@ export async function removeFriend(friendUid) {
 export async function propagateProfileToFriends({ username, hexColor } = {}) {
   if (!State.user) return;
   const patch = {};
-  if (typeof username === 'string' && username) patch.username = username;
-  if (typeof hexColor === 'string' && hexColor) patch.hexColor = _withHash(hexColor);
+  // INFRA-MD01: write both canonical (displayName/hexCode) and legacy
+  // (username/hexColor) so new NodeBlast reads and any old code paths
+  // both render correctly without a migration script.
+  if (typeof username === 'string' && username) {
+    patch.displayName = username;
+    patch.username = username;
+  }
+  if (typeof hexColor === 'string' && hexColor) {
+    patch.hexCode = _noHash(hexColor);
+    patch.hexColor = _withHash(hexColor);
+  }
   if (Object.keys(patch).length === 0) return;
   try {
     const snap = await getDocs(collection(db, 'users', State.user.uid, 'friends'));

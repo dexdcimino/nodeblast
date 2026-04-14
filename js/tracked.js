@@ -71,10 +71,17 @@ function _catalystSnapshot(cat) {
 }
 
 function _alchemistSnapshot(group) {
+  const name = group.displayName || 'anon';
+  const hex = (group.hexCode || '5aaa72').toLowerCase();
   return {
     uid: group.uid,
-    username: group.displayName || 'anon',
-    hex: (group.hexCode || '5aaa72').toLowerCase(),
+    // INFRA-MD01: canonical cross-site fields
+    displayName: name,
+    hexCode: hex,
+    // Legacy aliases — kept so previously-stored items and any remaining
+    // readers continue to render until a future cleanup pass.
+    username: name,
+    hex,
     photoURL: group.photoURL || '',
     isAdmin: !!group.isAdmin,
     pinnedAt: Date.now(),

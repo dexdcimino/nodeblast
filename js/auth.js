@@ -67,18 +67,22 @@ function stripHash(h) {
 
 function mergeProfileDocs(topData, prefsData, user, providerId) {
   const provider = (providerId || '').includes('github') ? 'github' : 'google';
-  // DexNote subdoc wins for displayName + hexCode. ".dev" is an admin
-  // display badge, never part of the stored name — strip any legacy
-  // value that still has it baked in.
+  // INFRA-MD01: CANONICAL top-level users/{uid} doc uses `displayName`
+  // + `hexCode` (no #). DexNote mirrors here from its internal
+  // prefs/profile subdoc (username/hexColor WITH #); we read the prefs
+  // subdoc first so a rapid DexNote edit wins before Firestore eventual
+  // consistency settles the top-level doc.
+  // ".dev" is an admin display badge, never part of the stored name —
+  // strip any legacy value that still has it baked in.
   const rawName =
-    prefsData?.username ||
-    topData?.displayName ||
+    prefsData?.username ||      // DexNote internal format (legacy fallback)
+    topData?.displayName ||     // CANONICAL cross-site field
     user.displayName ||
     'anon';
   const displayName = stripDevSuffix(rawName) || 'anon';
   const hexCode =
-    stripHash(prefsData?.hexColor) ||
-    stripHash(topData?.hexCode) ||
+    stripHash(prefsData?.hexColor) ||   // DexNote internal format (legacy fallback)
+    stripHash(topData?.hexCode) ||      // CANONICAL cross-site field
     null;
   const photoURL = topData?.photoURL || user.photoURL || '';
   const emailIsAdmin = !!(user?.email && ADMIN_EMAILS.has(user.email.toLowerCase()));
