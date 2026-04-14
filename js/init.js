@@ -1377,13 +1377,21 @@ function _buildCommunityCard(group) {
     socialWrap.addEventListener('click', (e) => e.stopPropagation());
     meta.appendChild(socialWrap);
   }
-  hdr.appendChild(meta);
-
+  // MD07: count label moved INSIDE the meta column (under name/hex) so
+  // it stops fighting the header's right-side button cluster for space.
   const count = document.createElement('span');
   count.className = 'community-card-count';
   const n = group.catalysts.length;
   count.textContent = n + (n === 1 ? ' catalyst' : ' catalysts');
-  hdr.appendChild(count);
+  meta.appendChild(count);
+
+  hdr.appendChild(meta);
+
+  // MD07: flexible spacer takes all leftover width so the icon cluster
+  // below floats right — replaces the old margin-left:auto on count.
+  const hdrSpacer = document.createElement('div');
+  hdrSpacer.className = 'community-card-hdr-spacer';
+  hdr.appendChild(hdrSpacer);
 
   // MD02: split into two buttons — silent clipboard copy + QR/share modal.
   // stopPropagation so clicks don't also fire the header's navigate handler.
