@@ -779,6 +779,20 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .creator-vote-count{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
 .community-empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px;}
 
+/* MD02: QR Share Modal */
+#qr-share-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:30000;opacity:0;pointer-events:none;transition:opacity var(--ease);}
+#qr-share-modal.open{opacity:1;pointer-events:all;}
+#qr-share-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:20px;padding:32px 28px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;width:320px;max-width:calc(100vw - 40px);position:relative;}
+#qr-share-close{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--tx3);cursor:pointer;padding:6px;border-radius:6px;display:inline-flex;transition:color var(--ease),background var(--ease);}
+#qr-share-close:hover{color:var(--tx);background:rgba(255,255,255,0.07);}
+#qr-share-title{font-size:14px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;}
+#qr-share-name{font-size:18px;font-weight:800;color:var(--tx);}
+#qr-share-qr-wrap{background:#fff;border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:center;}
+#qr-share-canvas{display:block;}
+#qr-share-url{font-size:12px;color:var(--tx3);font-family:var(--fn);word-break:break-all;text-align:center;max-width:260px;}
+#qr-share-actions{display:flex;gap:10px;width:100%;}
+#qr-share-actions .cat-btn{flex:1;justify-content:center;gap:6px;}
+
 /* MD18: pin button on community-view hex tiles. Positioned in the
    bottom-right corner inside the clipped hex, so it's visible over
    the fade layer but never overlaps the title. `.pinned` state swaps
@@ -1431,8 +1445,59 @@ body.cat-modal-open{overflow:hidden;}
 .gun-slot.active .gun-slot-icon{color:#00ff88;}
 .gun-slot-name{font-size:11px;color:rgba(255,255,255,0.45);text-align:center;letter-spacing:0.04em;text-transform:uppercase;line-height:1.2;max-width:96px;}
 .gun-slot.active .gun-slot-name{color:rgba(100,255,160,0.8);}
-#play-equip-tip{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.75);color:rgba(255,255,255,0.9);font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;padding:8px 20px;border-radius:8px;border:1px solid rgba(100,255,160,0.4);pointer-events:none;display:none;backdrop-filter:blur(4px);}
-#play-equip-tip.visible{display:block;}
+/* ── Gun slot locked state ── */
+.gun-slot.locked{opacity:0.28;pointer-events:none;filter:grayscale(0.8);}
+.gun-slot.locked .gun-slot-icon{opacity:0.4;}
+
+/* ── Hold-E pickup ring ── */
+#play-equip-tip{display:none;} /* replaced by ring UI */
+
+#play-e-ring-wrap{
+  position:absolute;
+  bottom:140px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 0.15s;
+}
+
+#play-e-ring-wrap.visible{opacity:1;}
+
+#play-e-ring-label{
+  font-family:'Outfit',sans-serif;
+  font-size:12px;
+  color:rgba(255,255,255,0.6);
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+}
+
+#play-e-ring-svg{width:52px;height:52px;}
+
+#play-e-ring-bg{stroke:rgba(255,255,255,0.1);}
+
+#play-e-ring-fill{
+  stroke:#5aaa72;
+  stroke-dasharray:113; /* 2π × 18 */
+  stroke-dashoffset:113;
+  transform-origin:26px 26px;
+  transform:rotate(-90deg);
+  transition:stroke-dashoffset 0.05s linear;
+  filter:drop-shadow(0 0 4px #5aaa72);
+}
+
+#play-e-ring-key{
+  font-family:'Outfit',sans-serif;
+  font-size:15px;
+  font-weight:700;
+  fill:rgba(255,255,255,0.9);
+  dominant-baseline:central;
+  text-anchor:middle;
+}
 /* Play button uses --clr-adj (light-mode adjusted) for bg and
    --clr-adj-on for text so contrast adapts to both themes. */
 .hdr-play-btn{background:var(--clr-adj);color:var(--clr-adj-on,#fff);border:none;border-radius:8px;padding:6px 16px;font-family:var(--fn);font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;}

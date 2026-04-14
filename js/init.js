@@ -220,6 +220,115 @@ async function shareProfileLink({ displayName, hexCode, usernameLower }) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+// MD02: QR share modal — lazy-loaded qrcode-generator + modal UI
+// ══════════════════════════════════════════════════════════════
+let _qrLib = null;
+function _loadQrLib() {
+  if (_qrLib) return Promise.resolve(_qrLib);
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-qr-lib]');
+    if (existing) {
+      existing.addEventListener('load', () => { _qrLib = window.qrcode; resolve(_qrLib); });
+      existing.addEventListener('error', reject);
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+    s.dataset.qrLib = '1';
+    s.onload = () => { _qrLib = window.qrcode; resolve(_qrLib); };
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function openQrShareModal({ displayName, hexCode, usernameLower }) {
+  const modal = document.getElementById('qr-share-modal');
+  if (!modal) return;
+
+  const name = (usernameLower || (displayName || '').toLowerCase());
+  const hex = (hexCode || '').toLowerCase();
+  const slug = buildUserSlug(name, hex);
+  const link = `${window.location.origin}/${slug}`;
+
+  const nameEl = document.getElementById('qr-share-name');
+  if (nameEl) nameEl.textContent = displayName || name;
+  const urlEl = document.getElementById('qr-share-url');
+  if (urlEl) urlEl.textContent = link;
+
+  const copyBtn = document.getElementById('qr-share-copy-btn');
+  if (copyBtn) {
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(link);
+        toast(`${displayName || 'Profile'} link copied!`);
+      } catch {
+        toast(link);
+      }
+    };
+  }
+
+  const nativeBtn = document.getElementById('qr-share-native-btn');
+  if (nativeBtn) {
+    if (typeof navigator.share === 'function') {
+      nativeBtn.style.display = '';
+      nativeBtn.onclick = async () => {
+        try {
+          await navigator.share({ title: (displayName || 'Profile') + ' on NodeBlast', url: link });
+        } catch (err) {
+          if (err?.name !== 'AbortError') toast('Share failed');
+        }
+      };
+    } else {
+      nativeBtn.style.display = 'none';
+    }
+  }
+
+  modal.classList.add('open');
+
+  try {
+    const qrFn = await _loadQrLib();
+    const qr = qrFn(0, 'M');
+    qr.addData(link);
+    qr.make();
+    const canvas = document.getElementById('qr-share-canvas');
+    if (canvas) {
+      const cellSize = 5;
+      const count = qr.getModuleCount();
+      const size = count * cellSize;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#000000';
+      for (let row = 0; row < count; row++) {
+        for (let col = 0; col < count; col++) {
+          if (qr.isDark(row, col)) {
+            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[qr-share] QR generation failed:', err);
+  }
+}
+
+function closeQrShareModal() {
+  document.getElementById('qr-share-modal')?.classList.remove('open');
+}
+
+function initQrShareModal() {
+  const modal = document.getElementById('qr-share-modal');
+  if (!modal) return;
+  document.getElementById('qr-share-close')?.addEventListener('click', closeQrShareModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeQrShareModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeQrShareModal();
+  });
+}
+
 function showProfileBar(user, catalystCount, isOwn) {
   const bar = document.getElementById('profile-bar');
   bar.classList.add('visible');
@@ -296,12 +405,11 @@ function showProfileBar(user, catalystCount, isOwn) {
   const actionBtn = document.getElementById('profile-bar-action');
   const shareBtn = document.getElementById('profile-bar-share');
 
-  // Share button is visible on BOTH own and other-user profiles
-  // (MD11). Click routes through shareProfileLink which prefers the
-  // native share sheet and falls back to clipboard copy.
+  // Share button is visible on BOTH own and other-user profiles.
+  // MD02: opens the QR share modal (QR + URL + copy/native share buttons).
   if (shareBtn) {
     shareBtn.style.display = 'inline-flex';
-    shareBtn.onclick = () => shareProfileLink({
+    shareBtn.onclick = () => openQrShareModal({
       displayName: user.displayName,
       hexCode: user.hexCode,
       usernameLower: user.usernameLower,
@@ -1277,20 +1385,39 @@ function _buildCommunityCard(group) {
   count.textContent = n + (n === 1 ? ' catalyst' : ' catalysts');
   hdr.appendChild(count);
 
-  // Share button — copies the profile URL to clipboard (or opens
-  // the native share sheet). stopPropagation so the click doesn't
-  // also fire the header's navigate-to-profile handler.
-  const shareBtn = document.createElement('button');
-  shareBtn.type = 'button';
-  shareBtn.className = 'community-card-share';
-  shareBtn.setAttribute('data-tip', 'Copy profile link');
-  shareBtn.setAttribute('aria-label', 'Share profile');
-  shareBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
-  shareBtn.addEventListener('click', (e) => {
+  // MD02: split into two buttons — silent clipboard copy + QR/share modal.
+  // stopPropagation so clicks don't also fire the header's navigate handler.
+  const copyLinkBtn = document.createElement('button');
+  copyLinkBtn.type = 'button';
+  copyLinkBtn.className = 'community-card-share';
+  copyLinkBtn.setAttribute('data-tip', 'Copy profile link');
+  copyLinkBtn.setAttribute('aria-label', 'Copy profile link');
+  copyLinkBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+  copyLinkBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    shareProfileLink({ displayName: group.displayName, hexCode: hex });
+    const name = (group.displayName || '').toLowerCase();
+    const slug = buildUserSlug(name, hex);
+    const link = `${window.location.origin}/${slug}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast(`${group.displayName || 'Profile'} link copied!`);
+    } catch {
+      toast(link);
+    }
   });
-  hdr.appendChild(shareBtn);
+  hdr.appendChild(copyLinkBtn);
+
+  const qrBtn = document.createElement('button');
+  qrBtn.type = 'button';
+  qrBtn.className = 'community-card-share';
+  qrBtn.setAttribute('data-tip', 'Share / QR code');
+  qrBtn.setAttribute('aria-label', 'Share profile QR');
+  qrBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="16" y="16" width="3" height="3" fill="currentColor" stroke="none"/><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/></svg>';
+  qrBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openQrShareModal({ displayName: group.displayName, hexCode: hex });
+  });
+  hdr.appendChild(qrBtn);
 
   // NB-MD05: collapse / expand button — shrinks the card to just the
   // header + first tile. State is session-only (Set keyed by uid).
@@ -2456,6 +2583,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   console.log('[BOOT] 12 - initCatalystDetail');
   initCatalystDetail();
+  // MD02: QR share modal (lazy-loads QR lib on first open)
+  initQrShareModal();
   console.log('[BOOT] 13 - initRouter');
   initRouter(renderRoute);
   console.log('[BOOT] 14 - initSearch');

@@ -175,7 +175,7 @@
       </div>
       <div id="profile-bar-right">
         <span id="profile-bar-count"></span>
-        <button id="profile-bar-share" class="cat-btn" style="display:none" data-tip="Copy profile link">
+        <button id="profile-bar-share" class="cat-btn" style="display:none" data-tip="Share / QR">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
           Share
         </button>
@@ -381,8 +381,18 @@
       </div>
       <!-- Gun HUD -->
       <div id="play-gun-hud"></div>
-      <!-- E-to-equip tooltip -->
-      <div id="play-equip-tip">Hold E to equip</div>
+      <!-- Hold-E pickup ring -->
+      <div id="play-e-ring-wrap">
+        <svg id="play-e-ring-svg" viewBox="0 0 52 52">
+          <circle id="play-e-ring-bg"   cx="26" cy="26" r="18" fill="rgba(0,0,0,0.5)" stroke-width="3"/>
+          <circle id="play-e-ring-fill" cx="26" cy="26" r="18" fill="none"             stroke-width="3"/>
+          <text   id="play-e-ring-key"  x="26"  y="26">E</text>
+        </svg>
+        <div id="play-e-ring-label">Hold to equip</div>
+      </div>
+
+      <!-- Drop tip -->
+      <div id="play-drop-tip" style="position:absolute;bottom:110px;left:50%;transform:translateX(-50%);font-family:'Outfit',sans-serif;font-size:11px;color:rgba(255,255,255,0.35);opacity:0;transition:opacity 0.2s;pointer-events:none;">[G] Drop gun</div>
     </div>
     <!-- MD04: escape exit confirmation modal -->
     <div id="play-exit-modal" aria-hidden="true">
@@ -1117,6 +1127,30 @@
       console.error('[UNHANDLED REJECTION]', e.reason);
     });
   </script>
+  <!-- QR Share Modal -->
+  <div id="qr-share-modal">
+    <div id="qr-share-card">
+      <button id="qr-share-close" class="cat-modal-close-btn" data-tip="Close" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div id="qr-share-title">Share Profile</div>
+      <div id="qr-share-name"></div>
+      <div id="qr-share-qr-wrap">
+        <canvas id="qr-share-canvas"></canvas>
+      </div>
+      <div id="qr-share-url"></div>
+      <div id="qr-share-actions">
+        <button id="qr-share-copy-btn" class="cat-btn primary" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy Link
+        </button>
+        <button id="qr-share-native-btn" class="cat-btn" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          Share
+        </button>
+      </div>
+    </div>
+  </div>
   <script type="module" src="js/init.js"></script>
 </body>
 </html>
