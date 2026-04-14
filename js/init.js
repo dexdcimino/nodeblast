@@ -83,6 +83,7 @@ let _currentTiles = [];
 let _currentShowAdd = false;
 let _currentEmptyMessage = '';
 let _firstRender = true;
+let _suppressNextDetailOpen = false;
 let _profileCache = new Map(); // "name#hex" or "name" -> { user, catalysts }
 let _viewingOther = null;       // { uid, displayName, hexCode } for the profile currently shown
 
@@ -1323,6 +1324,8 @@ function renderInternalCatalyst(user, cat) {
       <span>${unameHtml} <span style="color:#${escapeHtml(ownerHex)}">#${escapeHtml(ownerHex)}</span></span>
     `;
     creatorEl.onclick = () => {
+      _suppressNextDetailOpen = true;
+      closeCatalystDetail();
       navigate('/' + buildUserSlug(ownerName.toLowerCase(), ownerHex));
     };
   }
@@ -1354,6 +1357,8 @@ function _routeInternalIfNeeded(user, cat) {
 }
 
 async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
+  // Reset suppress flag if we're landing on a plain profile (no slug to open)
+  if (!openSlug) _suppressNextDetailOpen = false;
   hideAllViews();
   setPageTitle([username]);
 
@@ -1383,7 +1388,7 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
           ? 'Create your first catalyst'
           : 'This alchemist hasn\'t created any catalysts yet.',
       });
-      if (cachedMatch) openCatalystDetail(cachedMatch);
+      if (cachedMatch && !_suppressNextDetailOpen) openCatalystDetail(cachedMatch);
     }
   } else {
     renderSkeleton();
@@ -1404,11 +1409,20 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
     _profileCache.set(cacheKey, { user, catalysts });
     const match = openSlug ? catalysts.find((c) => c.slug === openSlug) : null;
     // If a slug was requested but doesn't exist in the subscription
-    // snapshot, DON'T render the profile page — the fallback lookup
-    // below will call show404() if it also fails. Rendering the
-    // profile here would flash a profile page that instantly gets
-    // replaced by 404, or worse, stays visible covering the 404.
-    if (openSlug && !match) return;
+    // snapshot, render the profile anyway — the slug may have been
+    // deleted, or this is a stale URL from back nav. The fallback
+    // lookup below will call show404() if the catalyst genuinely
+    // doesn't exist.
+    if (openSlug && !match) {
+      showProfileBar(user, catalysts.length, isOwn);
+      renderGrid(catalysts, {
+        showAdd: isOwn,
+        emptyMessage: isOwn
+          ? 'Create your first catalyst'
+          : 'This alchemist hasn\'t created any catalysts yet.',
+      });
+      return;
+    }
     // MD12: route internal matches to the full-page view before
     // touching the profile bar / grid so the project page takes over.
     if (match && _routeInternalIfNeeded(user, match)) {
@@ -1424,7 +1438,8 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
     });
     if (match) {
       setPageTitle([match.title, user.displayName || username]);
-      openCatalystDetail(match);
+      if (!_suppressNextDetailOpen) openCatalystDetail(match);
+      _suppressNextDetailOpen = false; // always reset after checking
     }
   });
   trackSub(unsub);
@@ -1986,6 +2001,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // the stack trace directly into the page instead of leaving the
   // user with a silent blank screen. Remove once the site is stable.
   console.log('[BOOT] DOMContentLoaded fired');
+  // Safety net: force-hide the loading screen after 6s if boot stalls
+  // (e.g. hard refresh on a catalyst URL races with auth resolve).
+  setTimeout(() => {
+    const ls = document.getElementById('loading-screen');
+    if (ls && !ls.classList.contains('hidden')) {
+      console.warn('[boot] Loading screen timeout — forcing hide');
+      ls.classList.add('hidden');
+      const err = document.getElementById('loading-error');
+      if (err) err.style.display = 'block';
+    }
+  }, 6000);
   try {
   // Palette first, accent second — applyPalette writes --clr, so the
   // logo accent must be applied *after* it to end up as the effective
@@ -2311,6 +2337,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // When the catalyst detail popup closes via back button, strip the slug
   // from the URL so a refresh lands on the profile page, not the catalyst.
   window.addEventListener('popstate', () => {
+    // If a detail popup is currently open, mark that we don't want
+    // the next renderRoute to re-open it (user is navigating back).
+    const pop = document.getElementById('cat-detail-popup');
+    if (pop?.classList.contains('open')) {
+      _suppressNextDetailOpen = true;
+    }
     closeCatalystDetail();
   });
 
