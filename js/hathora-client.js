@@ -11,6 +11,7 @@ const SERVER_URL = location.hostname === 'localhost' || location.hostname === '1
 let _ws = null;
 let _connected = false;
 let _myId = null;
+let _pendingMyId = null;
 let _onSnapshot = null;
 let _onConnected = null;
 let _onError = null;
@@ -33,6 +34,9 @@ export function initHathora({ roomId, username, hex, onSnapshot, onConnected, on
     return;
   }
 
+  // Store pending ID so snapshot filter works before welcome arrives
+  _pendingMyId = null;
+
   _ws.onopen = () => {
     console.log('[hathora] connected');
     _ws.send(JSON.stringify({
@@ -51,6 +55,7 @@ export function initHathora({ roomId, username, hex, onSnapshot, onConnected, on
     switch (msg.type) {
       case 'welcome':
         _myId = msg.id;
+        console.log('[hathora] my ID:', _myId);
         break;
       case 'joined':
         _connected = true;
@@ -58,7 +63,8 @@ export function initHathora({ roomId, username, hex, onSnapshot, onConnected, on
         if (_onConnected) _onConnected(_myId);
         break;
       case 'snapshot':
-        if (_onSnapshot) _onSnapshot(msg.players, _myId);
+        // Guard: if _myId not yet set, fall back to _pendingMyId
+        if (_onSnapshot) _onSnapshot(msg.players, _myId || _pendingMyId);
         break;
       case 'pong':
         _latency = Math.round((Date.now() - msg.t) / 2);
@@ -94,8 +100,9 @@ export function destroyHathora() {
     try { _ws.close(); } catch {}
     _ws = null;
   }
-  _connected = false;
-  _myId = null;
+  _connected   = false;
+  _myId        = null;
+  _pendingMyId = null;
   _onSnapshot = null;
   _onConnected = null;
   _onError = null;

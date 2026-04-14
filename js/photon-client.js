@@ -57,7 +57,9 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlaye
       _inRoom = true;
       _myId = _client.myActor().actorNr;
       window._nbMyActorId = _myId;
-      console.log('[photon] in room, my actor:', _myId);
+      const roomName = _client.myRoom()?.name || 'unknown';
+      const actorCount = _client.myRoomActorsCount?.() || '?';
+      console.log(`[photon] ✅ in room "${roomName}", actor: ${_myId}, total actors: ${actorCount}`);
       _updatePlayerCount();
       if (_onConnected) _onConnected(_myId);
       _startSendLoop();
@@ -70,9 +72,9 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlaye
   };
 
   _client.onJoinRoomFailed = (code, msg) => {
-    console.log('[photon] join failed, creating new room:', code, msg);
-    const roomId = 'nodeblast-' + Math.floor(Date.now() / 30000);
-    _client.createRoom(roomId, { maxPlayers: MAX_PLAYERS_PER_ROOM });
+    // Room doesn't exist yet — create the canonical shared room
+    console.log('[photon] join failed, creating canonical room:', code, msg);
+    _client.createRoom('nodeblast-main', { maxPlayers: MAX_PLAYERS_PER_ROOM });
   };
 
   _client.onActorLeave = (actor) => {
@@ -82,7 +84,7 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlaye
   };
 
   _client.onActorJoin = (actor) => {
-    console.log('[photon] actor joined:', actor.actorNr);
+    console.log(`[photon] 👤 actor joined: ${actor.actorNr} — room now has ${_client.myRoomActorsCount?.() || '?'} players`);
     _updatePlayerCount();
   };
 
@@ -133,12 +135,17 @@ export function photonSendState(x, y, z, rotY, pitch, username, hex) {
   _client.raiseEvent(1, { x, y, z, rotY, pitch, username, hex });
 }
 
+let _sendCount = 0;
 function _startSendLoop() {
   if (_sendTimer) clearInterval(_sendTimer);
   _sendTimer = setInterval(() => {
     if (!window._nbGetPlayerState) return;
     const s = window._nbGetPlayerState();
     if (!s) return;
+    _sendCount++;
+    if (_sendCount % 40 === 0) { // log every ~2s
+      console.log(`[photon] 📡 broadcasting state — pos: (${s.x?.toFixed(1)}, ${s.y?.toFixed(1)}, ${s.z?.toFixed(1)}), user: ${s.username}`);
+    }
     if (window._nbHathoraConnected?.()) {
       window._nbHathoraSendMove?.(s.x, s.y, s.z, s.rotY, s.pitch);
     }

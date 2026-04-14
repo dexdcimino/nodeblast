@@ -23,16 +23,35 @@ function _updatePlayerList() {
   const list = document.getElementById('play-player-list');
   if (!list) return;
   list.innerHTML = '';
+
+  // ── Local player row (always first) ──
+  const localName = State.profile?.displayName || 'You';
+  const localHex  = (State.profile?.hexCode || '5aaa72').replace('#', '');
+  const localPill = document.createElement('div');
+  localPill.className = 'player-list-pill player-list-self';
+  localPill.innerHTML = `<span class="player-list-dot" style="background:#${localHex}"></span><span>${localName} <span style="opacity:0.5;font-size:11px">(you)</span></span>`;
+  list.appendChild(localPill);
+
+  // ── Remote players ──
   const ids = getRemotePlayerIds();
   ids.forEach(id => {
     const data = getRemotePlayerData(id);
     const name = data?.username || ('Player ' + id);
-    const hex  = data?.hex      || '5aaa72';
+    const hex  = (data?.hex || '5aaa72').replace('#', '');
     const pill = document.createElement('div');
     pill.className = 'player-list-pill';
-    pill.innerHTML = `<span class="player-list-dot" style="background:#${hex.replace('#','')}"></span><span>${name}</span>`;
+    pill.innerHTML = `<span class="player-list-dot" style="background:#${hex}"></span><span>${name}</span>`;
     list.appendChild(pill);
   });
+
+  // ── Debug: show player count in status ──
+  const total = 1 + ids.length;
+  const statusEl = document.getElementById('play-status');
+  if (statusEl && statusEl.textContent.includes('online')) {
+    // Append player count without overwriting the connection status
+    const base = statusEl.textContent.replace(/ — \d+ players?$/, '');
+    statusEl.textContent = `${base} — ${total} ${total === 1 ? 'player' : 'players'}`;
+  }
 }
 
 function _addKillFeedEntry(attackerName, targetActorId) {
