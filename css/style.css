@@ -748,6 +748,11 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-follow.following:hover{background:color-mix(in srgb,var(--clr-adj) 80%,#000);}
 
 .community-tiles{display:flex;flex-wrap:wrap;gap:22px;justify-content:flex-start;align-items:flex-start;}
+
+/* NB-MD05: collapse/expand button + collapsed card state */
+.community-card-collapse{flex-shrink:0;background:transparent;border:none;color:var(--tx3);cursor:pointer;padding:6px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
+.community-card-collapse:hover{color:var(--tx);background:rgba(255,255,255,0.07);}
+.community-card.collapsed .community-tiles > *:not(:first-child){display:none;}
 .community-empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px;}
 
 /* MD18: pin button on community-view hex tiles. Positioned in the

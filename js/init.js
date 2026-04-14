@@ -86,6 +86,8 @@ let _firstRender = true;
 let _suppressNextDetailOpen = false;
 // NB-MD04: profile tab state — which columns are currently active
 const _profileActiveTabs = new Set(['catalysts']);
+// NB-MD05: collapsed community cards — session-only, keyed by creator UID
+const _collapsedCards = new Set();
 let _currentProfileView = null; // { user, catalysts, isOwn } — last rendered profile
 let _profileCache = new Map(); // "name#hex" or "name" -> { user, catalysts }
 let _viewingOther = null;       // { uid, displayName, hexCode } for the profile currently shown
@@ -1210,6 +1212,40 @@ function _buildCommunityCard(group) {
     shareProfileLink({ displayName: group.displayName, hexCode: hex });
   });
   hdr.appendChild(shareBtn);
+
+  // NB-MD05: collapse / expand button — shrinks the card to just the
+  // header + first tile. State is session-only (Set keyed by uid).
+  const COLLAPSE_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="21" y2="3"/><line x1="3" y1="21" x2="14" y2="10"/></svg>';
+  const EXPAND_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+  const collapseBtn = document.createElement('button');
+  collapseBtn.type = 'button';
+  collapseBtn.className = 'community-card-collapse';
+  collapseBtn.setAttribute('aria-label', 'Collapse card');
+  const startCollapsed = _collapsedCards.has(group.uid);
+  if (startCollapsed) {
+    card.classList.add('collapsed');
+    collapseBtn.setAttribute('data-tip', 'Expand');
+    collapseBtn.innerHTML = EXPAND_ICON;
+  } else {
+    collapseBtn.setAttribute('data-tip', 'Collapse');
+    collapseBtn.innerHTML = COLLAPSE_ICON;
+  }
+  collapseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const nowCollapsed = !card.classList.contains('collapsed');
+    if (nowCollapsed) {
+      _collapsedCards.add(group.uid);
+      card.classList.add('collapsed');
+      collapseBtn.setAttribute('data-tip', 'Expand');
+      collapseBtn.innerHTML = EXPAND_ICON;
+    } else {
+      _collapsedCards.delete(group.uid);
+      card.classList.remove('collapsed');
+      collapseBtn.setAttribute('data-tip', 'Collapse');
+      collapseBtn.innerHTML = COLLAPSE_ICON;
+    }
+  });
+  hdr.appendChild(collapseBtn);
 
   // MD18: follow / unfollow button. Hidden on your own creator card
   // (you can't follow yourself). The button is optimistic: the class
