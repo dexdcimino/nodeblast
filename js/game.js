@@ -867,6 +867,7 @@ function _physicsTick() {
       .add(f.scale(0.35));
     _gunRoot.rotation.copyFrom(_camera.rotation);
     _muzzleOffset = _gunRoot.position.add(f.scale(0.22));
+    window._nbMuzzlePos = _muzzleOffset;
   }
 
   const now = Date.now();
