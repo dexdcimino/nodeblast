@@ -129,6 +129,13 @@ function closeExitModal() {
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
   }
+  // Re-acquire pointer lock so mouse immediately controls camera again
+  setTimeout(() => {
+    const canvas = document.getElementById('play-canvas');
+    if (canvas && !document.pointerLockElement) {
+      canvas.requestPointerLock().catch(() => {});
+    }
+  }, 80);
 }
 
 // ── Route lifecycle ──
@@ -239,11 +246,32 @@ export async function renderPlayRoute(gameId) {
 
     // Identity HUD
     const identEl = document.getElementById('play-identity');
+    const name    = State.profile?.displayName || 'player';
+    const hex     = (State.profile?.hexCode || '5aaa72').replace('#', '');
     if (identEl) {
-      const name = State.profile?.displayName || 'player';
-      const hex  = State.profile?.hexCode || '5aaa72';
       identEl.innerHTML = `<span style="color:#${hex};font-size:18px;vertical-align:middle;margin-right:6px;">●</span><span style="vertical-align:middle">${name}</span>`;
     }
+
+    // Profile pill (top-right)
+    const pillDot  = document.getElementById('play-profile-dot');
+    const pillName = document.getElementById('play-profile-name');
+    if (pillDot)  { pillDot.style.background = '#' + hex; pillDot.style.color = '#' + hex; }
+    if (pillName) pillName.textContent = name;
+
+    // Notification badge — check if there are unread notifications
+    const notifBadge = document.getElementById('play-notif-badge');
+    if (notifBadge && State.unreadNotifCount > 0) {
+      notifBadge.classList.remove('hidden');
+    }
+
+    // Notification button opens notifications when clicked
+    document.getElementById('play-notif-btn')?.addEventListener('click', () => {
+      try { document.exitPointerLock(); } catch {}
+      // Navigate to notifications after exit
+      setTimeout(() => {
+        if (window._nbOpenExitModal) window._nbOpenExitModal();
+      }, 50);
+    });
 
     // Hathora window bridges for photon-client.js dual-send
     window._nbHathoraConnected = isHathoraConnected;

@@ -326,6 +326,19 @@
     <div id="play-hud">
       <button id="play-exit-btn" data-tip="Exit play mode">✕ Exit</button>
       <button id="play-audio-btn" data-tip="Toggle audio">🔊</button>
+
+      <!-- Profile pill — top right, always visible in play mode -->
+      <div id="play-profile-pill">
+        <span id="play-profile-dot"></span>
+        <span id="play-profile-name"></span>
+        <button id="play-notif-btn" title="Notifications">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 2a6 6 0 0 0-6 6v3l-1.5 2.5h15L16 11V8a6 6 0 0 0-6-6Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <path d="M8.5 16.5a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          </svg>
+          <span id="play-notif-badge" class="hidden"></span>
+        </button>
+      </div>
       <div id="play-fps"></div>
       <div id="play-killfeed"></div>
       <div id="play-identity"></div>
