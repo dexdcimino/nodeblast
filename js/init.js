@@ -2582,7 +2582,13 @@ document.addEventListener('DOMContentLoaded', () => {
     renderRoute();
   });
   console.log('[BOOT] 12 - initCatalystDetail');
-  initCatalystDetail();
+  // MD03: inject pin/unpin/isPinned callbacks so the detail popup can
+  // drive the tracked pin state without importing tracked.js itself.
+  initCatalystDetail({
+    onPin: (cat) => handlePinToggle(cat, true),
+    onUnpin: (catId) => handlePinToggle({ id: catId }, false),
+    isPinned: (catId) => _myTrackedCatIds.has(catId),
+  });
   // MD02: QR share modal (lazy-loads QR lib on first open)
   initQrShareModal();
   console.log('[BOOT] 13 - initRouter');

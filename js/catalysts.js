@@ -1511,6 +1511,9 @@ export function initCatalystModal(onSaved) {
 
 let _detailCatalyst = null;
 let _myVote = null;
+// MD03: callbacks injected by init.js so the detail popup can pin/unpin
+// without importing tracked.js directly.
+let _pinCallbacks = { onPin: null, onUnpin: null, isPinned: null };
 
 function _renderVoteButtons() {
   const fire = document.getElementById('cat-vote-fire');
@@ -1641,6 +1644,11 @@ async function _paintCatalystDetail(catalyst) {
     thumbEl.style.display = 'none';
   }
   thumbEl.style.setProperty('--accent', catalyst.accentColor || '#5AAA72');
+  // MD03: tint the detail card with the catalyst's accent so primary
+  // actions (Open button, active vote pill) reflect the catalyst's
+  // color rather than the global theme color.
+  const cardEl = document.getElementById('cat-detail-card');
+  if (cardEl) cardEl.style.setProperty('--cat-accent', catalyst.accentColor || '#5AAA72');
 
   document.getElementById('cat-detail-title').textContent = catalyst.title;
   document.getElementById('cat-detail-desc').textContent = catalyst.description || '';
@@ -1796,6 +1804,24 @@ async function _paintCatalystDetail(catalyst) {
   _renderVoteButtons();
   _renderViewCount();
 
+  // MD03: pin button — hidden on own catalysts + for guests. For every
+  // other viewer, reflect the current pin state.
+  const pinBtn = document.getElementById('cat-detail-pin-btn');
+  const pinLabel = document.getElementById('cat-detail-pin-label');
+  if (pinBtn) {
+    const isOwnCatalyst = !!(State.user && catalyst.ownerId === State.user.uid);
+    const isGuest = !State.user;
+    if (isOwnCatalyst || isGuest) {
+      pinBtn.style.display = 'none';
+    } else {
+      pinBtn.style.display = '';
+      const alreadyPinned = !!(_pinCallbacks.isPinned && _pinCallbacks.isPinned(catalyst.id));
+      pinBtn.classList.toggle('pinned', alreadyPinned);
+      if (pinLabel) pinLabel.textContent = alreadyPinned ? 'Pinned' : 'Pin Catalyst';
+      pinBtn.setAttribute('data-tip', alreadyPinned ? 'Unpin from your profile' : 'Pin to your profile');
+    }
+  }
+
   pop.classList.add('open');
 
   // Fire-and-forget view count increment
@@ -1822,10 +1848,39 @@ export function closeCatalystDetail() {
   _myVote = null;
 }
 
-export function initCatalystDetail() {
+export function initCatalystDetail(callbacks = {}) {
+  // MD03: store pin/unpin/isPinned callbacks so the detail popup can
+  // toggle pinned state without a direct tracked.js import.
+  _pinCallbacks = {
+    onPin: callbacks.onPin || null,
+    onUnpin: callbacks.onUnpin || null,
+    isPinned: callbacks.isPinned || null,
+  };
   const pop = document.getElementById('cat-detail-popup');
   if (!pop) return;
   document.getElementById('cat-detail-close')?.addEventListener('click', closeCatalystDetail);
+
+  // MD03: pin button inside the detail popup.
+  document.getElementById('cat-detail-pin-btn')?.addEventListener('click', () => {
+    if (!_detailCatalyst) return;
+    if (!State.user) { toast('Sign in to pin catalysts'); return; }
+    const btn = document.getElementById('cat-detail-pin-btn');
+    const label = document.getElementById('cat-detail-pin-label');
+    const isPinned = btn?.classList.contains('pinned');
+    if (isPinned) {
+      _pinCallbacks.onUnpin?.(_detailCatalyst.id);
+      btn?.classList.remove('pinned');
+      if (label) label.textContent = 'Pin Catalyst';
+      btn?.setAttribute('data-tip', 'Pin to your profile');
+      toast('Catalyst unpinned');
+    } else {
+      _pinCallbacks.onPin?.(_detailCatalyst);
+      btn?.classList.add('pinned');
+      if (label) label.textContent = 'Pinned';
+      btn?.setAttribute('data-tip', 'Unpin from your profile');
+      toast('Catalyst pinned!');
+    }
+  });
   pop.addEventListener('click', (e) => { if (e.target === pop) closeCatalystDetail(); });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && pop.classList.contains('open')) closeCatalystDetail();
