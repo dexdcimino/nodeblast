@@ -846,8 +846,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #honeycomb{position:relative;width:100%;min-height:200px;opacity:1;transition:opacity 150ms ease;}
 
 /* NB-MD04: Profile tabs strip — My Catalysts / Pinned / Following */
-#profile-tabs{display:flex;gap:4px;padding:8px 0 0;border-bottom:1px solid var(--bdr);margin-bottom:12px;}
-.profile-tab{display:flex;align-items:center;gap:6px;padding:8px 16px;border:none;background:transparent;color:var(--tx3);font-size:12px;font-weight:500;cursor:pointer;border-radius:8px 8px 0 0;border-bottom:2px solid transparent;transition:color .15s,border-color .15s,background .15s;white-space:nowrap;}
+#profile-tabs{display:flex;gap:4px;padding:8px 0 0;border-bottom:1px solid var(--bdr);margin-bottom:12px;justify-content:center;}
+.profile-tab{display:flex;align-items:center;gap:8px;padding:10px 20px;border:none;background:transparent;color:var(--tx3);font-size:16px;font-weight:700;cursor:pointer;border-radius:8px 8px 0 0;border-bottom:2px solid transparent;transition:color .15s,border-color .15s,background .15s;white-space:nowrap;}
 .profile-tab:hover{color:var(--tx);background:rgba(255,255,255,0.04);}
 .profile-tab.active{color:var(--clr);border-bottom-color:var(--clr);background:rgba(255,255,255,0.03);}
 

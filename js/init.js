@@ -88,7 +88,16 @@ let _currentEmptyMessage = '';
 let _firstRender = true;
 let _suppressNextDetailOpen = false;
 // NB-MD04: profile tab state — which columns are currently active
-const _profileActiveTabs = new Set(['catalysts']);
+const _profileActiveTabs = (() => {
+  try {
+    const raw = localStorage.getItem('nb-profile-tabs');
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length > 0) return new Set(arr);
+    }
+  } catch {}
+  return new Set(['catalysts']);
+})();
 // NB-MD05: collapsed community cards — session-only, keyed by creator UID
 const _collapsedCards = new Set();
 // NB-MD08: tracked data for the currently-viewed non-own profile. Null when
@@ -628,6 +637,7 @@ function initProfileTabs() {
       } else {
         _profileActiveTabs.add(tab);
       }
+      try { localStorage.setItem('nb-profile-tabs', JSON.stringify([..._profileActiveTabs])); } catch {}
       _updateProfileColumns();
       // Re-render the currently shown profile so the newly-revealed
       // column actually gets populated.
