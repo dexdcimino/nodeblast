@@ -789,6 +789,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-collapse{flex-shrink:0;background:transparent;border:none;color:var(--tx3);cursor:pointer;padding:6px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
 .community-card-collapse:hover{color:var(--tx);background:rgba(255,255,255,0.07);}
 .community-card.collapsed .community-tiles > *:not(:first-child){display:none;}
+.community-card.collapsed{min-height:0;}
+.community-card.collapsed .community-tiles{padding-bottom:0;}
+.community-card.collapsed .community-card-hdr{overflow:visible;text-overflow:unset;white-space:normal;}
+.community-card.collapsed .community-card-name{white-space:normal;overflow:visible;text-overflow:unset;}
 
 /* MD#1: absolute-positioned vote pills — bottom-left frost, bottom-right fire */
 .community-vote-pill{position:absolute;bottom:0;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:9999px;border:1px solid var(--bdr);background:var(--bg3);font-size:16px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;color:var(--tx2);line-height:1;}
