@@ -310,6 +310,58 @@ export async function loadUserTracked(uid) {
 //  profile Following column can render full community-style cards.
 //  Uses Promise.allSettled — one failing user doesn't block the rest.
 // ══════════════════════════════════════════════════════════════
+// Refresh denormalized owner fields on the signed-in user's own
+// tracked catalysts + alchemists after their profile changes. Other
+// users who pinned this person stay stale until they re-pin — full
+// fan-out would need a Cloud Function.
+export async function refreshTrackedOwnerData(uid, newProfile) {
+  if (!State.user) return;
+  const catRef = _trackedCatalystsRef(State.user.uid);
+  const alchRef = _trackedAlchemistsRef(State.user.uid);
+
+  try {
+    const catSnap = await getDoc(catRef);
+    if (catSnap.exists()) {
+      const items = catSnap.data().items || [];
+      let changed = false;
+      const updated = items.map((item) => {
+        if (item.ownerId !== uid) return item;
+        changed = true;
+        return {
+          ...item,
+          ownerName: newProfile.displayName || item.ownerName,
+          ownerHex: (newProfile.hexCode || item.ownerHex || '5aaa72').toLowerCase(),
+          ownerPhoto: newProfile.photoURL || item.ownerPhoto || '',
+        };
+      });
+      if (changed) await setDoc(catRef, { items: updated }, { merge: true });
+    }
+
+    const alchSnap = await getDoc(alchRef);
+    if (alchSnap.exists()) {
+      const items = alchSnap.data().items || [];
+      let changed = false;
+      const updated = items.map((item) => {
+        if (item.uid !== uid) return item;
+        changed = true;
+        const name = newProfile.displayName || item.displayName;
+        const hex = (newProfile.hexCode || item.hexCode || '5aaa72').toLowerCase();
+        return {
+          ...item,
+          displayName: name,
+          username: name,
+          hexCode: hex,
+          hex,
+          photoURL: newProfile.photoURL || item.photoURL || '',
+        };
+      });
+      if (changed) await setDoc(alchRef, { items: updated }, { merge: true });
+    }
+  } catch (err) {
+    console.warn('[tracked] refreshTrackedOwnerData failed:', err);
+  }
+}
+
 export async function loadFollowedAlchemistCatalysts(alchemists, maxPerUser = 5) {
   if (!alchemists || alchemists.length === 0) return new Map();
 

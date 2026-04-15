@@ -59,6 +59,7 @@ import {
   subscribeMyTracked,
   loadUserTracked,
   loadFollowedAlchemistCatalysts,
+  refreshTrackedOwnerData,
 } from './tracked.js';
 import { voteCreator, getMyCreatorVotes } from './creator-votes.js';
 
@@ -2544,6 +2545,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // community cards render them from the denormalized copy.
       if (updates.displayName || updates.hexCode || updates.photoURL || Array.isArray(updates.socialLinks)) {
         await refreshOwnerOnAllCatalysts();
+      }
+      if (updates.displayName || updates.hexCode || updates.photoURL) {
+        await refreshTrackedOwnerData(State.user.uid, State.profile);
       }
 
       // If we're on our own profile route and the name or hex changed,
