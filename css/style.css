@@ -885,7 +885,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    is clearly the star of the tile. The hover brightness bump stays. */
 .hex-tile::before{content:'';position:absolute;inset:0;background-image:var(--thumb,none);background-size:cover;background-position:center;opacity:0.88;transition:opacity .25s ease,filter .25s ease;}
 .hex-tile:hover::before{opacity:1;filter:brightness(1.08);}
-.hex-tile:hover{transform:scale(1.04);z-index:10;}
+.hex-tile:hover{transform:scale(1.12);z-index:10;filter:brightness(1.05);transition:transform .2s cubic-bezier(.34,1.56,.64,1), filter .2s ease;}
+.hex-tile-flow:hover{transform:scale(1.1);}
 
 /* MD21+MD26: faded yin-yang placeholder shown on no-thumb catalyst
    tiles. Centered with ~20% margin from each edge so the logo stays
