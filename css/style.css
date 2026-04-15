@@ -798,14 +798,14 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card.collapsed .community-card-name{white-space:normal;overflow:visible;text-overflow:unset;}
 
 /* MD#1: absolute-positioned vote pills — bottom-left frost, bottom-right fire */
-.community-vote-pill{position:absolute;bottom:0;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:9999px;border:1px solid var(--bdr);background:var(--bg3);font-size:16px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;color:var(--tx2);line-height:1;}
+.community-vote-pill{position:absolute;bottom:4px;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:9999px;border:1px solid var(--bdr);background:color-mix(in srgb,var(--bg3) 60%,transparent);font-size:20px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;color:var(--tx2);line-height:1;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
 .community-vote-pill.frost{left:0;}
 .community-vote-pill.fire{right:0;}
 .community-vote-pill:hover{border-color:var(--clr-adj);background:var(--bg4);}
 .community-vote-pill:active{transform:scale(0.93);}
 .community-vote-pill.active.fire{border-color:#ff6b35;background:rgba(255,107,53,0.12);}
 .community-vote-pill.active.frost{border-color:#a07850;background:rgba(160,120,80,0.12);}
-.community-vote-count{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--tx);}
+.community-vote-count{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--tx);}
 .community-empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px;}
 
 /* MD02: QR Share Modal */
