@@ -37,6 +37,14 @@ export const GUNS = [
     icon: `<svg viewBox="0 0 40 28" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="25"><ellipse cx="16" cy="14" rx="13" ry="8" fill="currentColor" opacity="0.85"/><rect x="28" y="11" width="8" height="6" rx="2" fill="currentColor" opacity="0.7"/><circle cx="37" cy="14" r="2.5" fill="currentColor" opacity="1"/><rect x="11" y="22" width="9" height="4" rx="1.5" fill="currentColor" opacity="0.6"/><circle cx="8" cy="10" r="2" fill="currentColor" opacity="0.5"/><circle cx="8" cy="18" r="2" fill="currentColor" opacity="0.5"/></svg>`,
     color:    { r: 1.0, g: 0.2, b: 0.2 },
   },
+  {
+    id:       'rocket',
+    name:     'Rocket Launcher',
+    slot:     4,
+    cooldown: 900,
+    icon: `<svg viewBox="0 0 40 28" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="25"><rect x="2" y="10" width="28" height="8" rx="2" fill="currentColor" opacity="0.9"/><rect x="30" y="8" width="6" height="12" rx="1.5" fill="currentColor" opacity="0.7"/><rect x="36" y="6" width="3" height="16" rx="1" fill="currentColor" opacity="0.5"/><rect x="8" y="18" width="10" height="5" rx="1.5" fill="currentColor" opacity="0.7"/><rect x="4" y="8" width="3" height="3" rx="0.5" fill="currentColor" opacity="0.6"/><circle cx="18" cy="14" r="2" fill="currentColor" opacity="0.5"/></svg>`,
+    color:    { r: 1.0, g: 0.5, b: 0.0 },
+  },
 ];
 
 // ── Active gun state ──

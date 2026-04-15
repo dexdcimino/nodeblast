@@ -272,6 +272,110 @@ function _spawnGooSplat(pos,normal,color){
   playGooImpact();
 }
 
+function _spawnRocketExplosion(pos, color) {
+  const B = window.BABYLON;
+  const c = color;
+
+  const exp = new B.PointLight('rk_exp_' + Date.now(), pos.clone(), _scene);
+  exp.diffuse = new B.Color3(c.r, c.g, c.b);
+  exp.intensity = 8.0; exp.range = 20;
+  let ei = 0;
+  const fade = setInterval(() => {
+    ei++;
+    if (exp.intensity !== undefined) exp.intensity = Math.max(0, 8.0 - ei * 0.5);
+    if (ei >= 16) { clearInterval(fade); try { exp.dispose(); } catch {} }
+  }, 16);
+
+  for (let w = 0; w < 3; w++) {
+    const ring = B.MeshBuilder.CreateTorus('rk_ring_' + Date.now() + '_' + w, {
+      diameter: 0.5, thickness: 0.15, tessellation: 20
+    }, _scene);
+    ring.position.copyFrom(pos);
+    ring.position.y = 0.3 + w * 0.4;
+    ring.rotation.x = Math.PI / 2;
+    const rm = new B.StandardMaterial('rk_rm_' + Date.now() + '_' + w, _scene);
+    rm.emissiveColor = new B.Color3(c.r, c.g, c.b);
+    rm.disableLighting = true;
+    rm.alpha = 0.9;
+    ring.material = rm;
+    let rl = 0;
+    const expandRate = 0.6 + w * 0.2;
+    const ringAnim = setInterval(() => {
+      rl++;
+      ring.scaling.setAll(1 + rl * expandRate);
+      rm.alpha = Math.max(0, 0.9 - rl * 0.04);
+      if (rl >= 25) { clearInterval(ringAnim); try { ring.dispose(); } catch {} }
+    }, 16);
+  }
+
+  const ps = new B.ParticleSystem('rk_ps_' + Date.now(), 250, _scene);
+  ps.emitter = pos.clone();
+  ps.direction1 = new B.Vector3(-5, 1, -5);
+  ps.direction2 = new B.Vector3(5, 8, 5);
+  ps.minLifeTime = 0.3; ps.maxLifeTime = 1.5;
+  ps.minSize = 0.2; ps.maxSize = 0.9;
+  ps.minEmitPower = 8; ps.maxEmitPower = 25;
+  ps.updateSpeed = 0.02; ps.emitRate = 600;
+  ps.color1 = new B.Color4(c.r, c.g, c.b, 1.0);
+  ps.color2 = new B.Color4(1.0, 0.9, 0.3, 0.8);
+  ps.colorDead = new B.Color4(0.15, 0.15, 0.15, 0.0);
+  ps.targetStopDuration = 0.15;
+  ps.start();
+  setTimeout(() => { try { ps.dispose(); } catch {} }, 2500);
+
+  for (let d = 0; d < 24; d++) {
+    const size = 0.1 + Math.random() * 0.3;
+    const chunk = B.MeshBuilder.CreateBox('rk_chunk_' + Date.now() + '_' + d, {
+      width: size, height: size * 0.6, depth: size
+    }, _scene);
+    chunk.position.copyFrom(pos);
+    const cm = new B.StandardMaterial('rk_cm_' + Date.now() + '_' + d, _scene);
+    const br = 0.6 + Math.random() * 0.4;
+    cm.emissiveColor = new B.Color3(c.r * br, c.g * br, c.b * br);
+    cm.disableLighting = true;
+    chunk.material = cm;
+    const angle = (d / 24) * Math.PI * 2 + (Math.random() - 0.5);
+    const speed = 0.25 + Math.random() * 0.4;
+    const chunkVel = new B.Vector3(
+      Math.cos(angle) * speed,
+      0.2 + Math.random() * 0.5,
+      Math.sin(angle) * speed
+    );
+    let chunkLife = 80 + Math.floor(Math.random() * 60);
+    const chunkTick = setInterval(() => {
+      chunkLife--;
+      chunkVel.y -= 0.012;
+      chunk.position.addInPlace(chunkVel);
+      chunk.rotation.x += 0.1;
+      chunk.rotation.z += 0.08;
+      if (chunk.position.y < 0.05) { chunk.position.y = 0.05; chunkVel.y = 0; chunkVel.scaleInPlace(0.8); }
+      if (chunkLife < 30 && cm.alpha !== undefined) cm.alpha = chunkLife / 30;
+      if (chunkLife <= 0) { clearInterval(chunkTick); try { chunk.dispose(); } catch {} }
+    }, 16);
+  }
+
+  const scorch = B.MeshBuilder.CreateCylinder('rk_scorch_' + Date.now(), {
+    diameter: 6, height: 0.02, tessellation: 16
+  }, _scene);
+  scorch.position.set(pos.x, 0.02, pos.z);
+  const sm = new B.StandardMaterial('rk_sm_' + Date.now(), _scene);
+  sm.emissiveColor = new B.Color3(c.r * 0.3, c.g * 0.3, c.b * 0.3);
+  sm.disableLighting = true;
+  sm.alpha = 0.6;
+  scorch.material = sm;
+  let scorchLife = 200;
+  const scorchFade = setInterval(() => {
+    scorchLife--;
+    sm.alpha = (scorchLife / 200) * 0.6;
+    if (scorchLife <= 0) { clearInterval(scorchFade); try { scorch.dispose(); } catch {} }
+  }, 16);
+
+  _shakeTimer = 15;
+  _shakeAmount = 0.015;
+
+  playGooImpact();
+}
+
 function _updateGooSplats(){
   const dead=[];
   for(let i=0;i<_gooSplats.length;i++){
@@ -393,6 +497,33 @@ function _buildGun(){
           const grip=B.MeshBuilder.CreateBox('gun_grip',{width:0.05,height:0.10,depth:0.06},_scene);grip.parent=_gunRoot;grip.position.set(0,-0.08,0.03);_applyMat(grip,'grip',0.10,0.10,0.13);
           const orb=B.MeshBuilder.CreateSphere('gun_orb',{diameter:0.04,segments:6},_scene);orb.parent=_gunRoot;orb.position.set(0,0,0.30);_applyGlowMat(orb,'orb',pc);
           break;}
+        case 'rocket': {
+          // Wide tube body
+          const body = B.MeshBuilder.CreateCylinder('gun_body', { diameter: 0.10, height: 0.38, tessellation: 10 }, _scene);
+          body.parent = _gunRoot; body.rotation.x = Math.PI / 2; body.position.set(0, 0, 0.12);
+          _applyMat(body, 'body', 0.20, 0.14, 0.06);
+          // Flared exhaust at back
+          const exhaust = B.MeshBuilder.CreateCylinder('gun_exhaust', { diameterTop: 0.06, diameterBottom: 0.14, height: 0.06, tessellation: 10 }, _scene);
+          exhaust.parent = _gunRoot; exhaust.rotation.x = Math.PI / 2; exhaust.position.set(0, 0, -0.10);
+          _applyMat(exhaust, 'exhaust', 0.18, 0.12, 0.05);
+          // Front cone/warhead tip
+          const cone = B.MeshBuilder.CreateCylinder('gun_cone', { diameterTop: 0.0, diameterBottom: 0.10, height: 0.10, tessellation: 8 }, _scene);
+          cone.parent = _gunRoot; cone.rotation.x = Math.PI / 2; cone.position.set(0, 0, 0.36);
+          _applyColorMat(cone, 'cone', pc);
+          // Grip
+          const grip = B.MeshBuilder.CreateBox('gun_grip', { width: 0.05, height: 0.12, depth: 0.07 }, _scene);
+          grip.parent = _gunRoot; grip.position.set(0, -0.09, 0.05);
+          _applyMat(grip, 'grip', 0.12, 0.10, 0.06);
+          // Sight on top
+          const sight = B.MeshBuilder.CreateBox('gun_sight', { width: 0.02, height: 0.04, depth: 0.06 }, _scene);
+          sight.parent = _gunRoot; sight.position.set(0, 0.07, 0.10);
+          _applyMat(sight, 'sight', 0.15, 0.15, 0.15);
+          // Glowing orb at tip
+          const orb = B.MeshBuilder.CreateSphere('gun_orb', { diameter: 0.05, segments: 6 }, _scene);
+          orb.parent = _gunRoot; orb.position.set(0, 0, 0.38);
+          _applyGlowMat(orb, 'orb', pc);
+          break;
+        }
       }
     }
   );
@@ -416,6 +547,14 @@ function _shoot(){
     fireNodeBlaster(muz,dir,pc);
     return;
   }
+  if (gun.id === 'rocket') {
+    const B = window.BABYLON;
+    const pc = getProjectileColor();
+    const dir = _camera.getDirection(B.Vector3.Forward()).normalize();
+    const origin = _muzzleOffset ? _muzzleOffset.clone() : _camera.position.add(dir.scale(0.4));
+    _fireRocket(origin, dir, pc);
+    return;
+  }
   const B=window.BABYLON,dir=_camera.getDirection(B.Vector3.Forward()).normalize();
   const isMG=gun.id==='machinegun';
   if(isMG){
@@ -436,6 +575,50 @@ function _shoot(){
   const orb=_scene.getMeshByName('gun_orb');
   if(orb&&orb.material){orb.material.emissiveColor=new B.Color3(pc.r*1.2,pc.g*1.2,pc.b*1.2);setTimeout(()=>{if(orb.material)orb.material.emissiveColor=new B.Color3(pc.r,pc.g,pc.b);},80);}
   _projectiles.push({mesh:ball,vel:dir.scale(projSpeed),life:80});
+}
+
+function _fireRocket(origin, direction, color) {
+  const B = window.BABYLON;
+  const rocket = B.MeshBuilder.CreateCylinder('rocket_proj_' + Date.now(), {
+    diameterTop: 0.0, diameterBottom: 0.12, height: 0.3, tessellation: 8
+  }, _scene);
+  rocket.position.copyFrom(origin);
+  const axis = B.Vector3.Cross(B.Vector3.Up(), direction).normalize();
+  const angle = Math.acos(B.Vector3.Dot(B.Vector3.Up(), direction));
+  if (axis.length() > 0.001) {
+    rocket.rotationQuaternion = B.Quaternion.RotationAxis(axis, angle);
+  }
+  const mat = new B.StandardMaterial('rocket_pm_' + Date.now(), _scene);
+  mat.emissiveColor = new B.Color3(color.r, color.g, color.b);
+  mat.disableLighting = true;
+  rocket.material = mat;
+
+  const trail = new B.ParticleSystem('rocket_trail_' + Date.now(), 40, _scene);
+  trail.emitter = rocket;
+  trail.minLifeTime = 0.1; trail.maxLifeTime = 0.4;
+  trail.minSize = 0.04; trail.maxSize = 0.12;
+  trail.emitRate = 60;
+  trail.minEmitPower = 0.5; trail.maxEmitPower = 1.5;
+  trail.direction1 = direction.negate().scale(0.5);
+  trail.direction2 = direction.negate().scale(1.0);
+  trail.color1 = new B.Color4(color.r, color.g, color.b, 0.8);
+  trail.color2 = new B.Color4(1, 0.8, 0.3, 0.4);
+  trail.colorDead = new B.Color4(0.2, 0.2, 0.2, 0);
+  trail.start();
+
+  const flash = new B.PointLight('rocket_flash_' + Date.now(), origin.clone(), _scene);
+  flash.diffuse = new B.Color3(color.r, color.g, color.b);
+  flash.intensity = 4.0; flash.range = 8;
+  setTimeout(() => { try { flash.dispose(); } catch {} }, 100);
+
+  _projectiles.push({
+    mesh: rocket,
+    vel: direction.scale(2.0),
+    life: 120,
+    _isRocket: true,
+    _trail: trail,
+    _color: color,
+  });
 }
 
 function _updateProjectiles(){
@@ -478,8 +661,43 @@ function _updateProjectiles(){
       hitNormal=dists.reduce((a,c)=>c.d<a.d?c:a).n;
     }
     if(py<0.12)hitNormal=new B.Vector3(0,1,0);
-    if(!hit&&(Math.abs(px)>65||Math.abs(pz)>65)){try{p.mesh.dispose();}catch{}dead.push(i);continue;}
-    if(hit||p.life<=0){const pc=getProjectileColor();if(hit&&hitPos)_spawnGooSplat(hitPos,hitNormal,pc);try{p.mesh.dispose();}catch{}dead.push(i);}
+    if(!hit&&(Math.abs(px)>200||Math.abs(pz)>200)){try{p.mesh.dispose();}catch{}dead.push(i);continue;}
+    if (hit || p.life <= 0) {
+      if (p._isRocket) {
+        if (p._trail) try { p._trail.dispose(); } catch {}
+        if (hit && hitPos) _spawnRocketExplosion(hitPos, p._color || getProjectileColor());
+        if (hit && hitPos) {
+          const ROCKET_RADIUS = 10;
+          const ROCKET_DAMAGE = 40;
+          if (_camera) {
+            const rdx = _camera.position.x - hitPos.x;
+            const rdy = _camera.position.y - hitPos.y;
+            const rdz = _camera.position.z - hitPos.z;
+            if (Math.sqrt(rdx*rdx + rdy*rdy + rdz*rdz) < ROCKET_RADIUS) _onPlayerDamaged(ROCKET_DAMAGE);
+          }
+          if (window._nbEnemyPositions) {
+            window._nbEnemyPositions().forEach(e => {
+              const edx = e.pos.x - hitPos.x;
+              const edz = e.pos.z - hitPos.z;
+              if (Math.sqrt(edx*edx + edz*edz) < ROCKET_RADIUS) damageEnemyNode(e.index, ROCKET_DAMAGE);
+            });
+          }
+          for (const [rpId, rp] of _remotePlayers) {
+            if (!rp.root.isEnabled()) continue;
+            const rpx = rp.root.position.x - hitPos.x;
+            const rpz = rp.root.position.z - hitPos.z;
+            if (Math.sqrt(rpx*rpx + rpz*rpz) < ROCKET_RADIUS) {
+              if (window._nbSendDamage) window._nbSendDamage(rpId, ROCKET_DAMAGE, _playerUsername);
+            }
+          }
+        }
+      } else {
+        const pc = getProjectileColor();
+        if (hit && hitPos) _spawnGooSplat(hitPos, hitNormal, pc);
+      }
+      try { p.mesh.dispose(); } catch {}
+      dead.push(i);
+    }
   }
   for(let i=dead.length-1;i>=0;i--)_projectiles.splice(dead[i],1);
 }
@@ -866,7 +1084,7 @@ function _physicsTick() {
   }
 
   // 1-4 key switching (only switch to unlocked slots)
-  for (let k = 1; k <= 4; k++) {
+  for (let k = 1; k <= 5; k++) {
     if (_keys['Digit' + k] && !_prevKeys['Digit' + k]) {
       setActiveSlot(k - 1);
     }
