@@ -488,6 +488,27 @@ function showProfileBar(user, catalystCount, isOwn) {
     _viewingOther = { uid: user.uid, displayName: user.displayName, hexCode: user.hexCode };
     _applyFriendButton(user);
   }
+
+  // MD#15: collapse toggle — own profile only (others have no embedded grid).
+  const toggleBtn = document.getElementById('profile-bar-toggle');
+  const profileBar = document.getElementById('profile-bar');
+  if (toggleBtn && profileBar) {
+    if (isOwn) {
+      toggleBtn.style.display = 'inline-flex';
+      const collapsed = localStorage.getItem('nb-profile-collapsed') === '1';
+      profileBar.classList.toggle('collapsed', collapsed);
+      toggleBtn.setAttribute('data-tip', collapsed ? 'Expand' : 'Collapse');
+      toggleBtn.onclick = () => {
+        const nowCollapsed = !profileBar.classList.contains('collapsed');
+        profileBar.classList.toggle('collapsed', nowCollapsed);
+        toggleBtn.setAttribute('data-tip', nowCollapsed ? 'Expand' : 'Collapse');
+        try { localStorage.setItem('nb-profile-collapsed', nowCollapsed ? '1' : '0'); } catch {}
+      };
+    } else {
+      toggleBtn.style.display = 'none';
+      profileBar.classList.remove('collapsed');
+    }
+  }
 }
 
 function _applyFriendButton(user) {
