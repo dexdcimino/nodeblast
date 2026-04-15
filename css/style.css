@@ -120,7 +120,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 
 #hdr-logo-wrap{position:relative;flex-shrink:0;display:flex;align-items:center;height:100%;}
 #hdr-logo{width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform var(--ease);border-radius:8px;}
-#hdr-logo svg{width:36px;height:36px;display:block;transition:transform var(--ease);filter:drop-shadow(0 0 8px rgba(0,0,0,0.4)) drop-shadow(0 0 20px rgba(90,170,114,0.25));}
+#hdr-logo svg{width:36px;height:36px;display:block;transition:transform var(--ease);}
 #hdr-logo:hover svg{transform:scale(1.1);}
 
 /* Logo color picker — two columns, one for each yin-yang half */
@@ -144,7 +144,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    the ink back onto center without changing layout. Do NOT replace with
    padding/height — no CSS property can measure ink position, so a
    layout-based fix will drift whenever the font or size changes. */
-#hdr-brand{font-size:30px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:center;height:100%;transform:translateY(2px);text-shadow:0 0 10px rgba(0,0,0,0.35), 0 0 24px rgba(90,170,114,0.2);}
+#hdr-brand{font-size:30px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:center;height:100%;transform:translateY(2px);}
 #hdr-brand #brand-node{color:#7ac74f;}
 #hdr-brand #brand-blast{color:#127596;}
 
