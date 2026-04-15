@@ -39,6 +39,14 @@
     </div>
     <div id="loading-error" style="display:none;margin-top:32px;color:rgba(255,255,255,.45);font-family:Outfit,sans-serif;font-size:13px;cursor:pointer;" onclick="location.reload()">Something went wrong. Tap to reload.</div>
   </div>
+  <script>
+    (function() {
+      var t = localStorage.getItem('nb-logo-top-color');
+      var b = localStorage.getItem('nb-logo-bot-color');
+      if (t) { var el = document.getElementById('loading-path-top'); if (el) el.setAttribute('fill', t); }
+      if (b) { var el2 = document.getElementById('loading-path-bot'); if (el2) el2.setAttribute('fill', b); }
+    })();
+  </script>
   <style>
     @keyframes nb-spin {
       from { transform: rotate(0deg); }
