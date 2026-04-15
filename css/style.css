@@ -606,7 +606,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    VIEW TOGGLE — Community vs My Profile
 ══════════════════════════════════════ */
 #view-toggle{display:flex;align-items:center;gap:2px;background:var(--bg3);border:1px solid var(--bdr);border-radius:22px;padding:4px;height:38px;}
-.view-toggle-btn{background:none;border:none;padding:0 18px;height:30px;border-radius:16px;font-family:var(--fn);font-size:14px;font-weight:600;color:var(--tx2);cursor:pointer;white-space:nowrap;transition:background var(--ease),color var(--ease),opacity var(--ease);}
+.view-toggle-btn{background:none;border:none;padding:0 18px;height:30px;border-radius:16px;font-family:var(--fn);font-size:15px;font-weight:600;color:var(--tx2);cursor:pointer;white-space:nowrap;transition:background var(--ease),color var(--ease),opacity var(--ease);width:140px;text-align:center;box-sizing:border-box;}
 .view-toggle-btn:hover{color:var(--tx);}
 .view-toggle-btn:not(.selected){background:var(--bg3);}
 .view-toggle-btn.selected{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
@@ -1931,7 +1931,7 @@ body.cat-modal-open{overflow:hidden;}
   #profile-bar-name{font-size:16px;}
   #profile-bar-count{display:none;}
   #view-toggle{padding:3px;height:34px;}
-  .view-toggle-btn{padding:0 12px;height:26px;font-size:12px;}
+  .view-toggle-btn{padding:0 12px;height:26px;font-size:13px;width:120px;}
   #feed-mode-toggle{padding:3px;height:34px;}
   .feed-mode-btn{padding:0 12px;height:26px;font-size:12px;}
   #feed-sort{padding:3px;height:34px;}
