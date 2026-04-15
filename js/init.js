@@ -1644,6 +1644,25 @@ function _buildCommunityCard(group) {
       tile.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', cat.id);
         tile.style.opacity = '0.5';
+
+        // MD#22: hex-clipped drag ghost so the preview isn't a square.
+        const ghost = tile.cloneNode(true);
+        ghost.style.position = 'absolute';
+        ghost.style.top = '-9999px';
+        ghost.style.left = '-9999px';
+        ghost.style.width = tile.offsetWidth + 'px';
+        ghost.style.height = tile.offsetHeight + 'px';
+        ghost.style.clipPath = 'url(#hex-clip)';
+        ghost.style.webkitClipPath = 'url(#hex-clip)';
+        ghost.style.opacity = '0.85';
+        ghost.style.pointerEvents = 'none';
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, tile.offsetWidth / 2, tile.offsetHeight / 2);
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+          }, 0);
+        });
       });
       tile.addEventListener('dragend', () => { tile.style.opacity = '1'; });
       tile.addEventListener('dragover', (e) => {
