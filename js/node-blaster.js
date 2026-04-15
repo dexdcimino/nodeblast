@@ -10,12 +10,12 @@ let _camera  = null;
 const _stickyNodes   = [];
 const _activeBlobs   = [];  // goo blobs flying from node blaster explosion
 
-const GROW_TIME        = 200;   // slightly longer grow for drama
-const MAX_SCALE        = 22.0;  // 4-5x visually larger than before
-const EXPLODE_RADIUS   = 8;     // larger blast radius
-const EXPLODE_DAMAGE   = 55;    // harder hit
+const GROW_TIME        = 260;
+const MAX_SCALE        = 40.0;
+const EXPLODE_RADIUS   = 12;
+const EXPLODE_DAMAGE   = 65;
 const STICK_SPEED      = 1.4;
-const GOO_SPLASH_COUNT = 18;    // blob particles on explosion
+const GOO_SPLASH_COUNT = 32;
 const SURFACE_OFFSET   = 0.18;  // push node to surface face on stick
 
 // Called every frame from updateNodeBlaster to advance flying blobs
@@ -200,70 +200,103 @@ export function updateNodeBlaster(colBlocks, onExplode) {
         const pos = n.mesh.position.clone();
         const c   = n.color;
 
-        const exp     = new B.PointLight('nb_exp_' + Date.now(), pos, _scene);
+        // ══ MEGA EXPLOSION ══
+
+        // Big bright flash
+        const exp = new B.PointLight('nb_exp_' + Date.now(), pos, _scene);
         exp.diffuse   = new B.Color3(c.r, c.g, c.b);
-        exp.intensity = 5.0;
-        exp.range     = EXPLODE_RADIUS * 2;
-        let ei        = 0;
-        const fade    = setInterval(() => {
+        exp.intensity = 10.0;
+        exp.range     = EXPLODE_RADIUS * 3;
+        let ei = 0;
+        const fade = setInterval(() => {
           ei++;
-          if (exp.intensity !== undefined)
-            exp.intensity = Math.max(0, 5.0 - ei * 0.35);
-          if (ei >= 15) { clearInterval(fade); try { exp.dispose(); } catch {} }
+          if (exp.intensity !== undefined) exp.intensity = Math.max(0, 10.0 - ei * 0.5);
+          if (ei >= 20) { clearInterval(fade); try { exp.dispose(); } catch {} }
         }, 16);
 
-        // ── Big goo explosion particle burst ──
-        const ps              = new B.ParticleSystem('nb_ps_' + Date.now(), 140, _scene);
-        ps.emitter            = pos.clone();
-        ps.direction1         = new B.Vector3(-3, 0.5, -3);
-        ps.direction2         = new B.Vector3( 3,  5.0,  3);
-        ps.minLifeTime        = 0.35; ps.maxLifeTime   = 1.2;
-        ps.minSize            = 0.18; ps.maxSize       = 0.65;
-        ps.minEmitPower       = 5;    ps.maxEmitPower  = 18;
-        ps.updateSpeed        = 0.02; ps.emitRate      = 400;
-        ps.color1             = new B.Color4(c.r, c.g, c.b, 1.0);
-        ps.color2             = new B.Color4(Math.min(c.r + 0.3, 1), Math.min(c.g + 0.3, 1), Math.min(c.b + 0.3, 1), 0.85);
-        ps.colorDead          = new B.Color4(c.r * 0.2, c.g * 0.2, c.b * 0.2, 0.0);
-        ps.targetStopDuration = 0.12;
-        ps.start();
-        setTimeout(() => { try { ps.dispose(); } catch {} }, 2000);
+        // Multiple particle bursts at different speeds
+        for (let burst = 0; burst < 3; burst++) {
+          const ps = new B.ParticleSystem('nb_ps_' + Date.now() + '_' + burst, 200, _scene);
+          ps.emitter     = pos.clone();
+          const spread   = 4 + burst * 3;
+          ps.direction1  = new B.Vector3(-spread, 0.5, -spread);
+          ps.direction2  = new B.Vector3(spread, 6 + burst * 3, spread);
+          ps.minLifeTime = 0.3 + burst * 0.2;
+          ps.maxLifeTime = 1.2 + burst * 0.5;
+          ps.minSize     = 0.15 + burst * 0.1;
+          ps.maxSize     = 0.6 + burst * 0.3;
+          ps.minEmitPower = 6 + burst * 5;
+          ps.maxEmitPower = 20 + burst * 8;
+          ps.updateSpeed  = 0.02;
+          ps.emitRate     = 500;
+          ps.color1       = new B.Color4(c.r, c.g, c.b, 1.0);
+          ps.color2       = new B.Color4(
+            Math.min(c.r + 0.4, 1), Math.min(c.g + 0.4, 1), Math.min(c.b + 0.4, 1), 0.8
+          );
+          ps.colorDead = new B.Color4(c.r * 0.1, c.g * 0.1, c.b * 0.1, 0.0);
+          ps.targetStopDuration = 0.1 + burst * 0.05;
+          ps.start();
+          setTimeout(() => { try { ps.dispose(); } catch {} }, 2500);
+        }
 
-        // ── Goo blob splats flying outward ──
+        // Expanding shockwave rings
+        for (let r = 0; r < 4; r++) {
+          const ring = B.MeshBuilder.CreateTorus('nb_ring_' + Date.now() + '_' + r, {
+            diameter: 1.0, thickness: 0.12 - r * 0.02, tessellation: 24
+          }, _scene);
+          ring.position.set(pos.x, 0.1 + r * 0.5, pos.z);
+          ring.rotation.x = Math.PI / 2;
+          const rm = new B.StandardMaterial('nb_rm_' + Date.now() + '_' + r, _scene);
+          rm.emissiveColor = new B.Color3(c.r, c.g, c.b);
+          rm.disableLighting = true;
+          rm.alpha = 0.85;
+          ring.material = rm;
+          let rl = 0;
+          const ringSpeed = 0.5 + r * 0.15;
+          const ringAnim = setInterval(() => {
+            rl++;
+            ring.scaling.setAll(1 + rl * ringSpeed);
+            rm.alpha = Math.max(0, 0.85 - rl * 0.035);
+            if (rl >= 28) { clearInterval(ringAnim); try { ring.dispose(); } catch {} }
+          }, 16);
+        }
+
+        // Big flying debris chunks
         for (let g = 0; g < GOO_SPLASH_COUNT; g++) {
+          const blobSize = 0.15 + Math.random() * 0.35;
           const blob = B.MeshBuilder.CreateSphere('nb_blob_' + Date.now() + '_' + g,
-            { diameter: 0.12 + Math.random() * 0.22, segments: 4 }, _scene);
+            { diameter: blobSize, segments: 4 }, _scene);
           blob.position.copyFrom(pos);
-          const bm = new B.StandardMaterial('nb_bm_' + Date.now(), _scene);
-          const br = 0.7 + Math.random() * 0.3;
+          const bm = new B.StandardMaterial('nb_bm_' + Date.now() + '_' + g, _scene);
+          const br = 0.6 + Math.random() * 0.4;
           bm.emissiveColor = new B.Color3(c.r * br, c.g * br, c.b * br);
           bm.disableLighting = true;
           blob.material = bm;
           const angle  = (g / GOO_SPLASH_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.8;
-          const speed  = 0.18 + Math.random() * 0.28;
+          const speed  = 0.25 + Math.random() * 0.45;
           blob._bvel   = new B.Vector3(
-            Math.cos(angle) * speed,
-            0.15 + Math.random() * 0.35,
-            Math.sin(angle) * speed,
+            Math.cos(angle) * speed, 0.2 + Math.random() * 0.5, Math.sin(angle) * speed,
           );
-          blob._blife  = 60 + Math.floor(Math.random() * 60);
+          blob._blife  = 80 + Math.floor(Math.random() * 80);
           blob._blanded = false;
           _activeBlobs.push(blob);
         }
 
-        // ── Ground splash ring ──
-        const ring = B.MeshBuilder.CreateCylinder('nb_ring_' + Date.now(),
-          { diameter: EXPLODE_RADIUS * 0.8, height: 0.04, tessellation: 16 }, _scene);
-        ring.position.set(pos.x, 0.03, pos.z);
-        const rm = new B.StandardMaterial('nb_rm_' + Date.now(), _scene);
-        rm.emissiveColor = new B.Color3(c.r * 0.7, c.g * 0.7, c.b * 0.7);
-        rm.alpha = 0.7;
-        rm.disableLighting = true;
-        ring.material = rm;
-        let ringLife = 120;
-        const ringFade = setInterval(() => {
-          ringLife--;
-          if (rm.alpha !== undefined) rm.alpha = (ringLife / 120) * 0.7;
-          if (ringLife <= 0) { clearInterval(ringFade); try { ring.dispose(); } catch {} }
+        // Ground scorch
+        const scorch = B.MeshBuilder.CreateCylinder('nb_scorch_' + Date.now(), {
+          diameter: EXPLODE_RADIUS * 0.7, height: 0.03, tessellation: 16
+        }, _scene);
+        scorch.position.set(pos.x, 0.03, pos.z);
+        const scm = new B.StandardMaterial('nb_scm_' + Date.now(), _scene);
+        scm.emissiveColor = new B.Color3(c.r * 0.4, c.g * 0.4, c.b * 0.4);
+        scm.disableLighting = true;
+        scm.alpha = 0.65;
+        scorch.material = scm;
+        let scorchLife = 180;
+        const scorchFade = setInterval(() => {
+          scorchLife--;
+          scm.alpha = (scorchLife / 180) * 0.65;
+          if (scorchLife <= 0) { clearInterval(scorchFade); try { scorch.dispose(); } catch {} }
         }, 16);
 
         if (onExplode) onExplode(pos.x, pos.y, pos.z, EXPLODE_RADIUS,
