@@ -18,6 +18,7 @@ const PHOTON_CDN = '/photon-realtime-module.js';
 let _engine = null;
 let _modalWired = false;
 let _exitModalOpen = false;
+let _returnPath = '/games';
 
 const MAX_VISIBLE_PLAYERS = 8;
 
@@ -145,6 +146,16 @@ export async function renderPlayRoute(gameId) {
   const canvas = document.getElementById('play-canvas');
   if (!view || !canvas) return;
 
+  // Remember where the player came from so exit returns them there
+  const currentPath = window.location.pathname;
+  if (!currentPath.startsWith('/game/') && currentPath !== '/play') {
+    _returnPath = currentPath;
+  } else {
+    _returnPath = document.referrer && new URL(document.referrer).pathname !== currentPath
+      ? new URL(document.referrer).pathname
+      : '/games';
+  }
+
   console.log('[play] loading game:', gameId || 'arena1');
 
   // Detect mobile — play mode requires keyboard + mouse
@@ -212,7 +223,7 @@ export async function renderPlayRoute(gameId) {
     document.getElementById('play-exit-btn')?.addEventListener('click', () => openExitModal());
     document.getElementById('play-exit-yes')?.addEventListener('click', () => {
       closeExitModal();
-      navigate('/');
+      navigate(_returnPath || '/games');
     });
     document.getElementById('play-exit-no')?.addEventListener('click', () => closeExitModal());
     document.getElementById('play-exit-modal')?.addEventListener('click', (e) => {

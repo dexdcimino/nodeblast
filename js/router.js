@@ -42,6 +42,15 @@ export function getRoute() {
     }
     return { page: 'play', gameId: 'arena1' };
   }
+  // Hard refresh on /game/* — redirect to /games instead of hanging
+  if (path.startsWith('/game/')) {
+    const navType = performance?.getEntriesByType?.('navigation')?.[0]?.type;
+    const isHardRefresh = navType === 'reload' || navType === 'navigate';
+    if (isHardRefresh) {
+      history.replaceState({}, '', '/games');
+      return { page: 'games' };
+    }
+  }
   if (path === '/games') return { page: 'games' };
   if (path === '/nodesplit') return { page: 'nodesplit' };
   if (path === '/dotsim') return { page: 'dotsim' };
