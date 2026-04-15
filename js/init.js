@@ -907,12 +907,6 @@ function _startMyTrackedSub() {
       const routeHex = (_currentRoute.hex || '').toLowerCase();
       const myHex = (State.profile?.hexCode || '').toLowerCase();
       if (routeLower && routeLower === myLower && routeHex === myHex) {
-        _renderTrackedFooter({
-          catalysts: _myTrackedCatalysts,
-          alchemists: _myTrackedAlchemists,
-          trackedPublic: !!State.profile?.trackedPublic,
-          isOwn: true,
-        });
         // NB-MD04: refresh Pinned + Following profile columns if visible
         if (_currentProfileView) {
           _renderProfileView(_currentProfileView.user, _currentProfileView.catalysts, _currentProfileView.isOwn);
@@ -1173,85 +1167,8 @@ function _buildFollowedChip(alch, { canRemove }) {
   return chip;
 }
 
-// Paints the profile footer tracked section. `trackedPublic` controls
-// the padlock icon + tooltip label; `isOwn` controls whether the
-// padlock is interactive and whether remove buttons appear. When the
-// viewer is a guest or the profile's tracked lists are private, the
-// whole footer is hidden.
-function _renderTrackedFooter({ catalysts, alchemists, trackedPublic, isOwn }) {
-  const footer = document.getElementById('profile-tracked-footer');
-  if (!footer) return;
-  const catBody = document.getElementById('tracked-catalysts-body');
-  const alchBody = document.getElementById('tracked-alchemists-body');
-  const catSection = document.getElementById('tracked-catalysts-section');
-  const alchSection = document.getElementById('tracked-alchemists-section');
-  const privBtn = document.getElementById('tracked-privacy-btn');
-  if (!catBody || !alchBody) return;
-
-  // Hide entirely if there's nothing to show — empty lists on someone
-  // else's profile shouldn't leave a ghost footer hanging.
-  const nothing = (catalysts.length === 0 && alchemists.length === 0);
-  if (nothing && !isOwn) {
-    footer.classList.remove('visible');
-    return;
-  }
-  footer.classList.add('visible');
-
-  // Catalysts row.
-  catBody.innerHTML = '';
-  if (catalysts.length === 0) {
-    catSection.classList.toggle('empty', isOwn);
-    if (isOwn) {
-      const hint = document.createElement('div');
-      hint.className = 'tracked-empty-hint';
-      hint.textContent = 'Pin catalysts from the community hub to show them here.';
-      catBody.appendChild(hint);
-    } else {
-      catSection.style.display = 'none';
-    }
-  } else {
-    catSection.style.display = '';
-    catSection.classList.remove('empty');
-    // Sort newest pin first so recent activity surfaces at the top.
-    const sorted = catalysts.slice().sort((a, b) => (b.pinnedAt || 0) - (a.pinnedAt || 0));
-    sorted.forEach((p) => catBody.appendChild(_buildPinnedFooterTile(p, { canRemove: isOwn })));
-  }
-
-  // Alchemists row.
-  alchBody.innerHTML = '';
-  if (alchemists.length === 0) {
-    if (isOwn) {
-      alchSection.style.display = '';
-      const hint = document.createElement('div');
-      hint.className = 'tracked-empty-hint';
-      hint.textContent = 'Pin alchemists from the community hub to show them here.';
-      alchBody.appendChild(hint);
-    } else {
-      alchSection.style.display = 'none';
-    }
-  } else {
-    alchSection.style.display = '';
-    const sorted = alchemists.slice().sort((a, b) => (b.pinnedAt || 0) - (a.pinnedAt || 0));
-    sorted.forEach((a) => alchBody.appendChild(_buildFollowedChip(a, { canRemove: isOwn })));
-  }
-
-  // Privacy padlock — only visible on the owner's view.
-  if (privBtn) {
-    if (isOwn) {
-      privBtn.style.display = '';
-      privBtn.classList.toggle('public', !!trackedPublic);
-      const label = privBtn.querySelector('.tracked-privacy-label');
-      if (label) label.textContent = trackedPublic ? 'Public' : 'Private';
-    } else {
-      privBtn.style.display = 'none';
-    }
-  }
-}
-
-function _hideTrackedFooter() {
-  const footer = document.getElementById('profile-tracked-footer');
-  if (footer) footer.classList.remove('visible');
-}
+// Tracked footer was removed — profile columns are the single source.
+function _hideTrackedFooter() {}
 
 /* ══════════════════════════════════════
    Community hub — per-creator cards
@@ -1948,30 +1865,16 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
   // profile uses the live cache so edits reflect instantly; visiting
   // someone else's profile falls back to a one-shot read, gated by
   // their trackedPublic flag.
-  if (isOwn) {
-    _renderTrackedFooter({
-      catalysts: _myTrackedCatalysts,
-      alchemists: _myTrackedAlchemists,
-      trackedPublic: !!State.profile?.trackedPublic,
-      isOwn: true,
-    });
-  } else {
+  if (!isOwn) {
     const targetUid = user.uid;
     loadUserTracked(targetUid).then(({ catalysts, alchemists, trackedPublic }) => {
-      // Check route is still pointing at the same profile before
-      // painting — the user may have navigated away during the async
-      // read. Compare against _currentRoute rather than _viewingOther
-      // because the latter is only set once the profile subscription
-      // callback fires, which races against this promise.
       const route = _currentRoute;
       if (!route || (route.page !== 'profile' && route.page !== 'catalyst')) return;
       const routeLower = (route.username || '').toLowerCase();
       const userLower = (user.usernameLower || user.displayName || '').toLowerCase();
       const hexMatch = (route.hex || '').toLowerCase() === (user.hexCode || '').toLowerCase();
       if (routeLower !== userLower || !hexMatch) return;
-      _renderTrackedFooter({ catalysts, alchemists, trackedPublic, isOwn: false });
-      // NB-MD08: cache for the Following column, then re-render so it
-      // shows the viewed user's follow list (not the empty placeholder).
+      // Cache the viewed user's tracked data so the Following column renders.
       _viewedUserTracked = { catalysts, alchemists, trackedPublic };
       if (_currentProfileView && _profileActiveTabs.has('following')) {
         _renderProfileView(_currentProfileView.user, _currentProfileView.catalysts, _currentProfileView.isOwn);
@@ -2754,26 +2657,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (_currentRoute?.page === 'feed') _repaintFeed();
     });
-  });
-
-  // MD18: privacy padlock on the profile tracked footer. Toggles
-  // trackedPublic on the signed-in user's doc. The button is only
-  // visible on the owner's profile, so we don't need to guard against
-  // viewer-vs-owner here — _renderTrackedFooter controls visibility.
-  document.getElementById('tracked-privacy-btn')?.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (!State.user) return;
-    const next = !State.profile?.trackedPublic;
-    const ok = await setTrackedPublic(next);
-    if (ok) {
-      _renderTrackedFooter({
-        catalysts: _myTrackedCatalysts,
-        alchemists: _myTrackedAlchemists,
-        trackedPublic: next,
-        isOwn: true,
-      });
-      toast(next ? 'Pinned list is now public' : 'Pinned list is now private');
-    }
   });
 
   // MD24: backup restore modal wiring. Settings → "Restore catalysts

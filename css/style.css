@@ -698,21 +698,6 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    a profile page. Inline child of #grid so it scrolls with the hex
    grid and inherits the same horizontal padding.
 ══════════════════════════════════════ */
-#profile-tracked-footer{display:none;margin:48px 0 64px;padding:0 8px;}
-#profile-tracked-footer.visible{display:block;}
-.tracked-section{margin-bottom:36px;}
-.tracked-section:last-child{margin-bottom:0;}
-.tracked-hdr{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
-.tracked-hdr-line{flex:1;height:1px;background:var(--bdr);}
-.tracked-hdr-title{font-size:13px;font-weight:700;color:var(--tx2);letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;}
-.tracked-privacy{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bdr);border-radius:14px;padding:5px 12px;color:var(--tx2);font-family:var(--fn);font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;transition:color var(--ease),border-color var(--ease),background var(--ease);}
-.tracked-privacy:hover{color:var(--tx);border-color:var(--clr-adj);}
-.tracked-privacy .tracked-lock-open{display:none;}
-.tracked-privacy.public .tracked-lock-closed{display:none;}
-.tracked-privacy.public .tracked-lock-open{display:inline;}
-.tracked-privacy.public{color:var(--clr-adj);border-color:var(--clr-adj);}
-.tracked-body{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;padding:0 2px;}
-.tracked-empty-hint{color:var(--tx3);font-size:13px;font-style:italic;padding:8px 4px;}
 
 /* Remove "×" button overlay used by both pinned tiles and followed
    avatars. Hidden by default, fades in on hover of the parent, and
