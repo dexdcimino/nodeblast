@@ -683,7 +683,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #profile-bar .profile-bar-collapse-icon{margin-left:8px;flex-shrink:0;cursor:pointer;color:var(--tx3);transition:color var(--ease),transform var(--ease);display:inline-flex;}
 #profile-bar .profile-bar-collapse-icon:hover{color:var(--tx);}
 #profile-bar.collapsed .profile-bar-collapse-icon{transform:rotate(180deg);}
-#profile-bar-catalysts{width:100%;display:none;padding-top:16px;border-top:1px solid var(--bdr);margin-top:16px;}
+#profile-bar-catalysts{width:100%;display:none;padding-top:16px;border-top:1px solid var(--bdr);margin-top:16px;position:relative;overflow:hidden;min-height:0;box-sizing:border-box;}
 #profile-bar-catalysts.visible{display:block;}
 #profile-bar-catalysts .hex-tile{cursor:grab;}
 #profile-bar.visible{display:flex;}

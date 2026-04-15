@@ -753,7 +753,7 @@ function _renderProfileView(user, catalysts, isOwn) {
   const barCats = document.getElementById('profile-bar-catalysts');
   const catCol = document.getElementById('profile-col-catalysts');
   if (isOwn) {
-    if (barCats) { barCats.style.display = ''; barCats.classList.add('visible'); }
+    if (barCats) { barCats.style.position = 'relative'; barCats.style.display = ''; barCats.classList.add('visible'); }
     document.getElementById('profile-bar')?.classList.add('has-grid');
     if (catCol) catCol.style.display = 'none';
   } else {
