@@ -175,13 +175,6 @@
          with the content. Visibility is toggled by init.js. -->
     <div id="profile-bar">
       <div id="profile-bar-left">
-        <div id="profile-bar-count-hex" data-tip="Catalysts">
-          <svg viewBox="0 0 100 115" width="36" height="42">
-            <polygon points="50,0 100,28.75 100,86.25 50,115 0,86.25 0,28.75" fill="var(--clr-adj)" opacity="0.15"/>
-            <polygon points="50,0 100,28.75 100,86.25 50,115 0,86.25 0,28.75" fill="none" stroke="var(--clr-adj)" stroke-width="3"/>
-            <text x="50" y="64" text-anchor="middle" dominant-baseline="central" fill="var(--clr-adj)" font-family="var(--fn)" font-size="36" font-weight="800" id="profile-bar-count-num">0</text>
-          </svg>
-        </div>
         <div id="profile-bar-avatar"></div>
         <div id="profile-bar-info">
           <div id="profile-bar-name"></div>
@@ -192,6 +185,12 @@
           <!-- Social links — rendered by init.js showProfileBar. Hidden
                entirely when the user has no links. -->
           <div id="profile-bar-socials"></div>
+        </div>
+        <div id="profile-bar-count-hex" data-tip="Catalysts">
+          <svg viewBox="0 0 100 115" width="40" height="46">
+            <polygon points="50,0 100,28.75 100,86.25 50,115 0,86.25 0,28.75" fill="var(--clr-adj)" opacity="0.12" stroke="var(--clr-adj)" stroke-width="4" stroke-linejoin="round"/>
+            <text x="50" y="68" text-anchor="middle" dominant-baseline="central" fill="var(--clr-adj)" font-family="var(--fn)" font-size="40" font-weight="800" id="profile-bar-count-num">0</text>
+          </svg>
         </div>
       </div>
       <div id="profile-bar-right">
