@@ -248,7 +248,8 @@ function _spawnGooSplat(pos,normal,color){
   disc.material=discMat;
   _gooSplats.push({mesh:disc,_vel:null,_gravity:0,_landed:true,_life:600});
   // Exploding blob pieces
-  const n=8+Math.floor(Math.random()*5);
+  const isMG = getActiveGun().id === 'machinegun';
+  const n = isMG ? 3 + Math.floor(Math.random() * 2) : 8 + Math.floor(Math.random() * 5);
   for(let i=0;i<n;i++){
     const size=0.05+Math.random()*0.14;
     const blob=B.MeshBuilder.CreateSphere('goo_blob_'+Date.now()+'_'+i,{diameter:size,segments:4},_scene);
@@ -268,7 +269,7 @@ function _spawnGooSplat(pos,normal,color){
   const flash=new B.PointLight('gf_'+Date.now(),pos.clone(),_scene);
   flash.diffuse=new B.Color3(cr,cg,cb);flash.intensity=2.2;flash.range=5;
   let t=0;const fade=setInterval(()=>{t+=0.2;if(flash.intensity!==undefined)flash.intensity=Math.max(0,2.2-t*2.2);if(t>=1){clearInterval(fade);try{flash.dispose();}catch{}}},16);
-  if(_gooSplats.length>250){const old=_gooSplats.splice(0,20);old.forEach(s=>{try{s.mesh.dispose();}catch{}});}
+  if(_gooSplats.length>120){const old=_gooSplats.splice(0,40);old.forEach(s=>{try{s.mesh.dispose();}catch{}});}
   playGooImpact();
 }
 
@@ -536,7 +537,7 @@ function _shoot(){
   const now=Date.now();
   const gun=getActiveGun();
   if(now-_lastShot<gun.cooldown)return;
-  if(_projectiles.length>=20)return;
+  if(_projectiles.length>=12)return;
   _lastShot=now;
   playShoot(gun.id);
   if(gun.id==='nodeblaster'){
