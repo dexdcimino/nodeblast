@@ -378,8 +378,24 @@ function _renderNow(state) {
       // GAMES-01: system game border color
       if (tile._systemGame && tile._gameColor) el.style.borderColor = tile._gameColor;
       el.innerHTML = catalystTileHTML(tile, { showCreatorAvatar: !!state.showCreatorAvatar });
+      let _pd = null;
+      el.addEventListener('pointerdown', (e) => {
+        _pd = { x: e.clientX, y: e.clientY, t: Date.now() };
+      });
       el.addEventListener('click', (e) => {
         if (_suppressNextClick) { _suppressNextClick = false; return; }
+        // MD#8: only activate on a tap — suppress if moved >8px or held >300ms.
+        if (_pd) {
+          const dx = Math.abs(e.clientX - _pd.x);
+          const dy = Math.abs(e.clientY - _pd.y);
+          const dt = Date.now() - _pd.t;
+          _pd = null;
+          if (dt > 300 || dx > 8 || dy > 8) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+        }
         if (e.target.closest('[data-creator-link]')) {
           e.stopPropagation();
           state.onCreatorClick?.(tile);
@@ -717,9 +733,25 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
     el.appendChild(pinBtn);
   }
 
+  let _flowPd = null;
+  el.addEventListener('pointerdown', (e) => {
+    _flowPd = { x: e.clientX, y: e.clientY, t: Date.now() };
+  });
   el.addEventListener('click', (e) => {
     if (_suppressNextClick) { _suppressNextClick = false; return; }
     if (e.target.closest('[data-pin-btn]')) return;
+    // MD#8: tap threshold.
+    if (_flowPd) {
+      const dx = Math.abs(e.clientX - _flowPd.x);
+      const dy = Math.abs(e.clientY - _flowPd.y);
+      const dt = Date.now() - _flowPd.t;
+      _flowPd = null;
+      if (dt > 300 || dx > 8 || dy > 8) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
     if (e.target.closest('[data-creator-link]')) {
       e.stopPropagation();
       handlers.onCreatorClick?.(cat);
