@@ -43,7 +43,7 @@ export const GUNS = [
 let _activeSlot      = 0;
 let _projectileColor = { r: 0.1, g: 1.0, b: 0.4 };
 // Tracks which slots are unlocked — pistol (0) always unlocked
-const _unlockedSlots = new Set([0]);
+const _unlockedSlots = new Set([0, 1, 2, 3]);
 
 export function unlockSlot(slot) { _unlockedSlots.add(slot); _updateHUD(); }
 export function lockSlot(slot)   { if (slot === 0) return; _unlockedSlots.delete(slot); _updateHUD(); }
@@ -104,5 +104,8 @@ export function resetGuns() {
   _activeSlot      = 0;
   _projectileColor = { r: 0.1, g: 1.0, b: 0.4 };
   _unlockedSlots.clear();
-  _unlockedSlots.add(0);  // always start with pistol
+  _unlockedSlots.add(0);
+  _unlockedSlots.add(1);
+  _unlockedSlots.add(2);
+  _unlockedSlots.add(3);
 }

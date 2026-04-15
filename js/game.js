@@ -6,7 +6,7 @@
 import State from './state.js';
 import { getActiveGun, getActiveSlot, setActiveSlot, setProjectileColor,
          getProjectileColor, initGunHUD, resetGuns, GUNS,
-         unlockSlot, lockSlot, isSlotUnlocked } from './guns.js';
+         unlockSlot, isSlotUnlocked } from './guns.js';
 import { initPlasma, updatePlasma, destroyPlasma } from './plasma.js';
 import { initEnemyNodes, updateEnemyNodes, damageEnemyNode,
          checkEnemyHit, destroyEnemyNodes } from './enemy-nodes.js';
@@ -484,97 +484,9 @@ function _updateProjectiles(){
   for(let i=dead.length-1;i>=0;i--)_projectiles.splice(dead[i],1);
 }
 
-function _spawnDroppedGun(slot, gun, pos) {
-  const B  = window.BABYLON;
-  const gc = gun.color;
-  const dropY = 1.2; // waist/shoulder height
-
-  const base = B.MeshBuilder.CreateBox('drop_base_' + slot + '_' + Date.now(),
-    { width: 0.55, height: 0.18, depth: 0.55 }, _scene);
-  base.position.set(pos.x, dropY - 0.2, pos.z);
-  const bm = new B.StandardMaterial('drop_bm_' + slot, _scene);
-  bm.diffuseColor  = new B.Color3(gc.r * 0.3, gc.g * 0.3, gc.b * 0.3);
-  bm.emissiveColor = new B.Color3(gc.r * 0.5, gc.g * 0.5, gc.b * 0.5);
-  base.material = bm;
-
-  const orb = B.MeshBuilder.CreateSphere('drop_orb_' + slot + '_' + Date.now(),
-    { diameter: 0.32, segments: 7 }, _scene);
-  orb.position.set(pos.x, dropY, pos.z);
-  const om = new B.StandardMaterial('drop_om_' + slot, _scene);
-  om.emissiveColor   = new B.Color3(gc.r, gc.g, gc.b);
-  om.disableLighting = true;
-  orb.material = om;
-
-  const light = new B.PointLight('drop_pt_' + slot + '_' + Date.now(),
-    new B.Vector3(pos.x, dropY, pos.z), _scene);
-  light.diffuse   = new B.Color3(gc.r, gc.g, gc.b);
-  light.intensity = 0.7;
-  light.range     = 4;
-
-  // Ground glow disc
-  const glow = B.MeshBuilder.CreateCylinder('drop_glow_' + slot + '_' + Date.now(),
-    { diameter: 0.8, height: 0.02, tessellation: 12 }, _scene);
-  glow.position.set(pos.x, 0.02, pos.z);
-  const gm = new B.StandardMaterial('drop_gm_' + slot, _scene);
-  gm.emissiveColor   = new B.Color3(gc.r * 0.4, gc.g * 0.4, gc.b * 0.4);
-  gm.disableLighting = true;
-  gm.alpha = 0.5;
-  glow.material = gm;
-
-  _gunPickups.push({
-    base, orb, pt: light, glow,
-    slot,
-    pos: new B.Vector3(pos.x, dropY, pos.z),
-    _isDropped: true,
-  });
-}
-
 function _buildGunPickups() {
-  const B = window.BABYLON;
-  const spawnSets = [{ z: -44 }, { z: 44 }];
-  const pickupDefs = [
-    { slot: 1, name: 'machinegun', x: -6 },
-    { slot: 2, name: 'plasma',     x:  0 },
-    { slot: 3, name: 'nodeblaster',x:  6 },
-  ];
-  spawnSets.forEach(sp => {
-    pickupDefs.forEach(def => {
-      const base = B.MeshBuilder.CreateBox('pickup_' + def.name + '_' + sp.z,
-        { width: 0.6, height: 0.2, depth: 0.6 }, _scene);
-      base.position.set(def.x, 0.5, sp.z);
-      const mat = new B.StandardMaterial('pm_' + def.name + sp.z, _scene);
-      const gc = GUNS[def.slot].color;
-      mat.diffuseColor  = new B.Color3(gc.r * 0.3, gc.g * 0.3, gc.b * 0.3);
-      mat.emissiveColor = new B.Color3(gc.r * 0.6, gc.g * 0.6, gc.b * 0.6);
-      base.material = mat;
-      const orb = B.MeshBuilder.CreateSphere('pickup_orb_' + def.name + sp.z,
-        { diameter: 0.35, segments: 8 }, _scene);
-      orb.position.set(def.x, 1.1, sp.z);
-      const orbMat = new B.StandardMaterial('pom_' + def.name + sp.z, _scene);
-      orbMat.emissiveColor   = new B.Color3(gc.r, gc.g, gc.b);
-      orbMat.disableLighting = true;
-      orb.material = orbMat;
-      const pt = new B.PointLight('ppt_' + def.name + sp.z,
-        new B.Vector3(def.x, 1.1, sp.z), _scene);
-      pt.diffuse   = new B.Color3(gc.r, gc.g, gc.b);
-      pt.intensity = 0.8;
-      pt.range     = 4;
-      // Ground glow disc beneath each pickup
-      const glowDisc = B.MeshBuilder.CreateCylinder(
-        'pickup_glow_' + def.name + sp.z,
-        { diameter: 1.1, height: 0.02, tessellation: 14 }, _scene,
-      );
-      glowDisc.position.set(def.x, 0.02, sp.z);
-      const gdMat = new B.StandardMaterial('pgm_' + def.name + sp.z, _scene);
-      gdMat.emissiveColor   = new B.Color3(gc.r * 0.35, gc.g * 0.35, gc.b * 0.35);
-      gdMat.disableLighting = true;
-      gdMat.alpha           = 0.45;
-      glowDisc.material     = gdMat;
-
-      _gunPickups.push({ base, orb, pt, glowDisc, slot: def.slot,
-        pos: new B.Vector3(def.x, 1.0, sp.z) });
-    });
-  });
+  // Cleared — slots 1-3 now unlocked by default.
+  // Rocket launcher pickup will be added here later.
 }
 
 function _updateHealthHUD() {
@@ -960,21 +872,9 @@ function _physicsTick() {
     }
   }
 
-  // G key — drop current gun (except pistol slot 0)
+  // Gun drop disabled — all 4 base guns are permanent
   const dropTip = document.getElementById('play-drop-tip');
-  if (getActiveSlot() > 0) {
-    if (dropTip) dropTip.style.opacity = '1';
-    if (_keys['KeyG'] && !_prevKeys['KeyG']) {
-      const droppedSlot = getActiveSlot();
-      const droppedGun  = getActiveGun();
-      // Place a new pickup orb at current player position
-      _spawnDroppedGun(droppedSlot, droppedGun, _camera.position.clone());
-      lockSlot(droppedSlot);
-      setActiveSlot(0);  // fall back to pistol
-    }
-  } else {
-    if (dropTip) dropTip.style.opacity = '0';
-  }
+  if (dropTip) dropTip.style.opacity = '0';
 
   // FOV kick: sprint widens FOV slightly for speed feel
   if (_camera) {
