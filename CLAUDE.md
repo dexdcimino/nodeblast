@@ -26,7 +26,9 @@ Creator portfolio platform at nodeblast.dev. Shares Firebase project (dexnote-d7
 - Firebase Storage path for thumbnails: /catalysts/{userId}/{catalystId}/thumb
 
 ## Git Workflow
-- **Always work directly on `main`. Never create feature branches.** Solo-dev project — standard branch/PR flow is overhead without payoff. Commit and push to `main` immediately after each task.
+- Always work on `main`. Never create feature branches unless explicitly asked.
+- After completing every markdown task, run: `git add -A && git commit -m "<descriptive message>" && git push`
+- Never cherry-pick files with `git add <specific files>` — always use `git add -A`. The `.gitignore` handles exclusions.
 
 ## Firestore Rules
 - `catalyst_backups` subcollection under `users/{userId}` requires read/write rules (same pattern as `account_backups`, `deleted_sessions`, etc.). Always keep `catalyst_backups` rules in sync when updating `firestore.rules` — omitting it causes `saveCatalystBackup` to silently fail against the deny-all catch-all.
