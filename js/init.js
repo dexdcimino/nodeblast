@@ -24,7 +24,7 @@ import {
   escapeHtml,
   toast,
 } from './ui-events.js';
-import { renderHexGrid, createCatalystTileElement, renderMiniHexGrid } from './hex-grid.js';
+import { renderHexGrid, createCatalystTileElement, renderMiniHexGrid, getEmbeddedCols } from './hex-grid.js';
 import {
   openCatalystModal,
   openCatalystDetail,
@@ -766,6 +766,8 @@ function _renderProfileView(user, catalysts, isOwn) {
     showAdd: isOwn,
     emptyMessage: _currentEmptyMessage,
     container: gridTarget,
+    getColsFn: isOwn ? getEmbeddedCols : undefined,
+    gap: isOwn ? 24 : undefined,
     onTileClick: handleTileClick,
     onAddClick: _handleAddCatalystClick,
     onCreatorClick: handleCreatorClick,

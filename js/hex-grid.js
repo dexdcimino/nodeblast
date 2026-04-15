@@ -68,6 +68,17 @@ export function getCols(width) {
   return 1;
 }
 
+// Embedded profile grid — denser column counts for smaller tiles.
+export function getEmbeddedCols(width) {
+  if (width >= 1400) return 12;
+  if (width >= 1200) return 10;
+  if (width >= 1000) return 8;
+  if (width >= 800) return 7;
+  if (width >= 600) return 6;
+  if (width >= 400) return 4;
+  return 3;
+}
+
 function layoutRows(count, COLS) {
   const rows = [];
   if (COLS <= 1) {
@@ -310,12 +321,12 @@ function _renderNow(state) {
   const containerW = honey.clientWidth;
   if (containerW <= 0) return;
 
-  const COLS = getCols(containerW);
+  const COLS = (state.getColsFn || getCols)(containerW);
 
   // Loading: render N skeleton placeholders matching current column count
   if (state.loading) {
     const skeletonCount = Math.max(3, COLS + Math.max(0, COLS - 1));
-    _renderTiles(honey, containerW, COLS, skeletonCount, (i, el) => {
+    _renderTiles(honey, containerW, COLS, skeletonCount, state.gap, (i, el) => {
       el.classList.add('hex-skeleton');
       el.innerHTML = skeletonHTML();
     });
@@ -341,7 +352,7 @@ function _renderNow(state) {
 
   const tileEls = new Array(tiles.length);
 
-  const slots = _renderTiles(honey, containerW, COLS, totalTiles, (i, el) => {
+  const slots = _renderTiles(honey, containerW, COLS, totalTiles, state.gap, (i, el) => {
     const isAdd = showAdd && i === tiles.length;
     if (isAdd) {
       el.classList.add('add-tile');
@@ -410,18 +421,14 @@ function _renderNow(state) {
   }
 }
 
-function _renderTiles(honey, containerW, COLS, count, decorate) {
+function _renderTiles(honey, containerW, COLS, count, customGap, decorate) {
+  const gap = customGap ?? GAP;
   // MD25: left-aligned honeycomb. hexW is sized to exactly fill an
-  // odd (non-offset) row at COLS tiles wide — `COLS*hexW + (COLS+1)*GAP = containerW`.
-  // Even rows carry COLS-1 tiles with a half-step offset so they
-  // interlock with the row above. The previous `/ (COLS + 0.5)`
-  // formula reserved room for a centered even row's half-tile
-  // overflow; with left-align that overflow is gone and the widest
-  // row is the odd row, so the formula simplifies.
-  const hexW = (containerW - GAP * (COLS + 1)) / Math.max(COLS, 1);
+  // odd (non-offset) row at COLS tiles wide.
+  const hexW = (containerW - gap * (COLS + 1)) / Math.max(COLS, 1);
   const hexH = hexW * 1.1547;
-  const stepX = hexW + GAP;
-  const stepY = hexH * 0.75 + GAP;
+  const stepX = hexW + gap;
+  const stepY = hexH * 0.75 + gap;
 
   const rowCounts = layoutRows(count, COLS);
   const slots = [];
@@ -434,7 +441,7 @@ function _renderTiles(honey, containerW, COLS, count, decorate) {
     // half a step so their tiles interlock with the row above.
     // `isOffsetRow` is 0-indexed to match the row index in this loop.
     const isOffsetRow = row % 2 === 1;
-    const rowLeft = GAP + (isOffsetRow ? stepX / 2 : 0);
+    const rowLeft = gap + (isOffsetRow ? stepX / 2 : 0);
     const top = GRID_TOP_PAD + row * stepY;
 
     for (let col = 0; col < rowCount; col++) {
@@ -452,7 +459,7 @@ function _renderTiles(honey, containerW, COLS, count, decorate) {
     }
   }
 
-  const totalH = GRID_TOP_PAD + rowCounts.length * stepY + GAP;
+  const totalH = GRID_TOP_PAD + rowCounts.length * stepY + gap;
   honey.style.height = totalH + 'px';
   return slots;
 }
