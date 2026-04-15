@@ -379,6 +379,8 @@ function showProfileBar(user, catalystCount, isOwn) {
     if (copyBtnHide) copyBtnHide.style.display = 'none';
     const msgBtnHide = document.getElementById('profile-bar-msg');
     if (msgBtnHide) msgBtnHide.style.display = 'none';
+    const addLinksBtnHide = document.getElementById('profile-bar-add-links');
+    if (addLinksBtnHide) addLinksBtnHide.style.display = 'none';
     _viewingOther = null;
     return;
   }
@@ -467,6 +469,26 @@ function showProfileBar(user, catalystCount, isOwn) {
       };
     } else {
       msgBtn.onclick = () => openDM(user);
+    }
+  }
+
+  const addLinksBtn = document.getElementById('profile-bar-add-links');
+  if (addLinksBtn) {
+    if (isOwn) {
+      addLinksBtn.style.display = 'inline-flex';
+      addLinksBtn.onclick = () => {
+        openAccountMenuFromPill();
+        setTimeout(() => {
+          const editBtn = document.getElementById('acct-edit-btn');
+          if (editBtn) editBtn.click();
+          setTimeout(() => {
+            const linksWrap = document.getElementById('acct-links-wrap');
+            if (linksWrap) linksWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+        }, 150);
+      };
+    } else {
+      addLinksBtn.style.display = 'none';
     }
   }
 
