@@ -168,6 +168,12 @@ export function renderSocialIconsHTML(links, { extraClass = '' } = {}) {
     );
   }
   if (items.length === 0) return '';
+  const MAX_DISPLAY = 5;
+  if (items.length > MAX_DISPLAY) {
+    const overflow = items.length - MAX_DISPLAY;
+    items.length = MAX_DISPLAY;
+    items.push(`<span class="social-icon social-icon-overflow" data-tip="${overflow} more">+${overflow}</span>`);
+  }
   const cls = 'social-icons' + (extraClass ? ' ' + extraClass : '');
   return `<div class="${cls}">${items.join('')}</div>`;
 }

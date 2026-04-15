@@ -280,10 +280,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-links-wrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
 #acct-links-list{display:flex;flex-direction:column;gap:6px;}
 #acct-links-list:empty{display:none;}
-.acct-link-row{display:flex;align-items:center;gap:6px;}
-.acct-link-platform{flex:0 0 auto;width:110px;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:12px;padding:6px 8px;outline:none;cursor:pointer;transition:border-color var(--ease);}
+.acct-link-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.acct-link-platform{flex:0 0 auto;width:120px;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:14px;padding:8px 10px;outline:none;cursor:pointer;transition:border-color var(--ease);}
 .acct-link-platform:focus{border-color:var(--tx3);}
-.acct-link-url{flex:1;min-width:0;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:12px;padding:6px 10px;outline:none;transition:border-color var(--ease);}
+.acct-link-url{flex:1;min-width:0;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:14px;padding:8px 10px;outline:none;transition:border-color var(--ease);}
 .acct-link-url:focus{border-color:var(--tx3);}
 .acct-link-url::placeholder{color:var(--tx3);}
 .acct-link-remove{background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;border-radius:4px;display:flex;align-items:center;transition:color var(--ease),background var(--ease);}
@@ -300,6 +300,9 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .social-icons .social-icon:hover{color:var(--tx);border-color:var(--clr-adj);background:var(--bg3);transform:translateY(-1px);}
 .social-icons .social-icon svg{width:12px;height:12px;display:block;}
 .social-icons.social-icons--sm .social-icon{width:18px;height:18px;}
+#profile-bar .social-icons .social-icon{width:32px;height:32px;border-radius:50%;border-width:1.5px;}
+#profile-bar .social-icons .social-icon svg{width:16px;height:16px;}
+.social-icon-overflow{font-size:10px;font-weight:700;color:var(--tx3);cursor:default;user-select:none;}
 .social-icons.social-icons--sm .social-icon svg{width:10px;height:10px;}
 
 /* Profile bar social row — lives under the hex label, hidden when
