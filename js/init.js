@@ -2536,6 +2536,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       await saveProfile(updates);
       _profileCache.clear();
+      _currentFeedSnapshot = [];
 
       // Propagate profile changes to denormalized catalyst fields so
       // existing tiles reflect the new username/hex/photo/socialLinks
@@ -2565,6 +2566,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       updateAuthUI(State.user, State.profile);
+      renderRoute({ force: true });
     },
   });
 
