@@ -744,7 +744,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #grid.feed-mode #community-list{display:flex;}
 #grid.feed-mode #honeycomb{display:none;}
 
-.community-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:18px;padding:18px 22px 24px;box-shadow:0 2px 10px rgba(0,0,0,.15);transition:border-color var(--ease),transform var(--ease);flex-shrink:0;min-width:280px;flex-basis:100%;}
+.community-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:24px;padding:18px 22px 24px;box-shadow:0 2px 10px rgba(0,0,0,.15);transition:border-color var(--ease),transform var(--ease);flex-shrink:0;min-width:280px;flex-basis:100%;}
+[data-theme="light"] .community-card{background:var(--bg4);}
 /* NB-MD07: flex-basis tiers based on catalyst count — browser flex-wrap packs rows */
 .community-card[data-count="1"]{flex-basis:auto;min-width:280px;width:fit-content;}
 .community-card[data-count="2"]{flex-basis:calc(30% - 14px);}
@@ -753,10 +754,6 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card[data-count="5"]{flex-basis:calc(60% - 14px);}
 .community-card[data-count="max"]{flex-basis:100%;}
 .community-card:hover{border-color:color-mix(in srgb,var(--clr-adj) 35%,var(--bdr));}
-/* MD10: own alchemist card — hex-colored glow ring so the user
-   immediately recognizes their own card in the community feed. */
-.community-card.own-card{border-color:color-mix(in srgb,var(--card-hex,var(--clr-adj)) 45%,var(--bdr));box-shadow:0 2px 10px rgba(0,0,0,.15),0 0 0 1px color-mix(in srgb,var(--card-hex,var(--clr-adj)) 20%,transparent);}
-.community-card.own-card .community-card-hdr{border-bottom-color:color-mix(in srgb,var(--card-hex,var(--clr-adj)) 20%,var(--bdr));}
 .community-card-hdr{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;padding-bottom:14px;border-bottom:1px solid var(--bdr);margin-bottom:16px;cursor:pointer;min-width:0;overflow:hidden;}
 .community-card-hdr:hover .community-card-name{color:var(--clr-adj);}
 .community-card-avatar{width:36px;height:36px;border-radius:50%;border:2px solid var(--card-hex,var(--clr-adj));background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:15px;font-weight:700;}
