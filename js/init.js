@@ -1524,9 +1524,9 @@ function _buildCommunityCard(group) {
       _collapsedCards.delete(group.uid);
       card.classList.remove('collapsed');
       // Restore original size tier so the card resizes back correctly.
-      const originalCount = group.catalysts.length >= 6
+      const originalCount = group.catalysts.length >= 10
         ? 'max'
-        : String(Math.max(1, Math.min(group.catalysts.length, 5)));
+        : String(Math.max(1, Math.min(group.catalysts.length, 9)));
       card.dataset.count = originalCount;
       collapseBtn.setAttribute('data-tip', 'Collapse');
       collapseBtn.innerHTML = COLLAPSE_ICON;
