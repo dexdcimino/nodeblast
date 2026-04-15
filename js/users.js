@@ -54,15 +54,44 @@ export async function getUserByUsernameHex(username, hex) {
       // collection was populated.
     }
 
+    // Primary fallback: usernameLower field (set on NodeBlast sign-in).
     const q = query(
       collection(db, 'users'),
       where('usernameLower', '==', lower),
       limit(1),
     );
     const snap = await getDocs(q);
-    if (snap.empty) return null;
-    const d = snap.docs[0];
-    return { uid: d.id, ...d.data() };
+    if (!snap.empty) {
+      const d = snap.docs[0];
+      return { uid: d.id, ...d.data() };
+    }
+
+    // Secondary fallback: displayName (covers DexNote-only accounts
+    // that never signed into NodeBlast and lack usernameLower).
+    const q2 = query(
+      collection(db, 'users'),
+      where('displayName', '==', lower),
+      limit(1),
+    );
+    const snap2 = await getDocs(q2);
+    if (!snap2.empty) {
+      const d = snap2.docs[0];
+      return { uid: d.id, ...d.data() };
+    }
+
+    // Tertiary fallback: original casing (displayName may not be lowercased).
+    const q3 = query(
+      collection(db, 'users'),
+      where('displayName', '==', username),
+      limit(1),
+    );
+    const snap3 = await getDocs(q3);
+    if (!snap3.empty) {
+      const d = snap3.docs[0];
+      return { uid: d.id, ...d.data() };
+    }
+
+    return null;
   } catch (err) {
     console.warn('[users] getUserByUsernameHex failed:', err);
     return null;
