@@ -1851,10 +1851,111 @@ async function renderGamesRoute() {
 
   const colsEl = document.getElementById('profile-columns');
   if (colsEl) colsEl.style.display = 'flex';
+
+  // Hide "My Catalysts" — not relevant on /games
+  const catCol = document.getElementById('profile-col-catalysts');
+  if (catCol) catCol.style.display = 'none';
+
+  // Left column — system games as pinned catalysts
   const pinnedCol = document.getElementById('profile-col-pinned');
+  if (pinnedCol) {
+    pinnedCol.style.display = '';
+    pinnedCol.innerHTML = '';
+    const pTitle = document.createElement('div');
+    pTitle.className = 'profile-col-title';
+    pTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg> Pinned Catalysts';
+    pinnedCol.appendChild(pTitle);
+    const pinned = getGamesAsCatalysts();
+    if (pinned.length > 0) {
+      pinned.forEach((cat) => {
+        const tile = createCatalystTileElement(
+          cat,
+          { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, isPinned: true },
+          { onTileClick: handleGameTileClick }
+        );
+        pinnedCol.appendChild(tile);
+      });
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'hex-empty';
+      empty.textContent = 'No pinned catalysts';
+      pinnedCol.appendChild(empty);
+    }
+  }
+
+  // Right column — dex.dev as a pinned alchemist
   const followingCol = document.getElementById('profile-col-following');
-  if (pinnedCol) pinnedCol.style.display = '';
-  if (followingCol) followingCol.style.display = '';
+  if (followingCol) {
+    followingCol.style.display = '';
+    followingCol.innerHTML = '';
+    const fTitle = document.createElement('div');
+    fTitle.className = 'profile-col-title';
+    fTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Pinned Alchemists';
+    followingCol.appendChild(fTitle);
+
+    const loading = document.createElement('div');
+    loading.className = 'hex-empty';
+    loading.textContent = 'Loading...';
+    followingCol.appendChild(loading);
+
+    (async () => {
+      try {
+        const dexUser = await getUserByUsernameHex('dex', null);
+        followingCol.innerHTML = '';
+        const t = document.createElement('div');
+        t.className = 'profile-col-title';
+        t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Pinned Alchemists';
+        followingCol.appendChild(t);
+        if (dexUser) {
+          const card = document.createElement('div');
+          card.className = 'community-card';
+          card.style.setProperty('--card-hex', '#' + (dexUser.hexCode || '5aaa72'));
+          card.dataset.count = '1';
+          const hdr = document.createElement('div');
+          hdr.className = 'community-card-hdr';
+          hdr.style.cursor = 'pointer';
+          hdr.style.borderBottom = 'none';
+          hdr.style.marginBottom = '0';
+          hdr.style.paddingBottom = '0';
+          const avatar = document.createElement('div');
+          avatar.className = 'community-card-avatar';
+          if (dexUser.photoURL) {
+            const img = document.createElement('img');
+            img.src = dexUser.photoURL;
+            img.alt = '';
+            avatar.appendChild(img);
+          } else {
+            avatar.textContent = (dexUser.displayName || 'D').charAt(0).toUpperCase();
+          }
+          hdr.appendChild(avatar);
+          const meta = document.createElement('div');
+          meta.className = 'community-card-meta';
+          const name = document.createElement('div');
+          name.className = 'community-card-name';
+          name.textContent = dexUser.displayName || 'dex';
+          meta.appendChild(name);
+          const hexRow = document.createElement('div');
+          hexRow.className = 'community-card-hex-row';
+          hexRow.innerHTML = '<div class="community-card-hex-dot"></div><span class="community-card-hex">#' + (dexUser.hexCode || '5aaa72') + '</span>';
+          meta.appendChild(hexRow);
+          hdr.appendChild(meta);
+          card.appendChild(hdr);
+          hdr.addEventListener('click', () => {
+            const slug = buildUserSlug((dexUser.displayName || '').toLowerCase(), dexUser.hexCode);
+            navigate('/' + slug);
+          });
+          followingCol.appendChild(card);
+        } else {
+          const empty = document.createElement('div');
+          empty.className = 'hex-empty';
+          empty.textContent = 'No alchemists pinned yet';
+          followingCol.appendChild(empty);
+        }
+      } catch (err) {
+        console.warn('[games] failed to load dex alchemist:', err);
+      }
+    })();
+  }
 }
 
 async function renderFeedRoute() {
