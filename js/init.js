@@ -1521,9 +1521,7 @@ function _buildCommunityCard(group) {
   // Pin button hidden on own tiles (you can't pin yourself), shown
   // everywhere else in the community hub.
   const hideOwnPin = State.user && group.uid === State.user.uid;
-  // Cap visible tiles at 5; no +N overflow badge — extras are simply
-  // not rendered, and viewing the full list means clicking through to
-  // the creator's profile.
+  const isOwnCardForReorder = State.user && group.uid === State.user.uid;
   const MAX_VISIBLE_TILES = 12;
   const sortedTiles = _sortCardTiles(group.catalysts);
   const tilesToShow = sortedTiles.slice(0, MAX_VISIBLE_TILES);
@@ -1540,6 +1538,37 @@ function _buildCommunityCard(group) {
       },
       { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick, onPinClick: handlePinToggle },
     );
+
+    if (isOwnCardForReorder) {
+      tile.draggable = true;
+      tile.style.cursor = 'grab';
+      tile.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', cat.id);
+        tile.style.opacity = '0.5';
+      });
+      tile.addEventListener('dragend', () => { tile.style.opacity = '1'; });
+      tile.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        tile.style.borderLeft = '3px solid var(--clr-adj)';
+      });
+      tile.addEventListener('dragleave', () => { tile.style.borderLeft = ''; });
+      tile.addEventListener('drop', (e) => {
+        e.preventDefault();
+        tile.style.borderLeft = '';
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if (draggedId === cat.id) return;
+        const allTiles = [...body.querySelectorAll('[data-cat-id]')];
+        const ids = allTiles.map(t => t.dataset.catId);
+        const fromIdx = ids.indexOf(draggedId);
+        const toIdx = ids.indexOf(cat.id);
+        if (fromIdx === -1 || toIdx === -1) return;
+        ids.splice(fromIdx, 1);
+        ids.splice(toIdx, 0, draggedId);
+        reorderCatalysts(State.user.uid, ids);
+        toast('Catalysts reordered');
+      });
+    }
+
     body.appendChild(tile);
   });
   card.appendChild(body);

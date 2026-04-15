@@ -678,6 +678,7 @@ function _teardownListeners(ctx) {
 export function createCatalystTileElement(cat, { width, height, showCreatorAvatar = false, showPinButton = false, isPinned = false } = {}, handlers = {}) {
   const el = document.createElement('div');
   el.className = 'hex-tile hex-tile-flow';
+  if (cat.id) el.dataset.catId = cat.id;
   if (width)  el.style.width  = typeof width  === 'number' ? width  + 'px' : width;
   if (height) el.style.height = typeof height === 'number' ? height + 'px' : height;
 
