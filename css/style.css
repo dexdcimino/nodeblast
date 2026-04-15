@@ -672,7 +672,11 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* Profile bar is now an INLINE child of #grid, so it scrolls with the
    honeycomb and inherits the same horizontal padding. No fixed
    positioning, no top offset. Hidden by default and toggled by init.js. */
-#profile-bar{display:none;align-items:center;justify-content:space-between;gap:20px;padding:14px 28px;margin:28px 0 0;background:color-mix(in srgb,var(--bg2) 85%,transparent);border:1px solid var(--bdr);border-radius:9999px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,.18);}
+#profile-bar{display:none;align-items:center;justify-content:space-between;gap:20px;padding:14px 28px;margin:28px 0 0;background:color-mix(in srgb,var(--bg2) 85%,transparent);border:1px solid var(--bdr);border-radius:9999px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,.18);flex-wrap:wrap;}
+#profile-bar.has-grid{border-radius:24px;}
+#profile-bar-catalysts{width:100%;display:none;padding-top:16px;border-top:1px solid var(--bdr);margin-top:16px;}
+#profile-bar-catalysts.visible{display:block;}
+#profile-bar-catalysts .hex-tile{cursor:grab;}
 #profile-bar.visible{display:flex;}
 #profile-bar-left{display:flex;align-items:center;gap:18px;min-width:0;flex:1;}
 #profile-bar-avatar{width:56px;height:56px;border-radius:50%;border:2.5px solid var(--acct-hex,var(--clr-adj));background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--clr-adj);font-size:22px;font-weight:700;}

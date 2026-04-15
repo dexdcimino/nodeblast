@@ -161,6 +161,9 @@ function setAvatarEl(el, profile, user) {
 function hideAllViews() {
   document.getElementById('cat-filter-bar').classList.remove('visible');
   document.getElementById('profile-bar').classList.remove('visible');
+  document.getElementById('profile-bar')?.classList.remove('has-grid');
+  const barCats = document.getElementById('profile-bar-catalysts');
+  if (barCats) { barCats.style.display = 'none'; barCats.classList.remove('visible'); barCats.innerHTML = ''; }
   document.getElementById('profile-bio')?.classList.remove('visible');
   document.getElementById('not-found').classList.remove('visible');
   // MD12: internal catalyst view hidden by default on every route.
@@ -718,24 +721,35 @@ function _renderProfileView(user, catalysts, isOwn) {
   if (colsEl) colsEl.style.display = 'flex';
   if (honeyEl) honeyEl.style.display = 'none';
 
-  // My Catalysts column — hex grid rendered into the column container
-  if (true) {
-    _currentTiles = catalysts;
-    _currentShowAdd = isOwn;
-    _currentEmptyMessage = isOwn
-      ? 'Create your first catalyst'
-      : "This alchemist hasn't created any catalysts yet.";
-    renderHexGrid({
-      tiles: catalysts,
-      showAdd: isOwn,
-      emptyMessage: _currentEmptyMessage,
-      container: 'profile-col-catalysts',
-      onTileClick: handleTileClick,
-      onAddClick: _handleAddCatalystClick,
-      onCreatorClick: handleCreatorClick,
-      onReorder: isOwn ? handleReorder : null,
-    });
+  // My Catalysts — embed grid inside #profile-bar when viewing own
+  // profile (MD#14); otherwise render into #profile-col-catalysts.
+  _currentTiles = catalysts;
+  _currentShowAdd = isOwn;
+  _currentEmptyMessage = isOwn
+    ? 'Create your first catalyst'
+    : "This alchemist hasn't created any catalysts yet.";
+  const gridTarget = isOwn ? 'profile-bar-catalysts' : 'profile-col-catalysts';
+  const barCats = document.getElementById('profile-bar-catalysts');
+  const catCol = document.getElementById('profile-col-catalysts');
+  if (isOwn) {
+    if (barCats) { barCats.style.display = ''; barCats.classList.add('visible'); }
+    document.getElementById('profile-bar')?.classList.add('has-grid');
+    if (catCol) catCol.style.display = 'none';
+  } else {
+    if (barCats) { barCats.style.display = 'none'; barCats.classList.remove('visible'); barCats.innerHTML = ''; }
+    document.getElementById('profile-bar')?.classList.remove('has-grid');
+    if (catCol) catCol.style.display = '';
   }
+  renderHexGrid({
+    tiles: catalysts,
+    showAdd: isOwn,
+    emptyMessage: _currentEmptyMessage,
+    container: gridTarget,
+    onTileClick: handleTileClick,
+    onAddClick: _handleAddCatalystClick,
+    onCreatorClick: handleCreatorClick,
+    onReorder: isOwn ? handleReorder : null,
+  });
 
   // Pinned column — always visible
   const pinnedCol = document.getElementById('profile-col-pinned');
