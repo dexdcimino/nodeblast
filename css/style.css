@@ -761,15 +761,15 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card:hover{border-color:var(--clr-adj);outline-color:var(--clr-adj);outline-width:3px;box-shadow:0 4px 20px rgba(0,0,0,.2);}
 .community-card-hdr{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;padding-bottom:14px;border-bottom:1px solid var(--bdr);margin-bottom:16px;cursor:pointer;min-width:0;overflow:hidden;}
 .community-card-hdr:hover .community-card-name{color:var(--clr-adj);}
-.community-card-avatar{width:36px;height:36px;border-radius:50%;border:2px solid var(--card-hex,var(--clr-adj));background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:15px;font-weight:700;}
+.community-card-avatar{width:42px;height:42px;border-radius:50%;border:2px solid var(--card-hex,var(--clr-adj));background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:15px;font-weight:700;}
 .community-card-avatar img{width:100%;height:100%;object-fit:cover;}
 .community-card-meta{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;flex:1 1 0;overflow:hidden;}
 .community-card-socials{margin-top:2px;}
-.community-card-name{font-size:16px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color var(--ease);}
+.community-card-name{font-size:18px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color var(--ease);}
 .community-card-hex-row{display:flex;align-items:center;gap:5px;flex-shrink:0;}
 .community-card-hex-dot{width:8px;height:8px;border-radius:50%;background:var(--card-hex,var(--clr-adj));}
-.community-card-hex{font-size:12px;color:var(--tx2);font-family:var(--fn);}
-.community-card-count{font-size:11px;color:var(--tx3);font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin-top:1px;}
+.community-card-hex{font-size:13px;color:var(--tx2);font-family:var(--fn);}
+.community-card-count{font-size:12px;color:var(--tx3);font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin-top:1px;}
 /* MD07: spacer that floats the right-side button cluster */
 .community-card-hdr-spacer{flex:1 1 auto;min-width:8px;}
 .community-card-share{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx2);cursor:pointer;padding:8px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease),background var(--ease);}
