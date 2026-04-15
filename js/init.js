@@ -944,6 +944,18 @@ function _startMyTrackedSub() {
     _myTrackedAlchemists = alchemists || [];
     _myTrackedCatIds = new Set(_myTrackedCatalysts.map((c) => c.catId));
     _myTrackedAlchUids = new Set(_myTrackedAlchemists.map((a) => a.uid));
+
+    // MD#10: seed defaults for new accounts — auto-follow nodeblast.dev
+    // and auto-pin the three original games on first visit.
+    if (State.user && _myTrackedCatalysts.length === 0 && _myTrackedAlchemists.length === 0) {
+      const seededKey = 'nb-tracked-seeded-' + State.user.uid;
+      if (!localStorage.getItem(seededKey)) {
+        try { localStorage.setItem(seededKey, '1'); } catch {}
+        followAlchemist(SYSTEM_PROFILE).catch(() => {});
+        const gameCats = getGamesAsCatalysts();
+        for (const cat of gameCats) pinCatalyst(cat).catch(() => {});
+      }
+    }
     // Update counts in the dropdown header.
     const countEl = document.getElementById('acct-pinned-count');
     if (countEl) {
