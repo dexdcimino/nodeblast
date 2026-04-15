@@ -57,7 +57,7 @@ export function getThemeAdjustedLogoColor(hex) {
   if (!hex) return hex;
   if (State.theme === 'dark') return hex;
   const lum = _relativeLuminance(hex);
-  return _mixBlack(hex, lum > 0.45 ? 0.42 : 0.22);
+  return _mixBlack(hex, lum > 0.65 ? 0.30 : 0.15);
 }
 
 export function applyTheme(theme, skipTransition = false) {
@@ -100,7 +100,7 @@ function _updateAuthAccent() {
   const pal = PALETTES[State.palette] || PALETTES.bold;
   const isDark = State.theme === 'dark';
   const palLum = _relativeLuminance(pal.clr);
-  const accent = isDark ? pal.clr : _mixBlack(pal.clr, palLum > 0.45 ? 0.45 : 0.25);
+  const accent = isDark ? pal.clr : _mixBlack(pal.clr, palLum > 0.65 ? 0.30 : 0.15);
   document.getElementById('auth-card')?.style.setProperty('--auth-accent', accent);
 }
 
