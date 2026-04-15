@@ -713,7 +713,7 @@ function _renderProfileView(user, catalysts, isOwn) {
     } else {
       const empty = document.createElement('div');
       empty.className = 'hex-empty';
-      empty.textContent = isOwn ? 'Pin catalysts from the community hub' : 'Nothing pinned yet';
+      empty.textContent = isOwn ? 'Pin catalysts from the community hub' : 'No catalysts yet';
       pinnedCol.appendChild(empty);
     }
   }
@@ -730,7 +730,7 @@ function _renderProfileView(user, catalysts, isOwn) {
     if (alchemistsToShow.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'hex-empty';
-      empty.textContent = isOwn ? 'Pin alchemists from the community hub' : 'No pinned alchemists yet';
+      empty.textContent = isOwn ? 'Follow alchemists from the community hub' : 'No alchemists yet';
       followingCol.appendChild(empty);
     } else {
       const loading = document.createElement('div');
