@@ -1428,19 +1428,7 @@ function _buildCommunityCard(group) {
   hexRow.innerHTML = `<span class="community-card-hex-dot"></span><span class="community-card-hex">#${escapeHtml(hex)}</span>`;
   meta.appendChild(nameEl);
   meta.appendChild(hexRow);
-  // Social icons — rendered below the hex row, smaller than the
-  // profile-bar variant. Clicks are stopped from bubbling to the
-  // header so opening a link doesn't also navigate to the profile.
-  const socialHTML = renderSocialIconsHTML(group.socialLinks, { extraClass: 'social-icons--sm' });
-  if (socialHTML) {
-    const socialWrap = document.createElement('div');
-    socialWrap.className = 'community-card-socials';
-    socialWrap.innerHTML = socialHTML;
-    socialWrap.addEventListener('click', (e) => e.stopPropagation());
-    meta.appendChild(socialWrap);
-  }
-  // MD07: count label moved INSIDE the meta column (under name/hex) so
-  // it stops fighting the header's right-side button cluster for space.
+  // Count label stays in meta (under name/hex).
   const count = document.createElement('span');
   count.className = 'community-card-count';
   const n = group.catalysts.length;
@@ -1449,33 +1437,21 @@ function _buildCommunityCard(group) {
 
   hdr.appendChild(meta);
 
-  // MD07: flexible spacer takes all leftover width so the icon cluster
-  // below floats right — replaces the old margin-left:auto on count.
+  // Social icons — placed between meta and spacer, mirroring the
+  // profile-bar layout. Clicks are stopped from bubbling.
+  const socialHTML = renderSocialIconsHTML(group.socialLinks, { extraClass: 'social-icons--sm' });
+  if (socialHTML) {
+    const socialWrap = document.createElement('div');
+    socialWrap.className = 'community-card-socials';
+    socialWrap.innerHTML = socialHTML;
+    socialWrap.addEventListener('click', (e) => e.stopPropagation());
+    hdr.appendChild(socialWrap);
+  }
+
+  // Flexible spacer — floats the icon cluster to the right.
   const hdrSpacer = document.createElement('div');
   hdrSpacer.className = 'community-card-hdr-spacer';
   hdr.appendChild(hdrSpacer);
-
-  // MD02: split into two buttons — silent clipboard copy + QR/share modal.
-  // stopPropagation so clicks don't also fire the header's navigate handler.
-  const copyLinkBtn = document.createElement('button');
-  copyLinkBtn.type = 'button';
-  copyLinkBtn.className = 'community-card-share';
-  copyLinkBtn.setAttribute('data-tip', 'Copy profile link');
-  copyLinkBtn.setAttribute('aria-label', 'Copy profile link');
-  copyLinkBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-  copyLinkBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    const name = (group.displayName || '').toLowerCase();
-    const slug = buildUserSlug(name, hex);
-    const link = `${window.location.origin}/${slug}`;
-    try {
-      await navigator.clipboard.writeText(link);
-      toast(`${group.displayName || 'Profile'} link copied!`);
-    } catch {
-      toast(link);
-    }
-  });
-  hdr.appendChild(copyLinkBtn);
 
   const qrBtn = document.createElement('button');
   qrBtn.type = 'button';
