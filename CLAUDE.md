@@ -25,6 +25,9 @@ Creator portfolio platform at nodeblast.dev. Shares Firebase project (dexnote-d7
 - New Firestore collections for NodeBlast: catalysts/, votes/
 - Firebase Storage path for thumbnails: /catalysts/{userId}/{catalystId}/thumb
 
+## Git Workflow
+- **Always work directly on `main`. Never create feature branches.** Solo-dev project — standard branch/PR flow is overhead without payoff. Commit and push to `main` immediately after each task.
+
 ## Firestore Rules
 - `catalyst_backups` subcollection under `users/{userId}` requires read/write rules (same pattern as `account_backups`, `deleted_sessions`, etc.). Always keep `catalyst_backups` rules in sync when updating `firestore.rules` — omitting it causes `saveCatalystBackup` to silently fail against the deny-all catch-all.
 - Required composite indexes for `catalysts` collection (keep `firestore.indexes.json` in sync):
