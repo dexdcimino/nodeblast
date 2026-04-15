@@ -100,6 +100,24 @@ const _profileActiveTabs = (() => {
 })();
 // NB-MD05: collapsed community cards — session-only, keyed by creator UID
 const _collapsedCards = new Set();
+// MD#16: undo/redo stack for card collapse/expand actions.
+const _collapseUndoStack = [];
+const _collapseRedoStack = [];
+const MAX_UNDO = 30;
+
+function _applyCollapseAction(uid, action) {
+  const card = [...document.querySelectorAll('.community-card')].find(c => {
+    const btn = c.querySelector('.community-vote-pill[data-creator-uid]');
+    return btn && btn.dataset.creatorUid === uid;
+  });
+  if (!card) return false;
+  const collapseBtn = card.querySelector('.community-card-collapse');
+  if (!collapseBtn) return false;
+  const isCollapsed = card.classList.contains('collapsed');
+  if ((action === 'collapse' && isCollapsed) || (action === 'expand' && !isCollapsed)) return false;
+  collapseBtn.click();
+  return true;
+}
 // NB-MD08: tracked data for the currently-viewed non-own profile. Null when
 // viewing own profile (use _myTrackedAlchemists directly) or no profile open.
 let _viewedUserTracked = null;
@@ -1514,6 +1532,9 @@ function _buildCommunityCard(group) {
   collapseBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const nowCollapsed = !card.classList.contains('collapsed');
+    _collapseUndoStack.push({ uid: group.uid, action: nowCollapsed ? 'collapse' : 'expand' });
+    if (_collapseUndoStack.length > MAX_UNDO) _collapseUndoStack.shift();
+    _collapseRedoStack.length = 0;
     if (nowCollapsed) {
       _collapsedCards.add(group.uid);
       card.classList.add('collapsed');
@@ -2915,6 +2936,31 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       focusSearch();
       return;
+    }
+
+    // MD#16: Ctrl/Cmd+Z undo / Ctrl/Cmd+Shift+Z redo for card collapse.
+    if (!isTyping) {
+      const isMac = navigator.platform?.includes('Mac');
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          const entry = _collapseRedoStack.pop();
+          if (!entry) return;
+          e.preventDefault();
+          _applyCollapseAction(entry.uid, entry.action);
+        } else {
+          const entry = _collapseUndoStack.pop();
+          if (!entry) return;
+          e.preventDefault();
+          const reverseAction = entry.action === 'collapse' ? 'expand' : 'collapse';
+          _collapseRedoStack.push(entry);
+          const stackLen = _collapseUndoStack.length;
+          _applyCollapseAction(entry.uid, reverseAction);
+          // The triggered click re-pushed to undo — remove that entry.
+          if (_collapseUndoStack.length > stackLen) _collapseUndoStack.pop();
+        }
+        return;
+      }
     }
     if (e.key === 'Escape') {
       // MD04: exit modal toggle in play mode (takes priority)
