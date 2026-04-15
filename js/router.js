@@ -51,6 +51,8 @@ export function getRoute() {
       return { page: 'games' };
     }
   }
+  if (path === '/catalysts') return { page: 'feed', mode: 'catalysts' };
+  if (path === '/alchemists') return { page: 'feed', mode: 'alchemists' };
   if (path === '/games') return { page: 'games' };
   if (path === '/nodesplit') return { page: 'nodesplit' };
   if (path === '/dotsim') return { page: 'dotsim' };

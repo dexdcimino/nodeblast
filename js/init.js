@@ -1841,10 +1841,15 @@ async function renderFeedRoute() {
   hideAllViews();
   showFilterBar();
   setPageTitle([]);
+  // MD#14: apply mode from URL route if present
+  if (_currentRoute?.mode === 'catalysts' || _currentRoute?.mode === 'alchemists') {
+    _feedViewMode = _currentRoute.mode;
+    document.querySelectorAll('.feed-mode-btn').forEach((b) => {
+      b.classList.toggle('selected', b.dataset.mode === _feedViewMode);
+    });
+  }
   // Skeleton briefly paints into #honeycomb before .feed-mode flips
-  // over to the community list. Acceptable loading flash — swapping
-  // to a community-shaped skeleton would double the code for a
-  // sub-second difference.
+  // over to the community list.
   renderSkeleton();
   _currentFeedSnapshot = [];
   const unsub = subscribePublicFeed(_currentCategory, (catalysts) => {
@@ -2064,6 +2069,14 @@ async function renderRoute({ force = false } = {}) {
   // "+ Add" tile depends on whether the viewer is the owner.
   if (!force && route.page === 'feed' && _currentRoute?.page === 'feed') {
     _currentRoute = route;
+    // MD#14: if URL mode changed, swap view modes and repaint from cache.
+    if ((route.mode === 'catalysts' || route.mode === 'alchemists') && route.mode !== _feedViewMode) {
+      _feedViewMode = route.mode;
+      document.querySelectorAll('.feed-mode-btn').forEach((b) => {
+        b.classList.toggle('selected', b.dataset.mode === _feedViewMode);
+      });
+      _repaintFeed();
+    }
     _updateViewToggle();
     return;
   }
@@ -2716,7 +2729,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Community / My Profile view toggle in the header.
   document.getElementById('view-toggle-community')?.addEventListener('click', () => {
-    navigate('/');
+    const modePath = _feedViewMode === 'catalysts' ? '/catalysts' : '/alchemists';
+    navigate(modePath);
   });
   document.getElementById('view-toggle-profile')?.addEventListener('click', () => {
     if (!State.user) { toast('Sign in to view your profile'); return; }
@@ -2780,6 +2794,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (mode !== 'catalysts' && mode !== 'alchemists') return;
       if (mode === _feedViewMode) return;
       _feedViewMode = mode;
+      // MD#14: reflect current mode in URL (replaceState so toggling
+      // doesn't flood browser history).
+      const newPath = mode === 'alchemists' ? '/alchemists' : '/catalysts';
+      if (window.location.pathname !== newPath) {
+        history.replaceState({}, '', newPath);
+      }
       // Per-account persistence — signed-out users get no memory,
       // so their next visit always reverts to Alchemists (MD17).
       if (State.user?.uid) {
