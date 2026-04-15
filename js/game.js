@@ -780,7 +780,8 @@ function _buildPickupGunModel(gunIndex) {
 
 function _buildGunPickups() {
   const B = window.BABYLON;
-  const PICKUP_POS = { x: 0, z: 0 };
+  const PICKUP_POS = { x: 55, z: -55 };
+  const TABLE_BASE_Y = 4.0; // sits on top of fortress upper platform
   const TABLE_W = 1.2, TABLE_D = 1.2, TABLE_H = 0.8;
   const LEG_W = 0.12, LEG_D = 0.12;
   const gc = GUNS[4].color;
@@ -788,7 +789,7 @@ function _buildGunPickups() {
   const tableTop = B.MeshBuilder.CreateBox('pickup_table_top', {
     width: TABLE_W, height: 0.08, depth: TABLE_D
   }, _scene);
-  tableTop.position.set(PICKUP_POS.x, TABLE_H, PICKUP_POS.z);
+  tableTop.position.set(PICKUP_POS.x, TABLE_BASE_Y + TABLE_H, PICKUP_POS.z);
   const ttMat = new B.StandardMaterial('pickup_tt_mat', _scene);
   ttMat.diffuseColor = new B.Color3(0.12, 0.14, 0.12);
   ttMat.emissiveColor = new B.Color3(0.02, 0.06, 0.03);
@@ -800,14 +801,14 @@ function _buildGunPickups() {
     const leg = B.MeshBuilder.CreateBox('pickup_leg_' + li, {
       width: LEG_W, height: TABLE_H, depth: LEG_D
     }, _scene);
-    leg.position.set(lx, TABLE_H / 2, lz);
+    leg.position.set(lx, TABLE_BASE_Y + TABLE_H / 2, lz);
     leg.material = ttMat;
   }
 
   const glowRing = B.MeshBuilder.CreateTorus('pickup_glow_ring', {
     diameter: 0.8, thickness: 0.03, tessellation: 20
   }, _scene);
-  glowRing.position.set(PICKUP_POS.x, TABLE_H + 0.06, PICKUP_POS.z);
+  glowRing.position.set(PICKUP_POS.x, TABLE_BASE_Y + TABLE_H + 0.06, PICKUP_POS.z);
   glowRing.rotation.x = Math.PI / 2;
   const grMat = new B.StandardMaterial('pickup_gr_mat', _scene);
   grMat.emissiveColor = new B.Color3(gc.r, gc.g, gc.b);
@@ -816,16 +817,16 @@ function _buildGunPickups() {
   glowRing.material = grMat;
 
   const pt = new B.PointLight('pickup_pt',
-    new B.Vector3(PICKUP_POS.x, TABLE_H + 1.5, PICKUP_POS.z), _scene);
+    new B.Vector3(PICKUP_POS.x, TABLE_BASE_Y + TABLE_H + 1.5, PICKUP_POS.z), _scene);
   pt.diffuse = new B.Color3(gc.r, gc.g, gc.b);
   pt.intensity = 1.0; pt.range = 6;
 
   const gunModel = _buildPickupGunModel(4);
-  gunModel.position.set(PICKUP_POS.x, TABLE_H + 0.6, PICKUP_POS.z);
+  gunModel.position.set(PICKUP_POS.x, TABLE_BASE_Y + TABLE_H + 0.6, PICKUP_POS.z);
 
   _gunPickups.push({
     tableTop, glowRing, pt, gunModel,
-    pos: new B.Vector3(PICKUP_POS.x, TABLE_H + 0.6, PICKUP_POS.z),
+    pos: new B.Vector3(PICKUP_POS.x, TABLE_BASE_Y + TABLE_H + 0.6, PICKUP_POS.z),
     slot: 4,
     _currentGunId: 'rocket',
   });
@@ -1078,7 +1079,7 @@ function _physicsTick() {
   _camera.position.x = res.x;
   _camera.position.z = res.z;
 
-  const BOUND = 58;
+  const BOUND = 118;
   _camera.position.x = Math.max(-BOUND, Math.min(BOUND, _camera.position.x));
   _camera.position.z = Math.max(-BOUND, Math.min(BOUND, _camera.position.z));
 
@@ -1326,8 +1327,66 @@ function _buildArenaCollision(){
   [1,2,3].forEach(s=>{_addCol(0,20+s*3,4,2,s*0.5);_addCol(0,-20-s*3,4,2,s*0.5);});
   // Pillars
   [{x:8,z:22},{x:-8,z:22},{x:8,z:-22},{x:-8,z:-22},{x:22,z:8},{x:22,z:-8},{x:-22,z:8},{x:-22,z:-8}].forEach(p=>_addCol(p.x,p.z,2,2,4));
+  // ══ EXPANDED ARENA — QUADRANT COLLISION ══
+
+  // NE Hex Platforms
+  _addCol(55, 55, 10, 10, 3.0);
+  _addCol(55, 55, 6, 6, 5.0);
+  _addCol(48, 48, 3, 3, 2.0);
+  _addCol(62, 48, 3, 3, 2.0);
+  _addCol(48, 62, 3, 3, 2.0);
+  _addCol(62, 62, 3, 3, 2.0);
+  _addCol(70, 55, 1, 8, 2.5);
+  _addCol(55, 70, 8, 1, 2.5);
+
+  // NW Sunken Pit rim walls
+  _addCol(-55, 45, 20, 1, 1.5);
+  _addCol(-55, 65, 20, 1, 1.5);
+  _addCol(-45, 55, 1, 20, 1.5);
+  _addCol(-65, 55, 1, 20, 1.5);
+  _addCol(-52, 52, 2, 2, 4);
+  _addCol(-58, 58, 2, 2, 4);
+  _addCol(-52, 58, 2, 2, 3);
+  _addCol(-58, 52, 2, 2, 3);
+
+  // SE Elevated Fortress
+  _addCol(55, -55, 14, 14, 2.0);
+  _addCol(55, -55, 8, 8, 4.0);
+  _addCol(55, -55, 3, 3, 7.0);
+  _addCol(48, -48, 4, 2, 0.7);
+  _addCol(48, -50, 4, 2, 1.3);
+  _addCol(48, -52, 4, 2, 2.0);
+  _addCol(68, -50, 1, 6, 2.5);
+  _addCol(50, -68, 6, 1, 2.5);
+
+  // SW Trench Network
+  _addCol(-50, -45, 1, 16, 2.0);
+  _addCol(-60, -45, 1, 16, 2.0);
+  _addCol(-55, -38, 10, 1, 2.0);
+  _addCol(-55, -53, 10, 1, 2.0);
+  _addCol(-55, -60, 10, 1, 2.0);
+  _addCol(-45, -55, 3, 3, 5);
+  _addCol(-65, -55, 3, 3, 5);
+  _addCol(-55, -55, 12, 2, 3.5);
+
+  // Mid-ring structures
+  _addCol(35, 0, 4, 7, 2.0);
+  _addCol(-35, 0, 4, 7, 2.0);
+  _addCol(0, 35, 7, 4, 2.0);
+  _addCol(0, -35, 7, 4, 2.0);
+  _addCol(25, 35, 3, 3, 3);
+  _addCol(-25, 35, 3, 3, 3);
+  _addCol(25, -35, 3, 3, 3);
+  _addCol(-25, -35, 3, 3, 3);
+
+  // Outer ring pillars
+  [{x:80,z:0},{x:-80,z:0},{x:0,z:80},{x:0,z:-80},
+   {x:75,z:75},{x:-75,z:75},{x:75,z:-75},{x:-75,z:-75}].forEach(p => {
+    _addCol(p.x, p.z, 2, 2, 6);
+  });
+
   // Fence walls
-  const W=60,FH=3.5,FW=W*2;
+  const W=120,FH=3.5,FW=W*2;
   [{x:0,z:W,rotY:0},{x:0,z:-W,rotY:0},{x:W,z:0,rotY:Math.PI/2},{x:-W,z:0,rotY:Math.PI/2}].forEach((fd,fi)=>{
     _addCol(fd.x,fd.z,fd.rotY===0?FW:0.3,fd.rotY===0?0.3:FW,FH);
     for(let pl=0;pl<Math.floor(FW/24);pl++){
@@ -1375,7 +1434,91 @@ function _buildArenaProc(){
   [{x:0,z:-50},{x:0,z:50},{x:50,z:0},{x:-50,z:0}].forEach((s,i)=>{
     const pad=B.MeshBuilder.CreateGround('sp_'+i,{width:4,height:4},_scene);pad.position.set(s.x,0.02,s.z);pad.material=MGD;
   });
-  const W=60,FH=3.5,FP=8,FW=W*2;
+  // ══ EXPANDED ARENA — VISUAL GEOMETRY ══
+  const MHex = mkMat('mhex', 0.08, 0.15, 0.10, 0, 0.3, 0.12);
+
+  // Extended ground
+  const gndExt = B.MeshBuilder.CreateGround('ground_ext', { width: 260, height: 260, subdivisions: 4 }, _scene);
+  gndExt.position.y = -0.01;
+  gndExt.material = mkMat('gnd_ext', 0.05, 0.06, 0.08);
+
+  // NE Hex Platforms
+  box('hex_base_ne', 10, 3, 10, 55, 55, MD);
+  box('hex_upper_ne', 6, 5, 6, 55, 55, MC);
+  strip('hex_glow_ne', 10, 0.12, 10, 55, 3.08, 55);
+  [{x:48,z:48},{x:62,z:48},{x:48,z:62},{x:62,z:62}].forEach((h, i) => {
+    box('hex_step_ne_' + i, 3, 2, 3, h.x, h.z, MHex);
+    strip('hex_step_g_ne_' + i, 3, 0.08, 3, h.x, 2.08, h.z);
+  });
+  box('hex_wall_ne_e', 1, 2.5, 8, 70, 55, MC);
+  box('hex_wall_ne_n', 8, 2.5, 1, 55, 70, MC);
+
+  // NW Sunken Pit
+  box('pit_s_nw', 20, 1.5, 1, -55, 45, MD);
+  box('pit_n_nw', 20, 1.5, 1, -55, 65, MD);
+  box('pit_e_nw', 1, 1.5, 20, -45, 55, MD);
+  box('pit_w_nw', 1, 1.5, 20, -65, 55, MD);
+  strip('pit_gs_nw', 20, 0.08, 1, -55, 1.56, 45);
+  strip('pit_gn_nw', 20, 0.08, 1, -55, 1.56, 65);
+  [{x:-52,z:52,h:4},{x:-58,z:58,h:4},{x:-52,z:58,h:3},{x:-58,z:52,h:3}].forEach((p, i) => {
+    box('pit_pil_' + i, 2, p.h, 2, p.x, p.z, MC);
+    strip('pit_pilg_' + i, 2, 0.08, 2, p.x, p.h + 0.05, p.z);
+  });
+  const pitLight = new B.PointLight('pit_light_nw', new B.Vector3(-55, 1, 55), _scene);
+  pitLight.diffuse = new B.Color3(0.1, 0.8, 0.4); pitLight.intensity = 1.2; pitLight.range = 18;
+
+  // SE Elevated Fortress
+  box('fort_base_se', 14, 2, 14, 55, -55, MD);
+  box('fort_upper_se', 8, 4, 8, 55, -55, MC);
+  box('fort_tower_se', 3, 7, 3, 55, -55, MD);
+  strip('fort_glow_se', 14, 0.12, 14, 55, 2.08, -55);
+  strip('fort_glow2_se', 8, 0.1, 8, 55, 4.08, -55);
+  [{ z: -48, h: 0.7 }, { z: -50, h: 1.3 }, { z: -52, h: 2.0 }].forEach((r, i) => {
+    box('fort_ramp_' + i, 4, r.h, 2, 48, r.z, MC);
+  });
+  box('fort_wall_e', 1, 2.5, 6, 68, -50, MC);
+  box('fort_wall_s', 6, 2.5, 1, 50, -68, MC);
+  const fortLight = new B.PointLight('fort_light_se', new B.Vector3(55, 8, -55), _scene);
+  fortLight.diffuse = new B.Color3(0.2, 0.6, 1.0); fortLight.intensity = 1.5; fortLight.range = 20;
+
+  // SW Trench Network
+  box('trench_w1', 1, 2, 16, -50, -45, MC);
+  box('trench_w2', 1, 2, 16, -60, -45, MC);
+  box('trench_h1', 10, 2, 1, -55, -38, MC);
+  box('trench_h2', 10, 2, 1, -55, -53, MC);
+  box('trench_h3', 10, 2, 1, -55, -60, MC);
+  box('trench_perch1', 3, 5, 3, -45, -55, MD);
+  box('trench_perch2', 3, 5, 3, -65, -55, MD);
+  const bridgeMesh = B.MeshBuilder.CreateBox('trench_bridge', { width: 12, height: 3.5, depth: 2 }, _scene);
+  bridgeMesh.position.set(-55, 3.5/2, -55); bridgeMesh.material = MC;
+  strip('trench_bg', 12, 0.08, 2, -55, 3.56, -55);
+  const trenchLight = new B.PointLight('trench_light_sw', new B.Vector3(-55, 2, -50), _scene);
+  trenchLight.diffuse = new B.Color3(1.0, 0.3, 0.1); trenchLight.intensity = 0.8; trenchLight.range = 14;
+
+  // Mid-ring hex cover
+  [{x:35,z:0},{x:-35,z:0}].forEach((m, i) => {
+    box('mid_hex_ew_' + i, 4, 2, 7, m.x, m.z, MHex);
+    strip('mid_hex_g_ew_' + i, 4, 0.08, 7, m.x, 2.08, m.z);
+  });
+  [{x:0,z:35},{x:0,z:-35}].forEach((m, i) => {
+    box('mid_hex_ns_' + i, 7, 2, 4, m.x, m.z, MHex);
+    strip('mid_hex_g_ns_' + i, 7, 0.08, 4, m.x, 2.08, m.z);
+  });
+  [{x:25,z:35},{x:-25,z:35},{x:25,z:-35},{x:-25,z:-35}].forEach((d, i) => {
+    box('diag_pil_' + i, 3, 3, 3, d.x, d.z, MC);
+    strip('diag_pilg_' + i, 3, 0.08, 3, d.x, 3.08, d.z);
+  });
+
+  // Outer ring pillars with lights
+  [{x:80,z:0},{x:-80,z:0},{x:0,z:80},{x:0,z:-80},
+   {x:75,z:75},{x:-75,z:75},{x:75,z:-75},{x:-75,z:-75}].forEach((p, i) => {
+    box('outer_pil_' + i, 2, 6, 2, p.x, p.z, MD);
+    strip('outer_pilg_' + i, 2, 0.08, 2, p.x, 6.08, p.z);
+    const opl = new B.PointLight('opl_' + i, new B.Vector3(p.x, 6.5, p.z), _scene);
+    opl.diffuse = new B.Color3(0.0, 0.7, 0.3); opl.intensity = 0.6; opl.range = 12;
+  });
+
+  const W=120,FH=3.5,FP=8,FW=W*2;
   const fenceMat=new B.StandardMaterial('fence_mat',_scene);
   fenceMat.diffuseColor=new B.Color3(0.08,0.10,0.08);fenceMat.emissiveColor=new B.Color3(0.0,0.18,0.06);
   fenceMat.specularColor=new B.Color3(0.1,0.3,0.1);fenceMat.alpha=0.85;
@@ -1427,17 +1570,23 @@ function _buildColorNodes(){
     {r:0.0,g:1.0,b:1.0,name:'cyan'},{r:0.1,g:0.3,b:1.0,name:'blue'},
     {r:0.7,g:0.1,b:1.0,name:'purple'},{r:1.0,g:1.0,b:1.0,name:'white'},
   ];
-  [-50,50].forEach(sz=>{
-    COLORS.forEach((col,ci)=>{
-      const x=8+ci*2.2,z=sz;
-      const sphere=B.MeshBuilder.CreateSphere('color_node_'+col.name+sz,{diameter:0.5,segments:8},_scene);
-      sphere.position.set(x,1.2,z);
-      const mat=new B.StandardMaterial('cnm_'+col.name+sz,_scene);
-      mat.emissiveColor=new B.Color3(col.r,col.g,col.b);mat.disableLighting=true;sphere.material=mat;
-      const pt=new B.PointLight('cnl_'+col.name+sz,new B.Vector3(x,1.2,z),_scene);
-      pt.diffuse=new B.Color3(col.r,col.g,col.b);pt.intensity=0.6;pt.range=3.5;
-      sphere._floatBase=1.2;sphere._floatPhase=ci*0.8;sphere._color=col;
-      _colorNodes.push({sphere,pt,color:col});
+  const nodePositions = [
+    { x: 8, z: -50 }, { x: 8, z: 50 },
+    { x: 55, z: 55 }, { x: -55, z: 55 },
+    { x: 55, z: -55 }, { x: -55, z: -55 },
+    { x: 80, z: 0 }, { x: -80, z: 0 },
+  ];
+  nodePositions.forEach((np, npi) => {
+    COLORS.forEach((col, ci) => {
+      const x = np.x + ci * 2.2, z = np.z;
+      const sphere = B.MeshBuilder.CreateSphere('color_node_' + col.name + '_' + npi, { diameter: 0.5, segments: 8 }, _scene);
+      sphere.position.set(x, 1.2, z);
+      const mat = new B.StandardMaterial('cnm_' + col.name + '_' + npi, _scene);
+      mat.emissiveColor = new B.Color3(col.r, col.g, col.b); mat.disableLighting = true; sphere.material = mat;
+      const pt = new B.PointLight('cnl_' + col.name + '_' + npi, new B.Vector3(x, 1.2, z), _scene);
+      pt.diffuse = new B.Color3(col.r, col.g, col.b); pt.intensity = 0.6; pt.range = 3.5;
+      sphere._floatBase = 1.2; sphere._floatPhase = ci * 0.8 + npi; sphere._color = col;
+      _colorNodes.push({ sphere, pt, color: col });
     });
   });
 }
@@ -1453,7 +1602,7 @@ export function initGame(canvas){
   _createSkybox();
   const hemi=new B.HemisphericLight('hemi',new B.Vector3(0,1,0),_scene);hemi.intensity=0.30;hemi.diffuse=new B.Color3(0.55,0.60,0.85);hemi.groundColor=new B.Color3(0.04,0.04,0.07);
   const dir=new B.DirectionalLight('dir',new B.Vector3(-0.5,-1,-0.3),_scene);dir.intensity=0.65;dir.diffuse=new B.Color3(0.85,0.82,0.75);dir.position=new B.Vector3(30,50,30);
-  _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=isLowEnd?0.005:0.008;
+  _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=isLowEnd?0.003:0.004;
   _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-48),_scene);_camera.setTarget(B.Vector3.Zero());
   _camera.attachControl(canvas,true);_camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
   _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;

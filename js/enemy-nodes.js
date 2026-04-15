@@ -3,7 +3,7 @@
 //  Defensive version — null-safe throughout
 // ══════════════════════════════════════
 
-const ENEMY_COUNT    = 4;
+const ENEMY_COUNT    = 8;
 const AGGRO_RANGE    = 18;
 const SHOOT_RANGE    = 14;
 const SHOOT_COOLDOWN = 160;   // slightly slower fire rate
@@ -15,12 +15,17 @@ const PATROL_SPEED_BASE = 0.005; // replaces per-enemy random in spawn
 const ENEMY_RADIUS   = 0.6;  // collision radius for wall pushout
 const PROJ_RADIUS    = 0.12; // projectile collision radius vs walls
 
-const NODE_NAMES = ['NODE-AC7', 'NODE-B3X', 'NODE-D9K', 'NODE-F2R'];
+const NODE_NAMES = ['NODE-AC7', 'NODE-B3X', 'NODE-D9K', 'NODE-F2R',
+                    'NODE-G5H', 'NODE-J8M', 'NODE-K1P', 'NODE-L4W'];
 const SPAWN_POS  = [
   { x:  20, z:  20 },
   { x: -20, z:  20 },
   { x:  20, z: -20 },
   { x: -20, z: -20 },
+  { x:  55, z:  55 },
+  { x: -55, z:  55 },
+  { x:  55, z: -55 },
+  { x: -55, z: -55 },
 ];
 
 let _scene        = null;
