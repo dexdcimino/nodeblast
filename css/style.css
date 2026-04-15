@@ -131,14 +131,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #logo-picker.open{display:flex;}
 .logo-picker-col{display:flex;flex-direction:column;gap:6px;}
 .logo-swatch{width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;transition:transform var(--ease),box-shadow var(--ease);box-shadow:0 0 0 1px rgba(255,255,255,.08);}
-.logo-swatch:hover{transform:scale(1.18);}
-.logo-swatch.selected{box-shadow:0 0 0 2px var(--bg2),0 0 0 4px currentColor;transform:scale(1.15);}
-/* White swatch needs a visible border against dark backgrounds */
-.logo-swatch[data-color="#ffffff"]{border:1.5px solid rgba(255,255,255,0.35);}
-.logo-swatch[data-color="#ffffff"].selected{box-shadow:0 0 0 2px #fff,0 0 0 4px rgba(255,255,255,0.3);}
-/* Near-black swatch needs a border against dark backgrounds too */
-.logo-swatch[data-color="#1a1a1a"]{border:1.5px solid rgba(255,255,255,0.15);}
-.logo-swatch[data-color="#1a1a1a"].selected{box-shadow:0 0 0 2px #1a1a1a,0 0 0 4px rgba(255,255,255,0.3);}
+.logo-swatch:hover{transform:scale(1.25);}
+.logo-swatch:active{transform:scale(1.35);}
+.logo-swatch.selected{box-shadow:0 0 0 2px var(--bg2),0 0 0 4px currentColor;transform:scale(1.2);}
+.logo-swatch[data-color="#ffffff"],.logo-swatch[data-color="#9AA5B4"]{border:1.5px solid var(--bdr);}
 
 /* Optical vertical alignment: Outfit at line-height:1 has ~6px of empty
    space below the baseline for descenders. "nodeblast" has none, so the
