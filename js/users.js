@@ -91,6 +91,21 @@ export async function getUserByUsernameHex(username, hex) {
       return { uid: d.id, ...d.data() };
     }
 
+    // Title-case fallback for URL slugs that lost original casing
+    const titleCase = lower.charAt(0).toUpperCase() + lower.slice(1);
+    if (titleCase !== username && titleCase !== lower) {
+      const q4 = query(
+        collection(db, 'users'),
+        where('displayName', '==', titleCase),
+        limit(1),
+      );
+      const snap4 = await getDocs(q4);
+      if (!snap4.empty) {
+        const d = snap4.docs[0];
+        return { uid: d.id, ...d.data() };
+      }
+    }
+
     return null;
   } catch (err) {
     console.warn('[users] getUserByUsernameHex failed:', err);
