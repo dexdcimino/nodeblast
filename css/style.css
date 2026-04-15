@@ -771,8 +771,9 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-count{font-size:11px;color:var(--tx3);font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin-top:1px;}
 /* MD07: spacer that floats the right-side button cluster */
 .community-card-hdr-spacer{flex:1 1 auto;min-width:8px;}
-.community-card-share{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx2);cursor:pointer;padding:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease),background var(--ease);}
+.community-card-share{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx2);cursor:pointer;padding:8px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease),background var(--ease);}
 .community-card-share:hover{color:var(--tx);border-color:var(--clr-adj);background:var(--bg3);}
+.community-card-share svg{width:18px;height:18px;}
 
 /* MD18: follow button on community creator cards. Lives alongside
    the share button in the card header. Pill-shaped so it reads as
@@ -786,8 +787,9 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-tiles{position:relative;display:flex;flex-wrap:wrap;gap:22px;justify-content:center;align-items:flex-start;padding-bottom:36px;}
 
 /* NB-MD05: collapse/expand button + collapsed card state */
-.community-card-collapse{flex-shrink:0;background:transparent;border:none;color:var(--tx3);cursor:pointer;padding:6px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
+.community-card-collapse{flex-shrink:0;background:transparent;border:none;color:var(--tx3);cursor:pointer;padding:8px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
 .community-card-collapse:hover{color:var(--tx);background:rgba(255,255,255,0.07);}
+.community-card-collapse svg{width:18px;height:18px;}
 .community-card.collapsed .community-tiles > *:not(:first-child){display:none;}
 .community-card.collapsed{min-height:0;}
 .community-card.collapsed .community-tiles{padding-bottom:0;}
