@@ -70,13 +70,13 @@ export function getCols(width) {
 
 // Embedded profile grid — denser column counts for smaller tiles.
 export function getEmbeddedCols(width) {
-  if (width >= 1400) return 12;
-  if (width >= 1200) return 10;
-  if (width >= 1000) return 8;
-  if (width >= 800) return 7;
-  if (width >= 600) return 6;
-  if (width >= 400) return 4;
-  return 3;
+  if (width >= 1400) return 8;
+  if (width >= 1200) return 7;
+  if (width >= 1000) return 6;
+  if (width >= 800) return 5;
+  if (width >= 600) return 4;
+  if (width >= 400) return 3;
+  return 2;
 }
 
 function layoutRows(count, COLS) {
