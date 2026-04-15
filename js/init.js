@@ -1625,10 +1625,11 @@ function _buildCommunityCard(group) {
     body.appendChild(tile);
   });
 
-  // NB-MD09 / MD#1: creator-level vote pills — absolute-positioned
-  // inside the body so card heights stay constant regardless of votes.
+  // NB-MD09 / MD#1 / MD#12: creator-level vote pills — absolute-positioned
+  // inside the body. Render for all cards (including own); own-card pills
+  // are read-only (click is toast-gated).
   const isOwnCardForVote = State.user && group.uid === State.user.uid;
-  if (!isOwnCardForVote) {
+  {
     const frostPill = document.createElement('button');
     frostPill.type = 'button';
     frostPill.className = 'community-vote-pill frost';
@@ -1653,6 +1654,7 @@ function _buildCommunityCard(group) {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!State.user) { toast('Sign in to vote'); openSigninModal(); return; }
+        if (isOwnCardForVote) { toast("Can't vote on your own catalysts"); return; }
         const voteType = btn.dataset.voteType;
         const sibling = btn === firePill ? frostPill : firePill;
         const wasActive = btn.classList.contains('active');
