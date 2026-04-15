@@ -712,7 +712,7 @@ function _physicsTick() {
   const ml = Math.sqrt(mx*mx + mz*mz);
   if (ml > 0) { mx /= ml; mz /= ml; }
 
-  _sprinting = _keys['ShiftLeft'] || _keys['ShiftRight'] || false;
+  _sprinting = (_keys['ShiftLeft'] || _keys['ShiftRight']) && _jpFuel > 0;
   const spd  = WALK_SPEED * (_sprinting ? SPRINT_MULT : 1);
   const ctrl = _onGround ? 1.0 : AIR_CONTROL;
   const accel = _sprinting ? SPRINT_INERTIA : INERTIA;
