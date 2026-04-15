@@ -741,6 +741,11 @@ function _renderProfileView(user, catalysts, isOwn) {
   if (tabsEl) tabsEl.style.display = 'none';
   if (colsEl) colsEl.style.display = 'flex';
   if (honeyEl) honeyEl.style.display = 'none';
+  // Defensive: ensure both pinned columns are visible (MD#2 patch).
+  const _pCol = document.getElementById('profile-col-pinned');
+  const _fCol = document.getElementById('profile-col-following');
+  if (_pCol) _pCol.style.display = '';
+  if (_fCol) _fCol.style.display = '';
 
   // My Catalysts — embed grid inside #profile-bar when viewing own
   // profile (MD#14); otherwise render into #profile-col-catalysts.
