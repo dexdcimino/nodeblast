@@ -479,7 +479,10 @@ function showProfileBar(user, catalystCount, isOwn) {
     actionBtn.classList.remove('is-friend');
     actionBtn.onclick = () => {
       openAccountMenuFromPill();
-      setTimeout(() => document.getElementById('acct-edit-btn')?.click(), 80);
+      setTimeout(() => {
+        const editBtn = document.getElementById('acct-edit-btn');
+        if (editBtn) editBtn.click();
+      }, 150);
     };
   } else {
     // Not our own profile — the action button becomes "Add Friend" /
