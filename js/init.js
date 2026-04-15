@@ -263,36 +263,45 @@ async function openQrShareModal({ displayName, hexCode, usernameLower }) {
 
   const nameEl = document.getElementById('qr-share-name');
   if (nameEl) nameEl.textContent = displayName || name;
-  const urlEl = document.getElementById('qr-share-url');
-  if (urlEl) urlEl.textContent = link;
 
-  const copyBtn = document.getElementById('qr-share-copy-btn');
-  if (copyBtn) {
-    copyBtn.onclick = async () => {
+  const urlLink = document.getElementById('qr-share-url-link');
+  if (urlLink) {
+    urlLink.textContent = link;
+    urlLink.href = link;
+  }
+
+  const copyInline = document.getElementById('qr-share-copy-inline');
+  if (copyInline) {
+    copyInline.onclick = async () => {
       try {
         await navigator.clipboard.writeText(link);
-        toast(`${displayName || 'Profile'} link copied!`);
-      } catch {
-        toast(link);
-      }
+        toast('Link copied!');
+      } catch { toast(link); }
     };
   }
 
-  const nativeBtn = document.getElementById('qr-share-native-btn');
-  if (nativeBtn) {
-    if (typeof navigator.share === 'function') {
-      nativeBtn.style.display = '';
-      nativeBtn.onclick = async () => {
-        try {
-          await navigator.share({ title: (displayName || 'Profile') + ' on NodeBlast', url: link });
-        } catch (err) {
-          if (err?.name !== 'AbortError') toast('Share failed');
-        }
+  document.querySelectorAll('.qr-share-link[data-platform]').forEach((btn) => {
+    btn.onclick = () => {
+      const p = btn.dataset.platform;
+      const encoded = encodeURIComponent(link);
+      const title = encodeURIComponent((displayName || 'Profile') + ' on NodeBlast');
+      const urls = {
+        x: `https://x.com/intent/tweet?url=${encoded}&text=${title}`,
+        linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`,
+        reddit: `https://www.reddit.com/submit?url=${encoded}&title=${title}`,
+        email: `mailto:?subject=${title}&body=${encoded}`,
+        whatsapp: `https://wa.me/?text=${title}%20${encoded}`,
       };
-    } else {
-      nativeBtn.style.display = 'none';
-    }
-  }
+      if (p === 'native') {
+        if (navigator.share) navigator.share({ title: decodeURIComponent(title), url: link }).catch(() => {});
+        return;
+      }
+      if (urls[p]) window.open(urls[p], '_blank', 'noopener,width=600,height=500');
+    };
+  });
+
+  const nativeBtn = document.getElementById('qr-share-native-btn');
+  if (nativeBtn) nativeBtn.style.display = (typeof navigator.share === 'function') ? '' : 'none';
 
   modal.classList.add('open');
 

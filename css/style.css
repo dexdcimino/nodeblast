@@ -820,9 +820,15 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #qr-share-name{font-size:18px;font-weight:800;color:var(--tx);}
 #qr-share-qr-wrap{background:#fff;border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:center;}
 #qr-share-canvas{display:block;}
-#qr-share-url{font-size:12px;color:var(--tx3);font-family:var(--fn);word-break:break-all;text-align:center;max-width:260px;}
-#qr-share-actions{display:flex;gap:10px;width:100%;}
-#qr-share-actions .cat-btn{flex:1;justify-content:center;gap:6px;}
+#qr-share-url-row{display:flex;align-items:center;gap:8px;width:100%;max-width:280px;}
+#qr-share-url-link{font-size:13px;color:var(--clr-adj);font-family:var(--fn);word-break:break-all;text-decoration:none;flex:1;min-width:0;}
+#qr-share-url-link:hover{text-decoration:underline;}
+#qr-share-copy-inline{background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx2);cursor:pointer;padding:6px;display:inline-flex;flex-shrink:0;transition:color var(--ease),border-color var(--ease);}
+#qr-share-copy-inline:hover{color:var(--tx);border-color:var(--clr-adj);}
+#qr-share-links{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;width:100%;}
+.qr-share-link{width:44px;height:44px;border-radius:50%;border:1px solid var(--bdr);background:var(--bg3);color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease),background var(--ease),transform .1s;}
+.qr-share-link:hover{color:var(--tx);border-color:var(--clr-adj);background:var(--bg4);transform:scale(1.08);}
+.qr-share-link:active{transform:scale(0.95);}
 
 /* MD18: pin button on community-view hex tiles. Positioned in the
    bottom-right corner inside the clipped hex, so it's visible over
