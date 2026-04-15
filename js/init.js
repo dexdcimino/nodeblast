@@ -44,7 +44,7 @@ import { getUserByUsernameHex } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './router.js';
 import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js';
 import { initNotifications, initHelpPanel } from './notifications.js';
-import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest, applyInviteButtonStates } from './friends.js';
+import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest, applyInviteButtonStates, openDM } from './friends.js';
 import { renderSocialIconsHTML } from './social.js';
 import { renderPlayRoute, destroyPlayRoute } from './play-mode.js';
 import { getGame, SYSTEM_PROFILE, getGamesAsCatalysts, GAME_REGISTRY } from './game-registry.js';
@@ -363,6 +363,10 @@ function showProfileBar(user, catalystCount, isOwn) {
     if (actionBtn) actionBtn.style.display = 'none';
     const shareBtn = document.getElementById('profile-bar-share');
     if (shareBtn) shareBtn.style.display = 'none';
+    const copyBtnHide = document.getElementById('profile-bar-copy');
+    if (copyBtnHide) copyBtnHide.style.display = 'none';
+    const msgBtnHide = document.getElementById('profile-bar-msg');
+    if (msgBtnHide) msgBtnHide.style.display = 'none';
     _viewingOther = null;
     return;
   }
@@ -424,6 +428,35 @@ function showProfileBar(user, catalystCount, isOwn) {
       hexCode: user.hexCode,
       usernameLower: user.usernameLower,
     });
+  }
+
+  const copyBtn = document.getElementById('profile-bar-copy');
+  if (copyBtn) {
+    copyBtn.style.display = 'inline-flex';
+    const slug = buildUserSlug((user.displayName || '').toLowerCase(), user.hexCode);
+    const link = `${window.location.origin}/${slug}`;
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(link);
+        toast(`${user.displayName || 'Profile'} link copied!`);
+      } catch { toast(link); }
+    };
+  }
+
+  const msgBtn = document.getElementById('profile-bar-msg');
+  if (msgBtn) {
+    msgBtn.style.display = 'inline-flex';
+    if (isOwn) {
+      msgBtn.onclick = () => {
+        openAccountMenuFromPill();
+        setTimeout(() => {
+          const peopleTab = document.querySelector('#acct-menu [data-tab="people"]');
+          if (peopleTab) peopleTab.click();
+        }, 100);
+      };
+    } else {
+      msgBtn.onclick = () => openDM(user);
+    }
   }
 
   if (isOwn) {
