@@ -120,7 +120,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 
 #hdr-logo-wrap{position:relative;flex-shrink:0;display:flex;align-items:center;height:100%;}
 #hdr-logo{width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform var(--ease);border-radius:8px;}
-#hdr-logo svg{width:36px;height:36px;display:block;transition:transform var(--ease);}
+#hdr-logo svg{width:36px;height:36px;display:block;transition:transform var(--ease);filter:drop-shadow(0 0 8px rgba(0,0,0,0.4)) drop-shadow(0 0 20px rgba(90,170,114,0.25));}
 #hdr-logo:hover svg{transform:scale(1.1);}
 
 /* Logo color picker — two columns, one for each yin-yang half */
@@ -144,7 +144,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    the ink back onto center without changing layout. Do NOT replace with
    padding/height — no CSS property can measure ink position, so a
    layout-based fix will drift whenever the font or size changes. */
-#hdr-brand{font-size:30px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:center;height:100%;transform:translateY(2px);}
+#hdr-brand{font-size:30px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:center;height:100%;transform:translateY(2px);text-shadow:0 0 10px rgba(0,0,0,0.35), 0 0 24px rgba(90,170,114,0.2);}
 #hdr-brand #brand-node{color:#7ac74f;}
 #hdr-brand #brand-blast{color:#127596;}
 
@@ -801,6 +801,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .creator-vote-btn.active.fire{border-color:#ff6b35;background:rgba(255,107,53,0.12);color:#ff6b35;}
 .creator-vote-btn.active.frost{border-color:#a07850;background:rgba(160,120,80,0.12);color:#c8a87a;}
 .creator-vote-count{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
+.creator-vote-spacer{height:42px;}
 .community-empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px;}
 
 /* MD02: QR Share Modal */

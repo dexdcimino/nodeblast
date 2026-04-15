@@ -1579,6 +1579,10 @@ function _buildCommunityCard(group) {
     voteRow.appendChild(fireBtn);
     voteRow.appendChild(frostBtn);
     card.appendChild(voteRow);
+  } else {
+    const voteSpacer = document.createElement('div');
+    voteSpacer.className = 'creator-vote-spacer';
+    card.appendChild(voteSpacer);
   }
 
   // NB-MD06: aggregate fire / poop vote totals for this creator.
