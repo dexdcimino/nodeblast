@@ -16,7 +16,7 @@ input,textarea,[contenteditable="true"]{user-select:text;}
   --ease:0.15s ease; --r:8px;
 }
 [data-theme="dark"]  { --bg:#0f1012;--bg2:#16171b;--bg3:#1d1e23;--bg4:#23242a;--bdr:#28292f;--tx:#dfe0e6;--tx2:#82848f;--tx3:#52535e; --clr-adj:var(--clr); --clr-adj-on:var(--clr-on,#fff); }
-[data-theme="light"] { --bg:#B0B7C0;--bg2:#BCC3CB;--bg3:#C5CCD4;--bg4:#CDD4DC;--bdr:#A0A8B2;--tx:#1C1F24;--tx2:#3E4550;--tx3:#6A7280; --clr-adj:color-mix(in hsl,var(--clr) 75%,black 25%); --clr-adj-on:var(--clr-title-on,#fff); }
+[data-theme="light"] { --bg:#B0B7C0;--bg2:#BCC3CB;--bg3:#C5CCD4;--bg4:#CDD4DC;--bdr:#A0A8B2;--tx:#1C1F24;--tx2:#3E4550;--tx3:#6A7280; --clr-adj:var(--clr); --clr-adj-on:var(--clr-title-on,#fff); }
 
 /* Theme transition */
 html.theme-transition,
