@@ -21,25 +21,20 @@ const PALETTES = {
 // ══════════════════════════════════════════════════════════════
 
 export const LOGO_PALETTE = [
-  { hex: '#127596', name: 'DexNote Blue' },     //  1
-  { hex: '#E8453C', name: 'Rich Red' },         //  2
-  { hex: '#F26B1C', name: 'Lambo Orange' },     //  3
-  { hex: '#F2C41C', name: 'Golden Yellow' },    //  4
-  { hex: '#7AC74F', name: 'Natural Green' },    //  5
-  { hex: '#2ECCC1', name: 'Teal Cyan' },        //  6
-  { hex: '#378ADD', name: 'Clean Blue' },       //  7
-  { hex: '#8B5CF6', name: 'Electric Violet' },  //  8
-  { hex: '#D946A8', name: 'Magenta Pink' },     //  9
-  { hex: '#9AA5B4', name: 'Cool Gray' },        // 10
-  { hex: '#ffffff', name: 'White' },            // 11
-  { hex: '#1a1a1a', name: 'Near Black' },       // 12
+  { hex: '#2D7FF9', name: 'Volt Blue' },       //  1
+  { hex: '#18BFBF', name: 'Reactor Teal' },    //  2
+  { hex: '#45D26A', name: 'Blast Green' },      //  3
+  { hex: '#F5C842', name: 'Arc Yellow' },       //  4
+  { hex: '#F26B1C', name: 'Lambo Orange' },     //  5
+  { hex: '#E8453C', name: 'Rich Red' },         //  6
+  { hex: '#F24E8A', name: 'Hot Pink' },         //  7
+  { hex: '#A855F7', name: 'Plasma Purple' },    //  8
+  { hex: '#9AA5B4', name: 'Cool Gray' },        //  9
+  { hex: '#ffffff', name: 'White' },            // 10
 ];
 
-// Defaults from assets/nodeblast_logo_v2.svg.
-// .st1 (#7ac74f green) fills nodeblast_logo_left; .st0 (#127596 teal)
-// fills nodeblast_logo_right. "Top" = left column, "Bot" = right column.
-export const DEFAULT_LOGO_TOP = '#7ac74f';   // SVG .st1 green (left)
-export const DEFAULT_LOGO_BOT = '#127596';   // SVG .st0 teal (right)
+export const DEFAULT_LOGO_TOP = '#45D26A';   // Blast Green
+export const DEFAULT_LOGO_BOT = '#2D7FF9';   // Volt Blue
 
 let _transTimer = null;
 let _currentAccent = null;
