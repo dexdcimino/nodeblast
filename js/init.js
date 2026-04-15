@@ -506,6 +506,12 @@ function showProfileBar(user, catalystCount, isOwn) {
       toggleBtn.onclick = () => {
         const nowCollapsed = !profileBar.classList.contains('collapsed');
         profileBar.classList.toggle('collapsed', nowCollapsed);
+        if (nowCollapsed) {
+          profileBar.classList.remove('has-grid');
+        } else {
+          const gridEl = document.getElementById('profile-bar-catalysts');
+          if (gridEl && gridEl.children.length > 0) profileBar.classList.add('has-grid');
+        }
         toggleBtn.setAttribute('data-tip', nowCollapsed ? 'Expand' : 'Collapse');
         try { localStorage.setItem('nb-profile-collapsed', nowCollapsed ? '1' : '0'); } catch {}
       };
