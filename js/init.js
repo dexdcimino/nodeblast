@@ -543,7 +543,7 @@ function showProfileBar(user, catalystCount, isOwn) {
       const collapsed = localStorage.getItem('nb-profile-collapsed') === '1';
       profileBar.classList.toggle('collapsed', collapsed);
       toggleBtn.setAttribute('data-tip', collapsed ? 'Expand' : 'Collapse');
-      toggleBtn.onclick = () => {
+      const _doToggleCollapse = () => {
         const nowCollapsed = !profileBar.classList.contains('collapsed');
         profileBar.classList.toggle('collapsed', nowCollapsed);
         if (nowCollapsed) {
@@ -555,7 +555,32 @@ function showProfileBar(user, catalystCount, isOwn) {
         toggleBtn.setAttribute('data-tip', nowCollapsed ? 'Expand' : 'Collapse');
         try { localStorage.setItem('nb-profile-collapsed', nowCollapsed ? '1' : '0'); } catch {}
       };
+      toggleBtn.onclick = _doToggleCollapse;
+
+      // MD#19: click blank space in the header row toggles collapse too.
+      // Attached once per page load; cached function replaced on re-render.
+      profileBar._nbToggleCollapse = _doToggleCollapse;
+      if (!profileBar._nbHeaderClickWired) {
+        profileBar._nbHeaderClickWired = true;
+        profileBar.addEventListener('click', (e) => {
+          const fn = profileBar._nbToggleCollapse;
+          if (!fn) return;
+          const target = e.target;
+          if (target.closest('button, a, input, .hex-tile, .icon-btn, #profile-bar-catalysts, #profile-bar-socials, .social-icon')) return;
+          if (target === profileBar ||
+              target.id === 'profile-bar-left' ||
+              target.id === 'profile-bar-right' ||
+              target.id === 'profile-bar-info' ||
+              target.id === 'profile-bar-name' ||
+              target.id === 'profile-bar-hex-row' ||
+              target.id === 'profile-bar-hex-label' ||
+              target.id === 'profile-bar-hex-dot') {
+            fn();
+          }
+        });
+      }
     } else {
+      if (profileBar) profileBar._nbToggleCollapse = null;
       toggleBtn.style.display = 'none';
       profileBar.classList.remove('collapsed');
     }
