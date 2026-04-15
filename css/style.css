@@ -753,6 +753,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card[data-count="3"]{flex-basis:calc(45% - 14px);min-width:380px;}
 .community-card[data-count="4"]{flex-basis:calc(55% - 14px);min-width:440px;}
 .community-card[data-count="5"]{flex-basis:calc(65% - 14px);min-width:500px;}
+.community-card[data-count="6"]{flex-basis:calc(70% - 14px);min-width:560px;}
+.community-card[data-count="7"]{flex-basis:calc(75% - 14px);min-width:600px;}
+.community-card[data-count="8"]{flex-basis:calc(80% - 14px);min-width:640px;}
+.community-card[data-count="9"]{flex-basis:calc(90% - 14px);min-width:700px;}
 .community-card[data-count="max"]{flex-basis:100%;}
 .community-card:hover{border-color:color-mix(in srgb,var(--clr-adj) 35%,var(--bdr));}
 .community-card-hdr{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;padding-bottom:14px;border-bottom:1px solid var(--bdr);margin-bottom:16px;cursor:pointer;min-width:0;overflow:hidden;}

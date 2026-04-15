@@ -1342,8 +1342,16 @@ function _sortCardTiles(tiles) {
 // against container width so tiles stay visually consistent between
 // cards no matter how many catalysts a creator has. 180px works well
 // alongside the card's padding and the grid's side margins.
-const COMMUNITY_TILE_W = 180;
-const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_W * 1.1547);
+const COMMUNITY_TILE_BASE_W = 180;
+const COMMUNITY_TILE_W = COMMUNITY_TILE_BASE_W;
+const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_BASE_W * 1.1547);
+function getCommunityTileSize(count) {
+  let w = COMMUNITY_TILE_BASE_W;
+  if (count > 8) w = 120;
+  else if (count > 6) w = 140;
+  else if (count > 5) w = 160;
+  return { w, h: Math.round(w * 1.1547) };
+}
 
 // NB-MD09: reflect the user's current creator-vote (or lack thereof)
 // on every matching card in the DOM. Called both after pre-fetching
@@ -1365,7 +1373,7 @@ function _buildCommunityCard(group) {
   if (State.user && group.uid === State.user.uid) card.classList.add('own-card');
   // NB-MD07: size tier based on catalyst count (6+ → full row)
   const catCount = group.catalysts.length;
-  card.dataset.count = catCount >= 6 ? 'max' : String(Math.max(1, Math.min(catCount, 5)));
+  card.dataset.count = catCount >= 10 ? 'max' : String(Math.max(1, Math.min(catCount, 9)));
   card.style.setProperty('--card-hex', hexColor);
 
   // Header row — avatar + name + hex + count. Clicking anywhere in the
@@ -1516,15 +1524,16 @@ function _buildCommunityCard(group) {
   // Cap visible tiles at 5; no +N overflow badge — extras are simply
   // not rendered, and viewing the full list means clicking through to
   // the creator's profile.
-  const MAX_VISIBLE_TILES = 5;
+  const MAX_VISIBLE_TILES = 12;
   const sortedTiles = _sortCardTiles(group.catalysts);
   const tilesToShow = sortedTiles.slice(0, MAX_VISIBLE_TILES);
+  const tileSize = getCommunityTileSize(tilesToShow.length);
   tilesToShow.forEach((cat) => {
     const tile = createCatalystTileElement(
       cat,
       {
-        width: COMMUNITY_TILE_W,
-        height: COMMUNITY_TILE_H,
+        width: tileSize.w,
+        height: tileSize.h,
         showCreatorAvatar: true,
         showPinButton: !hideOwnPin,
         isPinned: _myTrackedCatIds.has(cat.id),
