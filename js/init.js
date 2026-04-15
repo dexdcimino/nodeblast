@@ -353,7 +353,7 @@ function showProfileBar(user, catalystCount, isOwn) {
     document.getElementById('profile-bar-name').innerHTML = escapeHtml(user.displayName) + ' <span style="color:var(--clr-adj);font-size:14px;vertical-align:middle">⬡</span>';
     document.getElementById('profile-bar-hex-dot').style.background = hexColor;
     document.getElementById('profile-bar-hex-label').textContent = '#' + user.hexCode;
-    document.getElementById('profile-bar-count').textContent = catalystCount + (catalystCount === 1 ? ' game' : ' games');
+    _updateProfileBarCountHex(catalystCount, 'game');
     const socialEl = document.getElementById('profile-bar-socials');
     if (socialEl) { socialEl.innerHTML = ''; socialEl.classList.remove('visible'); }
     const bioEl = document.getElementById('profile-bio');
@@ -389,8 +389,7 @@ function showProfileBar(user, catalystCount, isOwn) {
   document.getElementById('profile-bar-name').innerHTML = renderUsername(user.displayName || 'anon', null, !!user.isAdmin);
   document.getElementById('profile-bar-hex-dot').style.background = hexColor;
   document.getElementById('profile-bar-hex-label').textContent = '#' + (user.hexCode || '5aaa72');
-  document.getElementById('profile-bar-count').textContent =
-    catalystCount + (catalystCount === 1 ? ' catalyst' : ' catalysts');
+  _updateProfileBarCountHex(catalystCount, 'catalyst');
 
   // Social links row — empty array renders nothing at all (renderSocialIconsHTML
   // returns '' for 0-length input), which keeps the profile bar tight
@@ -540,6 +539,14 @@ function _updateViewToggle() {
     && (routeHex ? routeHex === myHex : true);
   profile.classList.toggle('selected', isOwnProfile);
   profile.disabled = !signedIn;
+}
+
+function _updateProfileBarCountHex(count, word) {
+  const n = Number(count) || 0;
+  const numEl = document.getElementById('profile-bar-count-num');
+  if (numEl) numEl.textContent = String(n);
+  const hexEl = document.getElementById('profile-bar-count-hex');
+  if (hexEl) hexEl.setAttribute('data-tip', n + ' ' + (n === 1 ? word : word + 's'));
 }
 
 function openAccountMenuFromPill() {

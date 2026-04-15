@@ -115,6 +115,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* Light mode: lighter header to match DexNote's text-box feel */
 [data-theme="light"] #hdr{background:var(--bg4);border-bottom-color:var(--bdr);box-shadow:0 2px 8px rgba(0,0,0,.06);}
 [data-theme="light"] #profile-bar{background:var(--bg4);border-color:var(--bdr);}
+#profile-bar-count-hex{flex-shrink:0;cursor:default;display:flex;align-items:center;justify-content:center;}
+#profile-bar-count-hex svg{display:block;}
 #hdr-left{display:flex;align-items:center;gap:14px;min-width:0;height:100%;}
 #hdr-mid{display:flex;align-items:center;justify-content:center;gap:10px;position:relative;}
 #hdr-right{display:flex;align-items:center;justify-content:flex-end;gap:5px;min-width:0;}
