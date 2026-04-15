@@ -56,6 +56,17 @@ export function onThemeChange(cb) {
 export function getThemeAdjustedLogoColor(hex) {
   if (!hex) return hex;
   if (State.theme === 'dark') return hex;
+
+  // YIQ perceived luminance — same formula as friends.js _contrastColor
+  // and hex-grid.js _accentBrightnessClass.
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+
+  if (yiq > 180) return hex;
+  if (yiq > 130) return _mixBlack(hex, 0.12);
   return _mixBlack(hex, 0.22);
 }
 
@@ -130,11 +141,23 @@ function _mixWhite(hex, amt) {
 export function applyAccent(hex) {
   if (!hex) hex = DEFAULT_LOGO_TOP;
   const isDark = State.theme === 'dark';
-  const clr = isDark ? hex : _mixBlack(hex, 0.25);
+  const clr = isDark ? hex : getThemeAdjustedLogoColor(hex);
   document.documentElement.style.setProperty('--clr', clr);
   document.documentElement.style.setProperty('--clr-top', _mixWhite(hex, 0.20));
   document.documentElement.style.setProperty('--clr-dk',  _mixBlack(hex, 0.45));
   document.documentElement.style.setProperty('--clr-lt',  _mixWhite(hex, 0.35));
+
+  // Dynamic text-on-accent contrast. Evaluate against the adjusted
+  // color (clr) since that's what actually renders as the background.
+  const h = clr.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  const onColor = yiq >= 150 ? '#111111' : '#ffffff';
+  document.documentElement.style.setProperty('--clr-on', onColor);
+  document.documentElement.style.setProperty('--clr-title-on', onColor);
+
   _currentAccent = hex;
   State.accent = hex;
 }
