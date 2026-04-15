@@ -1431,9 +1431,9 @@ function _buildCommunityCard(group) {
   const qrBtn = document.createElement('button');
   qrBtn.type = 'button';
   qrBtn.className = 'community-card-share';
-  qrBtn.setAttribute('data-tip', 'Share / QR code');
-  qrBtn.setAttribute('aria-label', 'Share profile QR');
-  qrBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="16" y="16" width="3" height="3" fill="currentColor" stroke="none"/><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/></svg>';
+  qrBtn.setAttribute('data-tip', 'Share');
+  qrBtn.setAttribute('aria-label', 'Share profile');
+  qrBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
   qrBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     openQrShareModal({ displayName: group.displayName, hexCode: hex });
