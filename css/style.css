@@ -693,6 +693,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #profile-bar-hex-dot{width:10px;height:10px;border-radius:50%;background:var(--acct-hex,var(--clr-adj));flex-shrink:0;}
 #profile-bar-hex-label{font-size:13px;color:var(--tx2);font-family:var(--fn);}
 #profile-bar-right{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+#profile-bar-left,#profile-bar-right{min-height:56px;}
 #profile-bar-count{font-size:13px;color:var(--tx3);font-weight:500;}
 #profile-bar .cat-btn{padding:6px 16px;font-size:13px;height:34px;}
 
