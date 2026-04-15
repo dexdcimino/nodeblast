@@ -56,18 +56,8 @@ export function onThemeChange(cb) {
 export function getThemeAdjustedLogoColor(hex) {
   if (!hex) return hex;
   if (State.theme === 'dark') return hex;
-
-  // YIQ perceived luminance — same formula as friends.js _contrastColor
-  // and hex-grid.js _accentBrightnessClass.
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-
-  if (yiq > 180) return hex;
-  if (yiq > 130) return _mixBlack(hex, 0.12);
-  return _mixBlack(hex, 0.22);
+  const lum = _relativeLuminance(hex);
+  return _mixBlack(hex, lum > 0.45 ? 0.42 : 0.22);
 }
 
 export function applyTheme(theme, skipTransition = false) {
@@ -109,7 +99,8 @@ export function applyPalette(name) {
 function _updateAuthAccent() {
   const pal = PALETTES[State.palette] || PALETTES.bold;
   const isDark = State.theme === 'dark';
-  const accent = isDark ? pal.clr : _mixBlack(pal.clr, 0.25);
+  const palLum = _relativeLuminance(pal.clr);
+  const accent = isDark ? pal.clr : _mixBlack(pal.clr, palLum > 0.45 ? 0.45 : 0.25);
   document.getElementById('auth-card')?.style.setProperty('--auth-accent', accent);
 }
 
@@ -129,6 +120,14 @@ function _mixWhite(hex, amt) {
   const b = parseInt(h.slice(4, 6), 16);
   const mix = (c) => Math.round(c + (255 - c) * amt).toString(16).padStart(2, '0');
   return '#' + mix(r) + mix(g) + mix(b);
+}
+
+function _relativeLuminance(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 // Apply a user-chosen accent color site-wide. Drives the same --clr /
