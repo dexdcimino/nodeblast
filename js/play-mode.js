@@ -227,6 +227,11 @@ export async function renderPlayRoute(gameId) {
     const result = initGame(canvas);
     _engine = result.engine;
 
+    // Arena is built and rendering — hide loading overlay now
+    // (multiplayer connection happens in background)
+    _setLoadProgress(100, 'Ready!');
+    setTimeout(_hideLoadOverlay, 300);
+
     // Wire damage bridges
     window._nbSendDamage = (targetId, dmg, name) => {
       photonSendDamage(targetId, dmg, name);
@@ -282,8 +287,7 @@ export async function renderPlayRoute(gameId) {
     initPhoton({
       onConnected: (myId) => {
         console.log('[play] photon connected, actor:', myId);
-        _setLoadProgress(100, 'Ready!');
-        setTimeout(_hideLoadOverlay, 400);
+        console.log('[play] multiplayer connected');
         // Assign spawn based on actor number
         const spawnZ = (myId % 2 === 1) ? -48 : 48;
         const spawnX = (Math.random() - 0.5) * 6;
