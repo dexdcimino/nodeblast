@@ -710,16 +710,16 @@ function _updateProfileColumns() {
 
 function _renderProfileView(user, catalysts, isOwn) {
   _currentProfileView = { user, catalysts, isOwn };
-  // Show tabs + columns, hide the flat honeycomb
+  // Columns always visible; tabs hidden (MD#13).
   const tabsEl = document.getElementById('profile-tabs');
   const colsEl = document.getElementById('profile-columns');
   const honeyEl = document.getElementById('honeycomb');
-  if (tabsEl) tabsEl.style.display = '';
+  if (tabsEl) tabsEl.style.display = 'none';
   if (colsEl) colsEl.style.display = 'flex';
   if (honeyEl) honeyEl.style.display = 'none';
 
   // My Catalysts column — hex grid rendered into the column container
-  if (_profileActiveTabs.has('catalysts')) {
+  if (true) {
     _currentTiles = catalysts;
     _currentShowAdd = isOwn;
     _currentEmptyMessage = isOwn
@@ -737,10 +737,15 @@ function _renderProfileView(user, catalysts, isOwn) {
     });
   }
 
-  // Pinned column — only meaningful on own profile
+  // Pinned column — always visible
   const pinnedCol = document.getElementById('profile-col-pinned');
-  if (pinnedCol && _profileActiveTabs.has('pinned')) {
+  if (pinnedCol) {
+    pinnedCol.style.display = '';
     pinnedCol.innerHTML = '';
+    const pinnedTitle = document.createElement('div');
+    pinnedTitle.className = 'profile-col-title';
+    pinnedTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg> Catalysts';
+    pinnedCol.appendChild(pinnedTitle);
     if (isOwn && _myTrackedCatalysts.length > 0) {
       _myTrackedCatalysts.forEach((pinned) => {
         const tile = createCatalystTileElement(
@@ -767,11 +772,15 @@ function _renderProfileView(user, catalysts, isOwn) {
     }
   }
 
-  // NB-MD08: Following column — full community-style cards for each
-  // followed alchemist, showing their latest catalysts.
+  // Following column — always visible
   const followingCol = document.getElementById('profile-col-following');
-  if (followingCol && _profileActiveTabs.has('following')) {
+  if (followingCol) {
+    followingCol.style.display = '';
     followingCol.innerHTML = '';
+    const followingTitle = document.createElement('div');
+    followingTitle.className = 'profile-col-title';
+    followingTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Alchemists';
+    followingCol.appendChild(followingTitle);
     const alchemistsToShow = isOwn
       ? _myTrackedAlchemists
       : (_viewedUserTracked?.alchemists || []);
@@ -794,6 +803,10 @@ function _renderProfileView(user, catalysts, isOwn) {
         // Abort if the profile view has moved on.
         if (!_currentProfileView || _currentProfileView.user?.uid !== requestUid) return;
         followingCol.innerHTML = '';
+        const t = document.createElement('div');
+        t.className = 'profile-col-title';
+        t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Alchemists';
+        followingCol.appendChild(t);
         alchemistsToShow.forEach((alch) => {
           const cats = catMap.get(alch.uid) || [];
           // INFRA-MD01: canonical-first read with legacy fallback
