@@ -12,7 +12,7 @@ export const SYSTEM_PROFILE = {
   hexCode: '000000',
   uid: 'system',
   isSystem: true,
-  bio: 'Arena 1 \u00b7 Dot-Sim \u00b7 NodeSplit \u2014 more dropping soon.',
+  bio: '',
 };
 
 export const GAME_REGISTRY = [

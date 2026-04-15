@@ -1770,13 +1770,33 @@ async function renderGamesRoute() {
   setPageTitle(['games']);
   showProfileBar(SYSTEM_PROFILE, GAME_REGISTRY.length, false);
   const gameCatalysts = getGamesAsCatalysts();
+
+  // Embed games into the same container used on own profile.
+  const gridEl = document.getElementById('profile-bar-catalysts');
+  if (gridEl) {
+    gridEl.style.position = 'relative';
+    gridEl.style.display = '';
+    gridEl.classList.add('visible');
+    document.getElementById('profile-bar')?.classList.add('has-grid');
+  }
+
   renderHexGrid({
     tiles: gameCatalysts,
     showAdd: false,
     emptyMessage: 'No games yet.',
+    container: 'profile-bar-catalysts',
+    getColsFn: getEmbeddedCols,
+    gap: 24,
     onTileClick: handleGameTileClick,
     showCreatorAvatar: false,
   });
+
+  const colsEl = document.getElementById('profile-columns');
+  if (colsEl) colsEl.style.display = 'flex';
+  const pinnedCol = document.getElementById('profile-col-pinned');
+  const followingCol = document.getElementById('profile-col-following');
+  if (pinnedCol) pinnedCol.style.display = '';
+  if (followingCol) followingCol.style.display = '';
 }
 
 async function renderFeedRoute() {
