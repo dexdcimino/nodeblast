@@ -825,6 +825,7 @@ function _updateProfileColumns() {
 }
 
 function _renderProfileView(user, catalysts, isOwn) {
+  console.log('[profile-view] rendering', { user: user?.displayName, isOwn, catalystsCount: catalysts?.length });
   _currentProfileView = { user, catalysts, isOwn };
   // Columns always visible; tabs hidden (MD#13).
   const tabsEl = document.getElementById('profile-tabs');
@@ -833,6 +834,7 @@ function _renderProfileView(user, catalysts, isOwn) {
   if (tabsEl) tabsEl.style.display = 'none';
   if (colsEl) colsEl.style.display = 'flex';
   if (honeyEl) { honeyEl.style.display = 'none'; honeyEl.innerHTML = ''; }
+  console.log('[profile-view] colsEl display:', colsEl?.style.display, 'exists:', !!colsEl);
   // Defensive: ensure both pinned columns are visible (MD#2 patch).
   const _pCol = document.getElementById('profile-col-pinned');
   const _fCol = document.getElementById('profile-col-following');
@@ -889,6 +891,7 @@ function _renderProfileView(user, catalysts, isOwn) {
     pinnedTitle.className = 'profile-col-title';
     pinnedTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg> Catalysts';
     pinnedCol.appendChild(pinnedTitle);
+    console.log('[profile-view] rendering pinned col, isOwn:', isOwn, 'tracked:', _myTrackedCatalysts?.length);
     if (isOwn && _myTrackedCatalysts.length > 0) {
       _myTrackedCatalysts.forEach((pinned) => {
         const tile = createCatalystTileElement(
@@ -982,6 +985,12 @@ function _renderProfileView(user, catalysts, isOwn) {
   }
 
   _updateProfileColumns();
+
+  // MD#38: force-ensure honeycomb hidden and columns visible on profile routes
+  const _honeyForce = document.getElementById('honeycomb');
+  if (_honeyForce) _honeyForce.style.display = 'none';
+  const _colsForce = document.getElementById('profile-columns');
+  if (_colsForce) _colsForce.style.display = 'flex';
 }
 
 // MD13: guarded add-catalyst click. Opens the create modal only
