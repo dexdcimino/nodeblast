@@ -949,9 +949,12 @@ function _renderProfileView(user, catalysts, isOwn) {
           e.stopPropagation();
           unpinCatalyst(pinned.catId).then(() => toast('Catalyst unpinned')).catch(() => toast('Failed to unpin'));
         });
-        tile.style.position = 'relative';
-        tile.appendChild(unpinBtn);
-        tilesWrap.appendChild(tile);
+        // MD#59: wrap tile + unpin button so the button isn't clipped by hex clip-path
+        const tileWrap = document.createElement('div');
+        tileWrap.className = 'pinned-tile-wrap';
+        tileWrap.appendChild(tile);
+        tileWrap.appendChild(unpinBtn);
+        tilesWrap.appendChild(tileWrap);
       });
       pinnedCol.appendChild(tilesWrap);
     } else {
