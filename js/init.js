@@ -907,8 +907,23 @@ function _renderProfileView(user, catalysts, isOwn) {
     pinnedTitle.className = 'profile-col-title';
     pinnedTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Catalysts';
     pinnedCol.appendChild(pinnedTitle);
+    // MD#56: search bar
+    const pinnedSearch = document.createElement('input');
+    pinnedSearch.type = 'text';
+    pinnedSearch.className = 'profile-col-search';
+    pinnedSearch.placeholder = 'Search catalysts...';
+    pinnedSearch.addEventListener('input', () => {
+      const q = pinnedSearch.value.toLowerCase();
+      pinnedCol.querySelectorAll('.hex-tile, .community-card').forEach((el) => {
+        const text = el.textContent.toLowerCase();
+        el.style.display = text.includes(q) || !q ? '' : 'none';
+      });
+    });
+    pinnedCol.appendChild(pinnedSearch);
     console.log('[profile-view] rendering pinned col, isOwn:', isOwn, 'tracked:', _myTrackedCatalysts?.length);
     if (isOwn && _myTrackedCatalysts.length > 0) {
+      const tilesWrap = document.createElement('div');
+      tilesWrap.className = 'profile-col-tiles';
       _myTrackedCatalysts.forEach((pinned) => {
         const tile = createCatalystTileElement(
           {
@@ -936,8 +951,9 @@ function _renderProfileView(user, catalysts, isOwn) {
         });
         tile.style.position = 'relative';
         tile.appendChild(unpinBtn);
-        pinnedCol.appendChild(tile);
+        tilesWrap.appendChild(tile);
       });
+      pinnedCol.appendChild(tilesWrap);
     } else {
       const empty = document.createElement('div');
       empty.className = 'profile-col-empty';
@@ -955,6 +971,19 @@ function _renderProfileView(user, catalysts, isOwn) {
     followingTitle.className = 'profile-col-title';
     followingTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Alchemists';
     followingCol.appendChild(followingTitle);
+    // MD#56: search bar
+    const alchSearch = document.createElement('input');
+    alchSearch.type = 'text';
+    alchSearch.className = 'profile-col-search';
+    alchSearch.placeholder = 'Search alchemists...';
+    alchSearch.addEventListener('input', () => {
+      const q = alchSearch.value.toLowerCase();
+      followingCol.querySelectorAll('.community-card').forEach((el) => {
+        const text = el.textContent.toLowerCase();
+        el.style.display = text.includes(q) || !q ? '' : 'none';
+      });
+    });
+    followingCol.appendChild(alchSearch);
     const alchemistsToShow = isOwn
       ? _myTrackedAlchemists
       : (_viewedUserTracked?.alchemists || []);
