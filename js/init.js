@@ -93,10 +93,16 @@ const _profileActiveTabs = (() => {
     const raw = localStorage.getItem('nb-profile-tabs');
     if (raw) {
       const arr = JSON.parse(raw);
-      if (Array.isArray(arr) && arr.length > 0) return new Set(arr);
+      if (Array.isArray(arr) && arr.length > 0) {
+        // MD#48: ensure pinned + following are always included
+        const set = new Set(arr);
+        set.add('pinned');
+        set.add('following');
+        return set;
+      }
     }
   } catch {}
-  return new Set(['catalysts']);
+  return new Set(['catalysts', 'pinned', 'following']);
 })();
 // NB-MD05: collapsed community cards — session-only, keyed by creator UID
 const _collapsedCards = new Set();
