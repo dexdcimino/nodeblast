@@ -890,8 +890,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-tile.hex-tile-flow{position:relative;flex-shrink:0;}
 /* Background image is the hero — bump default opacity so the thumb
    is clearly the star of the tile. The hover brightness bump stays. */
-.hex-tile::before{content:'';position:absolute;inset:0;background-image:var(--thumb,none);background-size:cover;background-position:center;opacity:1;transition:opacity .25s ease,filter .25s ease;}
-.hex-tile:hover::before{opacity:1;filter:brightness(1.05);}
+.hex-tile::before{content:'';position:absolute;inset:0;background-image:var(--thumb,none);background-size:cover;background-position:center;opacity:1;transition:filter .25s ease;}
+.hex-tile:hover::before{filter:brightness(1.05);}
 .hex-tile:hover{transform:scale(1.12);z-index:10;filter:brightness(1.05);transition:transform .2s cubic-bezier(.34,1.56,.64,1), filter .2s ease;}
 .hex-tile-flow:hover{transform:scale(1.1);}
 
@@ -918,11 +918,11 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* Bottom gradient for title legibility. MD21 dialed the intensity
    down ~30% — the previous rgba(0,0,0,0.82) at the base was creating
    a heavy black bar that dominated tiles with bright thumbnails. */
-.hex-fade{position:absolute;left:0;right:0;bottom:0;top:0;background:linear-gradient(to top,rgba(0,0,0,0.45) 0%,rgba(0,0,0,0.2) 20%,rgba(0,0,0,0) 45%);pointer-events:none;}
+.hex-fade{position:absolute;left:0;right:0;bottom:0;top:0;background:linear-gradient(to top,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0.12) 18%,rgba(0,0,0,0) 40%);pointer-events:none;}
 /* No-thumb tiles sit over a flat var(--bg3) background — no photo
    to fight, so the gradient can be even lighter. Just enough dim to
    keep the title visible over whatever theme surface is behind. */
-.hex-tile.no-thumb .hex-fade{background:linear-gradient(to top,rgba(0,0,0,0.25) 0%,rgba(0,0,0,0.1) 22%,rgba(0,0,0,0) 45%);}
+.hex-tile.no-thumb .hex-fade{background:linear-gradient(to top,rgba(0,0,0,0.2) 0%,rgba(0,0,0,0.08) 20%,rgba(0,0,0,0) 40%);}
 
 /* MD23: locked-catalyst tile styles. The thumb pseudo-element gets
    a strong blur + slight dim, and a centered padlock overlay
