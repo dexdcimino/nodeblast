@@ -849,13 +849,17 @@ function _renderProfileView(user, catalysts, isOwn) {
   const gridTarget = isOwn ? 'profile-bar-catalysts' : 'profile-col-catalysts';
   const barCats = document.getElementById('profile-bar-catalysts');
   const catCol = document.getElementById('profile-col-catalysts');
+  const _profileBarEl = document.getElementById('profile-bar');
+  const _wasCollapsed = _profileBarEl?.classList.contains('collapsed');
   if (isOwn) {
+    // MD#33: temporarily uncollapse so the grid container is measurable
+    if (_wasCollapsed) _profileBarEl.classList.remove('collapsed');
     if (barCats) { barCats.style.position = 'relative'; barCats.style.display = ''; barCats.classList.add('visible'); }
-    document.getElementById('profile-bar')?.classList.add('has-grid');
+    _profileBarEl?.classList.add('has-grid');
     if (catCol) catCol.style.display = 'none';
   } else {
     if (barCats) { barCats.style.display = 'none'; barCats.classList.remove('visible'); barCats.innerHTML = ''; }
-    document.getElementById('profile-bar')?.classList.remove('has-grid');
+    _profileBarEl?.classList.remove('has-grid');
     if (catCol) catCol.style.display = '';
   }
   renderHexGrid({
@@ -870,6 +874,11 @@ function _renderProfileView(user, catalysts, isOwn) {
     onCreatorClick: handleCreatorClick,
     onReorder: isOwn ? handleReorder : null,
   });
+  // MD#33: restore collapsed state now that the grid has measured
+  if (isOwn && _wasCollapsed) {
+    _profileBarEl?.classList.add('collapsed');
+    _profileBarEl?.classList.remove('has-grid');
+  }
 
   // Pinned column — always visible
   const pinnedCol = document.getElementById('profile-col-pinned');
