@@ -494,16 +494,29 @@ function showProfileBar(user, catalystCount, isOwn) {
   if (addLinksBtn) {
     if (isOwn) {
       addLinksBtn.style.display = 'inline-flex';
-      addLinksBtn.onclick = () => {
-        openAccountMenuFromPill();
-        setTimeout(() => {
-          const editBtn = document.getElementById('acct-edit-btn');
-          if (editBtn) editBtn.click();
+      addLinksBtn.onclick = (e) => {
+        e.stopPropagation();
+        const acctMenu = document.getElementById('acct-menu');
+        const acctBtn = document.getElementById('acct-btn');
+        if (acctMenu && acctBtn) {
+          if (acctMenu.style.display === 'none' || !acctMenu.style.display || getComputedStyle(acctMenu).display === 'none') {
+            acctBtn.click();
+          }
           setTimeout(() => {
-            const linksWrap = document.getElementById('acct-links-wrap');
-            if (linksWrap) linksWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 300);
-        }, 150);
+            const editBtn = document.getElementById('acct-edit-btn');
+            if (editBtn) {
+              editBtn.click();
+              setTimeout(() => {
+                const linksWrap = document.getElementById('acct-links-wrap');
+                if (linksWrap) {
+                  linksWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  const addBtn = document.getElementById('acct-links-add-btn');
+                  if (addBtn) addBtn.focus();
+                }
+              }, 400);
+            }
+          }, 250);
+        }
       };
     } else {
       addLinksBtn.style.display = 'none';
