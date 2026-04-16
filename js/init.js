@@ -885,10 +885,10 @@ function _renderProfileView(user, catalysts, isOwn) {
     showAdd: isOwn,
     emptyMessage: _currentEmptyMessage,
     container: gridTarget,
-    getColsFn: isOwn ? getEmbeddedCols : undefined,
-    gap: isOwn ? 24 : undefined,
+    getColsFn: getEmbeddedCols,
+    gap: 24,
     onTileClick: handleTileClick,
-    onAddClick: _handleAddCatalystClick,
+    onAddClick: isOwn ? _handleAddCatalystClick : undefined,
     onCreatorClick: handleCreatorClick,
     onReorder: isOwn ? handleReorder : null,
   });
