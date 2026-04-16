@@ -10,7 +10,7 @@ import { renderUsername, escapeHtml } from './ui-events.js';
 // has breathing room around it after the profile bar was detached
 // into the main content area and given its own margin.
 const GAP = 60;
-const GRID_TOP_PAD = 56;
+const GRID_TOP_PAD = 16;
 const ROUND_R = 0.08;
 
 // MD08: pin button icons — outlined when not pinned, filled+colored when pinned.
@@ -479,7 +479,7 @@ function _renderTiles(honey, containerW, COLS, count, customGap, decorate) {
     }
   }
 
-  const totalH = GRID_TOP_PAD + rowCounts.length * stepY + gap;
+  const totalH = GRID_TOP_PAD + rowCounts.length * stepY + gap + 16;
   honey.style.height = totalH + 'px';
   return slots;
 }
