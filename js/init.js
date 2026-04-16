@@ -912,7 +912,7 @@ function _renderProfileView(user, catalysts, isOwn) {
       });
     } else {
       const empty = document.createElement('div');
-      empty.className = 'hex-empty';
+      empty.className = 'profile-col-empty';
       empty.textContent = isOwn ? 'Pin catalysts from the community hub' : 'No catalysts yet';
       pinnedCol.appendChild(empty);
     }
@@ -933,12 +933,12 @@ function _renderProfileView(user, catalysts, isOwn) {
 
     if (alchemistsToShow.length === 0) {
       const empty = document.createElement('div');
-      empty.className = 'hex-empty';
+      empty.className = 'profile-col-empty';
       empty.textContent = isOwn ? 'Follow alchemists from the community hub' : 'No alchemists yet';
       followingCol.appendChild(empty);
     } else {
       const loading = document.createElement('div');
-      loading.className = 'hex-empty';
+      loading.className = 'profile-col-empty';
       loading.textContent = 'Loading...';
       followingCol.appendChild(loading);
 
@@ -976,7 +976,7 @@ function _renderProfileView(user, catalysts, isOwn) {
         });
         if (followingCol.children.length === 0) {
           const empty = document.createElement('div');
-          empty.className = 'hex-empty';
+          empty.className = 'profile-col-empty';
           empty.textContent = 'No catalysts from pinned alchemists yet';
           followingCol.appendChild(empty);
         }
@@ -1980,7 +1980,7 @@ async function renderGamesRoute() {
       });
     } else {
       const empty = document.createElement('div');
-      empty.className = 'hex-empty';
+      empty.className = 'profile-col-empty';
       empty.textContent = 'No pinned catalysts';
       pinnedCol.appendChild(empty);
     }
@@ -1997,7 +1997,7 @@ async function renderGamesRoute() {
     followingCol.appendChild(fTitle);
 
     const loading = document.createElement('div');
-    loading.className = 'hex-empty';
+    loading.className = 'profile-col-empty';
     loading.textContent = 'Loading...';
     followingCol.appendChild(loading);
 
@@ -2050,7 +2050,7 @@ async function renderGamesRoute() {
           followingCol.appendChild(card);
         } else {
           const empty = document.createElement('div');
-          empty.className = 'hex-empty';
+          empty.className = 'profile-col-empty';
           empty.textContent = 'No alchemists pinned yet';
           followingCol.appendChild(empty);
         }
