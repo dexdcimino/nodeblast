@@ -2633,6 +2633,11 @@ function buildPickerColumn(col) {
     btn.dataset.color = c.hex;
     btn.style.background = c.hex;
     btn.title = c.name;
+    // MD#42: splat shape for dark-mode selected animation
+    const splat = document.createElement('div');
+    splat.className = 'swatch-splat';
+    splat.innerHTML = `<svg viewBox="0 0 40 40" width="100%" height="100%"><circle cx="20" cy="20" r="8" fill="${c.hex}"/><circle cx="12" cy="14" r="4" fill="${c.hex}"/><circle cx="28" cy="13" r="3.5" fill="${c.hex}"/><circle cx="14" cy="27" r="3" fill="${c.hex}"/><circle cx="27" cy="26" r="4" fill="${c.hex}"/><circle cx="20" cy="10" r="2.5" fill="${c.hex}"/><circle cx="10" cy="20" r="2" fill="${c.hex}"/><circle cx="30" cy="20" r="2.5" fill="${c.hex}"/><circle cx="20" cy="30" r="2" fill="${c.hex}"/></svg>`;
+    btn.appendChild(splat);
     wrap.appendChild(btn);
   });
   return wrap;

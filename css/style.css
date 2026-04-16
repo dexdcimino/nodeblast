@@ -135,6 +135,12 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .logo-swatch:active{transform:scale(1.35);}
 .logo-swatch.selected{box-shadow:0 0 0 2px var(--bg2),0 0 0 4px currentColor;transform:scale(1.2);}
 .logo-swatch[data-color="#ffffff"],.logo-swatch[data-color="#9AA5B4"]{border:1.5px solid var(--bdr);}
+.logo-swatch{position:relative;overflow:visible;}
+.swatch-splat{display:none;position:absolute;inset:-4px;opacity:0;transform:scale(0);pointer-events:none;}
+[data-theme="dark"] .logo-swatch.selected{background:transparent !important;animation:swatch-shrink 0.25s ease forwards;}
+[data-theme="dark"] .logo-swatch.selected .swatch-splat{display:block;animation:swatch-grow 0.3s 0.2s ease forwards;}
+@keyframes swatch-shrink{0%{transform:scale(1);opacity:1;}100%{transform:scale(0);opacity:0;}}
+@keyframes swatch-grow{0%{transform:scale(0);opacity:0;}100%{transform:scale(1);opacity:1;}}
 
 /* Optical vertical alignment: Outfit at line-height:1 has ~6px of empty
    space below the baseline for descenders. "nodeblast" has none, so the
