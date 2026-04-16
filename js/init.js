@@ -2034,14 +2034,17 @@ async function renderGamesRoute() {
     pinnedCol.appendChild(pTitle);
     const pinned = getGamesAsCatalysts();
     if (pinned.length > 0) {
+      const tilesWrap = document.createElement('div');
+      tilesWrap.className = 'profile-col-tiles';
       pinned.forEach((cat) => {
         const tile = createCatalystTileElement(
           cat,
           { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, isPinned: true },
           { onTileClick: handleGameTileClick }
         );
-        pinnedCol.appendChild(tile);
+        tilesWrap.appendChild(tile);
       });
+      pinnedCol.appendChild(tilesWrap);
     } else {
       const empty = document.createElement('div');
       empty.className = 'profile-col-empty';
