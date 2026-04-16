@@ -2927,6 +2927,15 @@ document.addEventListener('DOMContentLoaded', () => {
   initQrShareModal();
   console.log('[BOOT] 13 - initRouter');
   initRouter(renderRoute);
+
+  // MD#47: welcome notification — once per account, once per guest session.
+  const welcomeKey = State.user?.uid ? 'nb-welcomed-' + State.user.uid : 'nb-welcomed-guest';
+  if (!localStorage.getItem(welcomeKey)) {
+    try { localStorage.setItem(welcomeKey, '1'); } catch {}
+    setTimeout(() => {
+      toast("Welcome to nodeblast! 🎉 Explore what others have built, share your own creations, and push boundaries.");
+    }, 1500);
+  }
   console.log('[BOOT] 14 - initSearch');
   initSearch();
   console.log('[BOOT] 15 - initNotifications');
