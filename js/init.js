@@ -2789,6 +2789,8 @@ function initLogoPicker() {
   let hideTimer = null;
   const show = () => {
     clearTimeout(hideTimer); hideTimer = null;
+    // MD#65: pre-selected swatches show splat instantly on open (no animation)
+    picker.querySelectorAll('.logo-swatch.selected').forEach((s) => s.classList.add('instant'));
     picker.classList.add('open');
   };
   const hide = () => {
@@ -2807,6 +2809,8 @@ function initLogoPicker() {
     const col = btn.closest('.logo-picker-col')?.dataset.col;
     const newColor = btn.dataset.color;
     if (!col || !newColor) return;
+    // MD#65: clicked swatch drops .instant so the click animation plays
+    btn.classList.remove('instant');
 
     let nextTop = _logoTop, nextBot = _logoBot;
     if (col === 'top') {
