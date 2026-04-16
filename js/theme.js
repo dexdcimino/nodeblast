@@ -58,8 +58,14 @@ export function getThemeAdjustedLogoColor(hex) {
   if (State.theme === 'dark') return hex;
   const lower = hex.toLowerCase();
   if (lower === '#ffffff' || lower === '#fff') return hex;
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const isYellowish = r > 200 && g > 160 && b < 120;
+  if (isYellowish) return _mixBlack(hex, 0.12);
   const lum = _relativeLuminance(hex);
-  return _mixBlack(hex, lum > 0.65 ? 0.30 : 0.15);
+  return _mixBlack(hex, lum > 0.65 ? 0.25 : 0.15);
 }
 
 export function applyTheme(theme, skipTransition = false) {
@@ -164,6 +170,12 @@ export function applyAccent(hex) {
 
   _currentAccent = hex;
   State.accent = hex;
+
+  if (hex.toLowerCase() === '#ffffff' || hex.toLowerCase() === '#fff') {
+    document.documentElement.setAttribute('data-accent-white', '');
+  } else {
+    document.documentElement.removeAttribute('data-accent-white');
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
