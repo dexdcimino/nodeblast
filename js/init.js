@@ -2696,11 +2696,24 @@ function markSelectedSwatches() {
 // site-wide accent (driven by the TOP color), favicon, swatch
 // rings, and localStorage. Firestore persistence is layered on
 // top by the picker click handler when a signed-in user clicks.
+function _applyBotClrVars() {
+  const isDark = State.theme === 'dark';
+  const botAdj = isDark ? _logoBot : getThemeAdjustedLogoColor(_logoBot);
+  document.documentElement.style.setProperty('--clr-bot', botAdj);
+  const bh = botAdj.replace('#', '');
+  const br = parseInt(bh.slice(0, 2), 16);
+  const bg = parseInt(bh.slice(2, 4), 16);
+  const bb = parseInt(bh.slice(4, 6), 16);
+  const botYiq = (br * 299 + bg * 587 + bb * 114) / 1000;
+  document.documentElement.style.setProperty('--clr-bot-on', botYiq >= 150 ? '#111111' : '#ffffff');
+}
+
 function setLogoColors(top, bot) {
   _logoTop = top || DEFAULT_LOGO_TOP;
   _logoBot = bot || DEFAULT_LOGO_BOT;
   paintLogo(_logoTop, _logoBot);
   applyAccent(_logoTop);            // site --clr follows the top color
+  _applyBotClrVars();               // MD#63: second logo color drives the play button
   applyFavicon(_logoTop, _logoBot); // rebuild the browser tab icon
   markSelectedSwatches();
   try {
@@ -2767,6 +2780,7 @@ function initLogoPicker() {
   // darkened favicon would look worse on dark OS chrome.
   onThemeChange(() => {
     paintLogo(_logoTop, _logoBot);
+    _applyBotClrVars();
   });
 
   let hideTimer = null;
