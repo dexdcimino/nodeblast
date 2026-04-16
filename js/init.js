@@ -1499,14 +1499,19 @@ function _buildCommunityCard(group) {
   hexRow.innerHTML = `<span class="community-card-hex-dot"></span><span class="community-card-hex">#${escapeHtml(hex)}</span>`;
   meta.appendChild(nameEl);
   meta.appendChild(hexRow);
-  // Count label stays in meta (under name/hex).
-  const count = document.createElement('span');
-  count.className = 'community-card-count';
-  const n = group.catalysts.length;
-  count.textContent = n + (n === 1 ? ' catalyst' : ' catalysts');
-  meta.appendChild(count);
 
   hdr.appendChild(meta);
+
+  // MD#24: hex count badge — matches profile bar style.
+  const countN = group.catalysts.length;
+  const countHex = document.createElement('div');
+  countHex.className = 'community-card-count-hex';
+  countHex.setAttribute('data-tip', countN + (countN === 1 ? ' catalyst' : ' catalysts'));
+  countHex.innerHTML = `<svg viewBox="0 0 100 115" width="36" height="42">
+    <polygon points="50,3 97,30 97,85 50,112 3,85 3,30" fill="${hexColor}" opacity="0.12" stroke="${hexColor}" stroke-width="2.5" stroke-linejoin="round"/>
+    <text x="50" y="57.5" text-anchor="middle" dominant-baseline="central" fill="${hexColor}" font-family="var(--fn)" font-size="42" font-weight="800">${countN}</text>
+  </svg>`;
+  hdr.appendChild(countHex);
 
   // Social icons — placed between meta and spacer, mirroring the
   // profile-bar layout. Clicks are stopped from bubbling.
