@@ -4,6 +4,7 @@
 // ══════════════════════════════════════
 
 let _renderRoute = null;
+let _routerBooted = false;
 
 // Parse "dex.1199ff" → { username: "dex", hex: "1199ff" }
 // Parse "dex"         → { username: "dex", hex: null }         (backwards compat)
@@ -33,20 +34,16 @@ export function getRoute() {
   // Hard refresh on /play — redirect to /games instead of hanging
   // A hard refresh means no previous pushState entry (navigation type 'reload' or 'navigate' from address bar)
   if (path === '/play') {
-    const navType = performance?.getEntriesByType?.('navigation')?.[0]?.type;
-    const isHardRefresh = navType === 'reload' || navType === 'navigate';
-    if (isHardRefresh) {
-      // Replace history so Back button works correctly
+    if (!_routerBooted) {
+      // Genuine hard refresh on /play — redirect to /games
       history.replaceState({}, '', '/games');
       return { page: 'games' };
     }
     return { page: 'play', gameId: 'arena1' };
   }
-  // Hard refresh on /game/* — redirect to /games instead of hanging
   if (path.startsWith('/game/')) {
-    const navType = performance?.getEntriesByType?.('navigation')?.[0]?.type;
-    const isHardRefresh = navType === 'reload' || navType === 'navigate';
-    if (isHardRefresh) {
+    if (!_routerBooted) {
+      // Genuine hard refresh on /game/* — redirect to /games
       history.replaceState({}, '', '/games');
       return { page: 'games' };
     }
@@ -88,6 +85,8 @@ export function navigate(path, { replace = false } = {}) {
 
 export function initRouter(renderFn) {
   _renderRoute = renderFn;
+  // MD#66: mark booted — subsequent route evaluations are client-side navs
+  _routerBooted = true;
   window.addEventListener('popstate', () => {
     if (_renderRoute) _renderRoute();
   });
