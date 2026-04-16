@@ -887,6 +887,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #profile-col-pinned .hex-tile{position:relative;width:100%;max-width:240px;}
 .profile-col-title{font-size:16px;font-weight:700;color:var(--tx);margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px;}
 .profile-col-empty{display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:14px;text-align:center;padding:30px 20px;line-height:1.55;}
+.profile-col-unpin{position:absolute;top:8px;right:8px;z-index:5;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,0.5);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s ease;pointer-events:all;}
+.hex-tile:hover .profile-col-unpin,.profile-col-unpin:focus{opacity:1;}
 .profile-col-title svg{width:18px;height:18px;color:var(--clr-adj);}
 
 .hex-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:14px;text-align:center;padding:40px 24px;line-height:1.55;max-width:420px;margin:0 auto;}

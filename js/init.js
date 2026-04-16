@@ -897,7 +897,7 @@ function _renderProfileView(user, catalysts, isOwn) {
     pinnedCol.innerHTML = '';
     const pinnedTitle = document.createElement('div');
     pinnedTitle.className = 'profile-col-title';
-    pinnedTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg> Catalysts';
+    pinnedTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Catalysts';
     pinnedCol.appendChild(pinnedTitle);
     console.log('[profile-view] rendering pinned col, isOwn:', isOwn, 'tracked:', _myTrackedCatalysts?.length);
     if (isOwn && _myTrackedCatalysts.length > 0) {
@@ -916,6 +916,18 @@ function _renderProfileView(user, catalysts, isOwn) {
           { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, isPinned: true },
           { onTileClick: handleTileClick }
         );
+        // MD#51: unpin button on each pinned tile
+        const unpinBtn = document.createElement('button');
+        unpinBtn.className = 'profile-col-unpin';
+        unpinBtn.type = 'button';
+        unpinBtn.setAttribute('data-tip', 'Unpin');
+        unpinBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        unpinBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          unpinCatalyst(pinned.catId).then(() => toast('Catalyst unpinned')).catch(() => toast('Failed to unpin'));
+        });
+        tile.style.position = 'relative';
+        tile.appendChild(unpinBtn);
         pinnedCol.appendChild(tile);
       });
     } else {
@@ -1307,7 +1319,7 @@ function _buildPinnedFooterTile(pinned, { canRemove }) {
   return tile;
 }
 
-// Small circular avatar chip used in the profile footer's "Pinned Alchemists"
+// Small circular avatar chip used in the profile footer's "Alchemists"
 // row. Clicking navigates to that alchemist's profile. Own-profile
 // viewers get a remove "×" in the corner.
 function _buildFollowedChip(alch, { canRemove }) {
@@ -1974,7 +1986,7 @@ async function renderGamesRoute() {
     pinnedCol.innerHTML = '';
     const pTitle = document.createElement('div');
     pTitle.className = 'profile-col-title';
-    pTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg> Pinned Catalysts';
+    pTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Catalysts';
     pinnedCol.appendChild(pTitle);
     const pinned = getGamesAsCatalysts();
     if (pinned.length > 0) {
@@ -2001,7 +2013,7 @@ async function renderGamesRoute() {
     followingCol.innerHTML = '';
     const fTitle = document.createElement('div');
     fTitle.className = 'profile-col-title';
-    fTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Pinned Alchemists';
+    fTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Alchemists';
     followingCol.appendChild(fTitle);
 
     const loading = document.createElement('div');
@@ -2015,7 +2027,7 @@ async function renderGamesRoute() {
         followingCol.innerHTML = '';
         const t = document.createElement('div');
         t.className = 'profile-col-title';
-        t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Pinned Alchemists';
+        t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Alchemists';
         followingCol.appendChild(t);
         if (dexUser) {
           const card = document.createElement('div');
