@@ -672,7 +672,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    honeycomb and inherits the same horizontal padding. No fixed
    positioning, no top offset. Hidden by default and toggled by init.js. */
 #profile-bar{display:none;align-items:center;justify-content:space-between;gap:20px;padding:14px 28px;margin:28px 0 0;background:color-mix(in srgb,var(--bg2) 85%,transparent);border:1px solid var(--bdr);border-radius:9999px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,.18);flex-wrap:wrap;}
-#profile-bar.has-grid{border-radius:42px;padding:14px 28px;}
+#profile-bar.has-grid{border-radius:32px;padding:14px 28px;}
 #profile-bar.collapsed{border-radius:9999px;padding:10px 24px;}
 #profile-bar.collapsed #profile-bar-catalysts{display:none !important;}
 #profile-bar.collapsed #profile-bio{display:none;}
