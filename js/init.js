@@ -196,7 +196,7 @@ function hideAllViews() {
   const honeyEl = document.getElementById('honeycomb');
   if (tabsEl) tabsEl.style.display = 'none';
   if (colsEl) colsEl.style.display = 'none';
-  if (honeyEl) honeyEl.style.display = '';
+  if (honeyEl) { honeyEl.style.display = ''; honeyEl.innerHTML = ''; }
   _currentProfileView = null;
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
@@ -832,7 +832,7 @@ function _renderProfileView(user, catalysts, isOwn) {
   const honeyEl = document.getElementById('honeycomb');
   if (tabsEl) tabsEl.style.display = 'none';
   if (colsEl) colsEl.style.display = 'flex';
-  if (honeyEl) honeyEl.style.display = 'none';
+  if (honeyEl) { honeyEl.style.display = 'none'; honeyEl.innerHTML = ''; }
   // Defensive: ensure both pinned columns are visible (MD#2 patch).
   const _pCol = document.getElementById('profile-col-pinned');
   const _fCol = document.getElementById('profile-col-following');
@@ -1919,6 +1919,9 @@ async function renderGamesRoute() {
     onTileClick: handleGameTileClick,
     showCreatorAvatar: false,
   });
+
+  const _honeyEl = document.getElementById('honeycomb');
+  if (_honeyEl) { _honeyEl.style.display = 'none'; _honeyEl.innerHTML = ''; }
 
   const colsEl = document.getElementById('profile-columns');
   if (colsEl) colsEl.style.display = 'flex';
