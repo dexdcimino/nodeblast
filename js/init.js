@@ -2659,6 +2659,7 @@ function buildPickerColumn(col) {
     btn.type = 'button';
     btn.dataset.color = c.hex;
     btn.style.background = c.hex;
+    btn.style.setProperty('--swatch-color', c.hex);
     btn.title = c.name;
     // MD#42: splat shape for dark-mode selected animation
     const splat = document.createElement('div');
