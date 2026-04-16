@@ -1755,7 +1755,6 @@ function _buildCommunityCard(group) {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!State.user) { toast('Sign in to vote'); openSigninModal(); return; }
-        if (isOwnCardForVote) { toast("Can't vote on your own catalysts"); return; }
         const voteType = btn.dataset.voteType;
         const sibling = btn === firePill ? frostPill : firePill;
         const wasActive = btn.classList.contains('active');
