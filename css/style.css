@@ -773,7 +773,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-hex-dot{width:8px;height:8px;border-radius:50%;background:var(--card-hex,var(--clr-adj));}
 .community-card-hex{font-size:13px;color:var(--tx2);font-family:var(--fn);}
 .community-card-count{font-size:12px;color:var(--tx3);font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin-top:1px;}
-.community-card-count-hex{flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:auto;}
+.community-card-count-hex{flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:0;}
 .community-card-count-hex svg{display:block;}
 /* MD07: spacer that floats the right-side button cluster */
 .community-card-hdr-spacer{flex:1 1 auto;min-width:8px;}
