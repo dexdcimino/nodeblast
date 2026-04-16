@@ -823,6 +823,8 @@ function _updateProfileColumns() {
   ['catalysts', 'pinned', 'following'].forEach((tab) => {
     const col = document.getElementById('profile-col-' + tab);
     if (!col) return;
+    // MD#50: own profile renders catalysts in profile-bar-catalysts; skip this column.
+    if (tab === 'catalysts' && _currentProfileView?.isOwn) return;
     col.style.display = _profileActiveTabs.has(tab) ? '' : 'none';
   });
   document.querySelectorAll('.profile-tab').forEach((btn) => {

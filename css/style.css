@@ -878,7 +878,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* NB-MD04 / MD#13: two columns (Catalysts + Alchemists), always visible */
 #profile-columns{display:flex;width:100%;gap:20px;padding:0 0 40px;flex-wrap:wrap;align-items:flex-start;margin-top:24px;}
 .profile-col{flex:1;min-width:0;position:relative;}
-#profile-col-catalysts{min-height:200px;}
+#profile-col-catalysts{min-height:0;}
 #profile-col-catalysts[style*="display: none"],#profile-col-catalysts[style*="display:none"]{min-height:0;}
 #profile-col-pinned,#profile-col-following{flex:1 1 0;min-width:280px;min-height:120px;background:var(--bg2);border:1px solid var(--bdr);border-radius:24px;padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;}
 [data-theme="light"] #profile-col-pinned,[data-theme="light"] #profile-col-following{background:var(--bg4);}
