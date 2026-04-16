@@ -599,9 +599,23 @@ function showProfileBar(user, catalystCount, isOwn) {
         });
       }
     } else {
-      if (profileBar) profileBar._nbToggleCollapse = null;
-      toggleBtn.style.display = 'none';
+      // MD#54: other user profiles also get a collapse toggle; always start expanded.
+      toggleBtn.style.display = 'inline-flex';
       profileBar.classList.remove('collapsed');
+      toggleBtn.setAttribute('data-tip', 'Collapse');
+      const _otherToggle = () => {
+        const nowCollapsed = !profileBar.classList.contains('collapsed');
+        profileBar.classList.toggle('collapsed', nowCollapsed);
+        if (nowCollapsed) {
+          profileBar.classList.remove('has-grid');
+        } else {
+          const gridEl = document.getElementById('profile-bar-catalysts');
+          if (gridEl && gridEl.children.length > 0) profileBar.classList.add('has-grid');
+        }
+        toggleBtn.setAttribute('data-tip', nowCollapsed ? 'Expand' : 'Collapse');
+      };
+      toggleBtn.onclick = _otherToggle;
+      if (profileBar) profileBar._nbToggleCollapse = _otherToggle;
     }
   }
 }
@@ -823,8 +837,8 @@ function _updateProfileColumns() {
   ['catalysts', 'pinned', 'following'].forEach((tab) => {
     const col = document.getElementById('profile-col-' + tab);
     if (!col) return;
-    // MD#50: own profile renders catalysts in profile-bar-catalysts; skip this column.
-    if (tab === 'catalysts' && _currentProfileView?.isOwn) return;
+    // MD#54: catalysts always render in profile-bar-catalysts, never in this column.
+    if (tab === 'catalysts') return;
     col.style.display = _profileActiveTabs.has(tab) ? '' : 'none';
   });
   document.querySelectorAll('.profile-tab').forEach((btn) => {
@@ -856,22 +870,16 @@ function _renderProfileView(user, catalysts, isOwn) {
   _currentEmptyMessage = isOwn
     ? 'Create your first catalyst'
     : "This alchemist hasn't created any catalysts yet.";
-  const gridTarget = isOwn ? 'profile-bar-catalysts' : 'profile-col-catalysts';
+  const gridTarget = 'profile-bar-catalysts'; // MD#54: always embed in the profile bar
   const barCats = document.getElementById('profile-bar-catalysts');
   const catCol = document.getElementById('profile-col-catalysts');
   const _profileBarEl = document.getElementById('profile-bar');
   const _wasCollapsed = _profileBarEl?.classList.contains('collapsed');
-  if (isOwn) {
-    // MD#33: temporarily uncollapse so the grid container is measurable
-    if (_wasCollapsed) _profileBarEl.classList.remove('collapsed');
-    if (barCats) { barCats.style.position = 'relative'; barCats.style.display = ''; barCats.classList.add('visible'); }
-    _profileBarEl?.classList.add('has-grid');
-    if (catCol) catCol.style.display = 'none';
-  } else {
-    if (barCats) { barCats.style.display = 'none'; barCats.classList.remove('visible'); barCats.innerHTML = ''; }
-    _profileBarEl?.classList.remove('has-grid');
-    if (catCol) catCol.style.display = '';
-  }
+  // MD#33: temporarily uncollapse so the grid container is measurable
+  if (_wasCollapsed) _profileBarEl?.classList.remove('collapsed');
+  if (barCats) { barCats.style.position = 'relative'; barCats.style.display = ''; barCats.classList.add('visible'); }
+  _profileBarEl?.classList.add('has-grid');
+  if (catCol) catCol.style.display = 'none';
   renderHexGrid({
     tiles: catalysts,
     showAdd: isOwn,
@@ -885,7 +893,7 @@ function _renderProfileView(user, catalysts, isOwn) {
     onReorder: isOwn ? handleReorder : null,
   });
   // MD#33: restore collapsed state now that the grid has measured
-  if (isOwn && _wasCollapsed) {
+  if (_wasCollapsed) {
     _profileBarEl?.classList.add('collapsed');
     _profileBarEl?.classList.remove('has-grid');
   }
@@ -2195,6 +2203,8 @@ function _routeInternalIfNeeded(user, cat) {
 }
 
 async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
+  // MD#54: scroll to top on profile navigation
+  document.getElementById('grid')?.scrollTo(0, 0);
   // Reset suppress flag if we're landing on a plain profile (no slug to open)
   if (!openSlug) _suppressNextDetailOpen = false;
   // NB-MD08: clear stale viewed-user tracked data; will be populated for
