@@ -794,7 +794,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-collapse svg{width:18px;height:18px;}
 .community-card.collapsed .community-tiles > *:not(:first-child):not(.community-vote-pill){display:none;}
 .community-card.collapsed{min-height:0;}
-.community-card.collapsed .community-tiles{padding-bottom:0;}
+.community-card.collapsed .community-tiles{padding-bottom:0;justify-content:center;}
+.community-card.collapsed .community-tiles > *:first-child{width:180px !important;height:208px !important;}
 .community-card.collapsed .community-card-hdr{overflow:visible;text-overflow:unset;white-space:normal;}
 .community-card.collapsed .community-card-name{white-space:normal;overflow:visible;text-overflow:unset;}
 
