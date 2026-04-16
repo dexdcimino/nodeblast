@@ -137,7 +137,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .logo-swatch[data-color="#ffffff"],.logo-swatch[data-color="#9AA5B4"]{border:1.5px solid var(--bdr);}
 .logo-swatch{position:relative;overflow:visible;}
 .swatch-splat{display:none;position:absolute;inset:-4px;opacity:0;transform:scale(0);pointer-events:none;z-index:2;}
-[data-theme="dark"] .logo-swatch.selected{transform:scale(1.2) !important;overflow:visible;}
+[data-theme="dark"] .logo-swatch.selected{transform:scale(1.2) !important;overflow:visible;background:transparent !important;box-shadow:none !important;}
 [data-theme="dark"] .logo-swatch.selected::after{content:'';position:absolute;inset:0;border-radius:50%;background:var(--swatch-color);animation:swatch-circle-shrink 0.3s ease forwards;z-index:1;}
 [data-theme="dark"] .logo-swatch.selected .swatch-splat{display:block;animation:swatch-splat-grow 0.3s 0.2s ease forwards;}
 @keyframes swatch-circle-shrink{0%{transform:scale(1);opacity:1;}100%{transform:scale(0);opacity:0;}}
