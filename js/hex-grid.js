@@ -261,8 +261,9 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
 function addTileHTML() {
   return `
     <div class="add-tile-bg"></div>
-    <svg class="add-tile-border" viewBox="0 0 200 231" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;">
-      <polygon points="100,2 198,52 198,179 100,229 2,179 2,52" fill="none" stroke="var(--tx3)" stroke-width="3" stroke-linejoin="round" opacity="0.35"/>
+    <svg class="add-tile-outline" viewBox="0 0 100 115.47" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="50,2 97,27.87 97,87.6 50,113.47 3,87.6 3,27.87"
+        fill="none" stroke="var(--tx3)" stroke-width="2.5" stroke-linejoin="round"/>
     </svg>
     <div class="add-tile-plus">
       <span class="plus">+</span>
@@ -844,7 +845,7 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
       const isAdd = showAdd && idx === tiles.length;
       if (isAdd) {
         el.classList.add('add-tile');
-        el.innerHTML = '<div class="add-tile-bg"></div><svg class="add-tile-border" viewBox="0 0 200 231" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;"><polygon points="100,2 198,52 198,179 100,229 2,179 2,52" fill="none" stroke="var(--tx3)" stroke-width="3" stroke-linejoin="round" opacity="0.35"/></svg><div class="add-tile-plus"><span class="plus">+</span></div>';
+        el.innerHTML = '<div class="add-tile-bg"></div><svg class="add-tile-outline" viewBox="0 0 100 115.47" xmlns="http://www.w3.org/2000/svg"><polygon points="50,2 97,27.87 97,87.6 50,113.47 3,87.6 3,27.87" fill="none" stroke="var(--tx3)" stroke-width="2.5" stroke-linejoin="round"/></svg><div class="add-tile-plus"><span class="plus">+</span></div>';
         el.addEventListener('click', () => {
           if (_suppressNextClick) { _suppressNextClick = false; return; }
           onAddClick?.();
