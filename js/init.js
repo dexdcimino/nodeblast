@@ -1551,9 +1551,11 @@ function _buildCommunityCard(group) {
   meta.appendChild(nameEl);
   meta.appendChild(hexRow);
 
-  hdr.appendChild(meta);
+  // MD#53: wrap meta + count hex in a group so they stay together.
+  const metaGroup = document.createElement('div');
+  metaGroup.className = 'community-card-meta-group';
+  metaGroup.appendChild(meta);
 
-  // MD#24: hex count badge — matches profile bar style.
   const countN = group.catalysts.length;
   const countHex = document.createElement('div');
   countHex.className = 'community-card-count-hex';
@@ -1562,7 +1564,9 @@ function _buildCommunityCard(group) {
     <polygon points="50,3 97,30 97,85 50,112 3,85 3,30" fill="${hexColor}" opacity="0.12" stroke="${hexColor}" stroke-width="2.5" stroke-linejoin="round"/>
     <text x="50" y="57.5" text-anchor="middle" dominant-baseline="central" fill="${hexColor}" font-family="var(--fn)" font-size="42" font-weight="800">${countN}</text>
   </svg>`;
-  hdr.appendChild(countHex);
+  metaGroup.appendChild(countHex);
+
+  hdr.appendChild(metaGroup);
 
   // Social icons — placed between meta and spacer, mirroring the
   // profile-bar layout. Clicks are stopped from bubbling.

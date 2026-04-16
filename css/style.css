@@ -775,6 +775,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-avatar{width:42px;height:42px;border-radius:50%;border:2px solid var(--card-hex,var(--clr-adj));background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:15px;font-weight:700;}
 .community-card-avatar img{width:100%;height:100%;object-fit:cover;}
 .community-card-meta{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;flex:1 1 0;overflow:hidden;}
+.community-card-meta-group{display:flex;align-items:center;gap:10px;min-width:0;flex-shrink:1;}
 .community-card-socials{margin-top:2px;}
 .community-card-name{font-size:18px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color var(--ease);}
 .community-card-hex-row{display:flex;align-items:center;gap:5px;flex-shrink:0;}
