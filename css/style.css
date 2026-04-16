@@ -680,7 +680,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #profile-bar .profile-bar-collapse-icon{margin-left:8px;flex-shrink:0;cursor:pointer;color:var(--tx3);transition:color var(--ease),transform var(--ease);display:inline-flex;}
 #profile-bar .profile-bar-collapse-icon:hover{color:var(--tx);}
 #profile-bar.collapsed .profile-bar-collapse-icon{transform:rotate(-90deg);}
-#profile-bar-catalysts{width:calc(100% + 16px);margin-left:-8px;display:none;padding-top:14px;border-top:1px solid var(--bdr);margin-top:14px;position:relative;overflow:hidden;min-height:0;box-sizing:border-box;}
+#profile-bar-catalysts{width:calc(100% + 16px);margin-left:-8px;display:none;padding-top:14px;border-top:1px solid var(--bdr);margin-top:14px;position:relative;overflow:visible;min-height:0;box-sizing:border-box;padding-bottom:8px;}
 #profile-bar-catalysts.visible{display:block;}
 #profile-bar-catalysts .hex-tile{cursor:grab;}
 #profile-bar.visible{display:flex;}
@@ -994,16 +994,18 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-skeleton-inner{position:absolute;inset:0;background:linear-gradient(100deg,var(--bg3) 40%,var(--bg4) 50%,var(--bg3) 60%);background-size:200% 100%;animation:hex-shimmer 1.4s ease-in-out infinite;}
 @keyframes hex-shimmer{0%{background-position:180% 0;}100%{background-position:-80% 0;}}
 
-.hex-tile.add-tile{background:transparent;border:2px solid color-mix(in srgb,var(--tx3) 30%,transparent);transition:border-color .2s ease,transform .2s ease;}
+.hex-tile.add-tile{background:transparent;border:none;transition:transform .2s ease;}
 .hex-tile.add-tile::before{display:none;}
 .hex-tile.add-tile .hex-fade{display:none;}
 .hex-tile.add-tile .add-tile-bg{position:absolute;inset:0;background:var(--bg2);clip-path:url(#hex-clip);opacity:0.45;transition:opacity .25s ease;}
 .hex-tile.add-tile .add-tile-plus{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;color:var(--tx);opacity:0.35;transition:opacity .25s ease;}
 .hex-tile.add-tile .add-tile-plus span.plus{font-size:48px;font-weight:300;line-height:1;margin-bottom:8px;}
-.hex-tile.add-tile .add-tile-plus span.label{font-size:11px;font-weight:500;letter-spacing:0.04em;text-transform:lowercase;}
+.hex-tile.add-tile .add-tile-plus span.label{font-size:15px;font-weight:500;letter-spacing:0.04em;text-transform:lowercase;}
+.hex-tile.add-tile .add-tile-border polygon{transition:stroke .2s ease,opacity .2s ease;}
+.hex-tile.add-tile:hover .add-tile-border polygon{stroke:var(--clr-adj);opacity:0.6;}
 .hex-tile.add-tile:hover .add-tile-bg{opacity:0.55;background:color-mix(in srgb,var(--clr-adj) 12%,var(--bg2));}
 .hex-tile.add-tile:hover .add-tile-plus{opacity:0.85;}
-.hex-tile.add-tile:hover{transform:scale(1.04);border-color:color-mix(in srgb,var(--clr-adj) 40%,transparent);}
+.hex-tile.add-tile:hover{transform:scale(1.04);}
 
 /* ── Drag-to-reorder ─────────────────────────────────────────
    While #honeycomb.reordering is set, non-dragged tiles smoothly
