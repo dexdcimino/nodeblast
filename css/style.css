@@ -796,6 +796,9 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-follow:hover{background:color-mix(in srgb,var(--clr-adj) 15%,transparent);}
 .community-card-follow.following{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
 .community-card-follow.following:hover{background:color-mix(in srgb,var(--clr-adj) 80%,#000);}
+.community-card-follow.icon-only{padding:6px;border-radius:50%;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;font-size:0;}
+.community-card-follow.icon-only svg{flex-shrink:0;}
+.community-card.collapsed .community-card-hdr{flex-wrap:nowrap;overflow:hidden;}
 
 .community-tiles{position:relative;display:flex;flex-wrap:wrap;gap:22px;justify-content:center;align-items:flex-end;padding-bottom:44px;}
 

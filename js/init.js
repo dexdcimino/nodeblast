@@ -1586,6 +1586,15 @@ function _buildCommunityCard(group) {
     card.dataset.count = '1';
     collapseBtn.setAttribute('data-tip', 'Expand');
     collapseBtn.innerHTML = EXPAND_ICON;
+    // Defer pin icon shrink until after followBtn is appended
+    requestAnimationFrame(() => {
+      const _initPin = card.querySelector('.community-card-follow');
+      if (_initPin) {
+        _initPin.dataset.fullText = _initPin.textContent;
+        _initPin.classList.add('icon-only');
+        _initPin.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>';
+      }
+    });
   } else {
     collapseBtn.setAttribute('data-tip', 'Collapse');
     collapseBtn.innerHTML = COLLAPSE_ICON;
@@ -1602,9 +1611,21 @@ function _buildCommunityCard(group) {
       card.dataset.count = '1';
       collapseBtn.setAttribute('data-tip', 'Expand');
       collapseBtn.innerHTML = EXPAND_ICON;
+      const _pinBtn = card.querySelector('.community-card-follow');
+      if (_pinBtn) {
+        _pinBtn.dataset.fullText = _pinBtn.textContent;
+        _pinBtn.classList.add('icon-only');
+        _pinBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>';
+      }
     } else {
       _collapsedCards.delete(group.uid);
       card.classList.remove('collapsed');
+      const _pinBtn2 = card.querySelector('.community-card-follow');
+      if (_pinBtn2) {
+        _pinBtn2.classList.remove('icon-only');
+        const _isFollowing = _pinBtn2.classList.contains('following');
+        _pinBtn2.textContent = _isFollowing ? 'Pinned' : '+ Pin';
+      }
       // Restore original size tier so the card resizes back correctly.
       const originalCount = group.catalysts.length >= 10
         ? 'max'
