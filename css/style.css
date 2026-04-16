@@ -865,7 +865,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .profile-tab.active{color:var(--clr);border-bottom-color:var(--clr);background:rgba(255,255,255,0.03);}
 
 /* NB-MD04 / MD#13: two columns (Catalysts + Alchemists), always visible */
-#profile-columns{display:flex;width:100%;gap:20px;padding:0 0 40px;flex-wrap:wrap;align-items:flex-start;}
+#profile-columns{display:flex;width:100%;gap:20px;padding:0 0 40px;flex-wrap:wrap;align-items:flex-start;margin-top:24px;}
 .profile-col{flex:1;min-width:0;position:relative;}
 #profile-col-catalysts{min-height:200px;}
 #profile-col-catalysts[style*="display: none"],#profile-col-catalysts[style*="display:none"]{min-height:0;}
