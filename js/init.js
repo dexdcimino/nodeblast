@@ -1792,7 +1792,7 @@ function _buildCommunityCard(group) {
     frostPill.setAttribute('data-tip', 'Poop');
     const frostCount = group.frostVoteCount || 0;
     frostPill.innerHTML = `💩${frostCount > 0 ? `<span class="community-vote-count">${frostCount}</span>` : ''}`;
-    body.appendChild(frostPill);
+    card.appendChild(frostPill);
 
     const firePill = document.createElement('button');
     firePill.type = 'button';
@@ -1802,7 +1802,7 @@ function _buildCommunityCard(group) {
     firePill.setAttribute('data-tip', 'Fire');
     const fireCount = group.fireVoteCount || 0;
     firePill.innerHTML = `🔥${fireCount > 0 ? `<span class="community-vote-count">${fireCount}</span>` : ''}`;
-    body.appendChild(firePill);
+    card.appendChild(firePill);
 
     [firePill, frostPill].forEach((btn) => {
       btn.addEventListener('click', async (e) => {
