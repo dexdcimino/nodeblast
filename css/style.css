@@ -865,7 +865,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* ══════════════════════════════════════
    HEX GRID (NodeBlast)
 ══════════════════════════════════════ */
-#grid{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;overflow:auto;background:var(--bg);padding:0 clamp(20px,6vw,120px);}
+#grid{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;overflow:auto;background:var(--bg);padding:0 clamp(20px,6vw,120px);scrollbar-gutter:stable;}
+@supports not (scrollbar-gutter: stable) {
+  #grid{overflow-y:scroll;}
+}
 #grid.with-filter{top:calc(var(--hdr) + 56px);}
 #honeycomb{position:relative;width:100%;min-height:200px;opacity:1;transition:opacity 150ms ease;}
 
