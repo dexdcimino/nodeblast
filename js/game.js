@@ -886,17 +886,17 @@ function _buildGunPickups() {
   });
 
   // Sniper pickup on sky bridge center
-  const sniperY = 33.4;
+  const sniperY = 30.4; // East tower top
   const sniperModel = _buildPickupGunModel(5);
-  sniperModel.position.set(0, sniperY + 0.6, 0);
+  sniperModel.position.set(75, sniperY + 0.6, 0);
   const sniperGlow = B.MeshBuilder.CreateTorus('sniper_glow', { diameter: 2, thickness: 0.1, tessellation: 6 }, _scene);
-  sniperGlow.position.set(0, sniperY + 0.1, 0); sniperGlow.material = new B.StandardMaterial('sniper_glow_m', _scene);
+  sniperGlow.position.set(75, sniperY + 0.1, 0); sniperGlow.material = new B.StandardMaterial('sniper_glow_m', _scene);
   sniperGlow.material.emissiveColor = new B.Color3(0.8, 0.2, 0.9); sniperGlow.material.disableLighting = true;
-  const sniperPt = new B.PointLight('sniper_pickup_pt', new B.Vector3(0, sniperY + 1.5, 0), _scene);
+  const sniperPt = new B.PointLight('sniper_pickup_pt', new B.Vector3(75, sniperY + 1.5, 0), _scene);
   sniperPt.diffuse = new B.Color3(0.8, 0.2, 0.9); sniperPt.intensity = 1; sniperPt.range = 6;
   _gunPickups.push({
     tableTop: null, glowRing: sniperGlow, pt: sniperPt, gunModel: sniperModel,
-    pos: new B.Vector3(0, sniperY + 0.6, 0),
+    pos: new B.Vector3(75, sniperY + 0.6, 0),
     slot: 5,
     _currentGunId: 'sniper',
   });
@@ -1428,6 +1428,16 @@ function _buildArenaCollision(){
 
   // Hex boundary walls are added in _buildArenaProc via _addCol
 
+  // Twin tower collision
+  const TX=75,TW=6,TOWER_H=30;
+  [{x:TX,z:0,facing:-1},{x:-TX,z:0,facing:1}].forEach((t,ti)=>{
+    _addCol(t.x,TW/2,TW,0.5,TOWER_H);
+    _addCol(t.x,-TW/2,TW,0.5,TOWER_H);
+    _addCol(t.x+t.facing*TW/2,0,0.5,TW-1,TOWER_H);
+    _addCol(t.x-t.facing*TW/2,0,0.5,TW-1,TOWER_H,3.5);
+    _addCol(t.x,0,TW+3,TW+3,TOWER_H+0.2,TOWER_H-0.2);
+  });
+
   // Spotlight
   const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
   spot.intensity=0.6;spot.diffuse=new B.Color3(0.85,0.95,1.0);
@@ -1564,6 +1574,10 @@ function _buildArenaProc(){
     const segLen=Math.sqrt(dx*dx+dz*dz);
     const wallAngle=Math.atan2(dx,dz);
 
+    // Skip walls that would pass through tower positions
+    const towerClash = (Math.abs(mx) > 60 && Math.abs(mz) < 20);
+    if(towerClash) continue;
+
     const wall=B.MeshBuilder.CreateBox('hex_wall_'+i,{width:segLen,height:WALL_H,depth:0.5},_scene);
     wall.position.set(mx,WALL_H/2,mz);wall.rotation.y=wallAngle;wall.material=wallMat;
 
@@ -1606,51 +1620,54 @@ function _buildArenaProc(){
     vLight.diffuse=new B.Color3(0.1,1,0.5);vLight.intensity=0.8;vLight.range=12;
   }
 
-  // ── TWIN TOWERS + SKY BRIDGE ──
-  const TOWER_H=35, TOWER_W=6, TOWER_X=80, BRIDGE_Y=TOWER_H-2;
-  const MTower=mkMat('mtower',0.12,0.12,0.16);
-  const MBridge=mkMat('mbridge',0.14,0.14,0.18);
+  // ── TWIN TOWERS (East + West) ──
+  const TOWER_H=30,TW=6,TX=75;
+  const MTw=mkMat('mtower',0.12,0.13,0.17,0,0.05,0.02);
 
-  [{x:TOWER_X,z:0},{x:-TOWER_X,z:0}].forEach((t,ti)=>{
-    box('tw_n_'+ti,TOWER_W,TOWER_H,0.5,t.x,t.z+TOWER_W/2,MTower);
-    box('tw_s_'+ti,TOWER_W,TOWER_H,0.5,t.x,t.z-TOWER_W/2,MTower);
-    box('tw_back_'+ti,0.5,TOWER_H,TOWER_W,t.x+(ti===0?TOWER_W/2:-TOWER_W/2),t.z,MTower);
-    box('tw_front_upper_'+ti,0.5,TOWER_H-4,TOWER_W,t.x+(ti===0?-TOWER_W/2:TOWER_W/2),t.z,MTower,true);
-    _addCol(t.x+(ti===0?-TOWER_W/2:TOWER_W/2),t.z,0.5,TOWER_W,TOWER_H);
+  [{x:TX,z:0,facing:-1},{x:-TX,z:0,facing:1}].forEach((t,ti)=>{
+    // 3 solid walls
+    box('tw_n_'+ti,TW,TOWER_H,0.5,t.x,TW/2,MTw);
+    box('tw_s_'+ti,TW,TOWER_H,0.5,t.x,-TW/2,MTw);
+    box('tw_back_'+ti,0.5,TOWER_H,TW-1,t.x+t.facing*TW/2,0,MTw);
 
-    for(let h=3;h<TOWER_H-3;h+=4){
-      const side=(Math.floor(h/4)%2===0)?1:-1;
-      const px=t.x+side*(TOWER_W/2-1.5);
-      const plat=B.MeshBuilder.CreateBox('ladder_'+ti+'_'+h,{width:2.5,height:0.3,depth:TOWER_W-1},_scene);
-      plat.position.set(px,h,t.z);plat.material=MHex;
-      _addCol(px,t.z,2.5,TOWER_W-1,h+0.15);
+    // Front wall with doorway — upper wall only (door gap is 3m wide, 3.5m tall)
+    const frontX=t.x-t.facing*TW/2;
+    const upperH=TOWER_H-3.5;
+    const upper=B.MeshBuilder.CreateBox('tw_front_upper_'+ti,{width:0.5,height:upperH,depth:TW-1},_scene);
+    upper.position.set(frontX,3.5+upperH/2,0);upper.material=MTw;
+    _addCol(frontX,0,0.5,TW-1,TOWER_H,3.5);
+    // Door frame sides
+    box('tw_door_l_'+ti,0.5,3.5,(TW-3)/2,frontX,(TW-1)/2-(TW-3)/4,MTw);
+    box('tw_door_r_'+ti,0.5,3.5,(TW-3)/2,frontX,-(TW-1)/2+(TW-3)/4,MTw);
+
+    // Interior ladder platforms (alternating left/right every 3.5m)
+    for(let h=3;h<TOWER_H-2;h+=3.5){
+      const side=(Math.floor(h/3.5)%2===0)?1:-1;
+      const px=t.x+side*(TW/2-1.2);
+      const plat=B.MeshBuilder.CreateBox('tw_plat_'+ti+'_'+h,{width:2,height:0.25,depth:TW-1.5},_scene);
+      plat.position.set(px,h,0);plat.material=MHex;
+      _addCol(px,0,2,TW-1.5,h+0.12,h-0.12);
     }
 
-    box('tw_top_'+ti,TOWER_W+2,0.4,TOWER_W+2,t.x,t.z,MC);
-    _addCol(t.x,t.z,TOWER_W+2,TOWER_W+2,TOWER_H+0.2);
+    // Ladder rungs (visual only — thin bars on the back wall)
+    for(let r=0.8;r<TOWER_H-1;r+=0.8){
+      const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:0.08,height:0.08,depth:1.5},_scene);
+      rung.position.set(t.x+t.facing*(TW/2-0.3),r,0);rung.material=MG;
+    }
 
-    const tRing=B.MeshBuilder.CreateTorus('tw_ring_'+ti,{diameter:TOWER_W+2,thickness:0.12,tessellation:6},_scene);
-    tRing.position.set(t.x,TOWER_H+0.5,t.z);tRing.material=MG;
+    // Top platform (wider than tower, can stand on)
+    const topPlat=B.MeshBuilder.CreateBox('tw_top_'+ti,{width:TW+3,height:0.4,depth:TW+3},_scene);
+    topPlat.position.set(t.x,TOWER_H,0);topPlat.material=MC;
+    _addCol(t.x,0,TW+3,TW+3,TOWER_H+0.2,TOWER_H-0.2);
 
-    const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,TOWER_H+2,t.z),_scene);
+    // Top glow ring
+    const topRing=B.MeshBuilder.CreateTorus('tw_glow_'+ti,{diameter:TW+3,thickness:0.12,tessellation:6},_scene);
+    topRing.position.set(t.x,TOWER_H+0.3,0);topRing.material=MG;
+
+    // Tower light
+    const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,TOWER_H+2,0),_scene);
     tLight.diffuse=new B.Color3(0.1,1,0.5);tLight.intensity=1.5;tLight.range=20;
   });
-
-  const bridgeLen=TOWER_X*2-TOWER_W;
-  const bridge=B.MeshBuilder.CreateBox('sky_bridge',{width:bridgeLen,height:0.4,depth:3},_scene);
-  bridge.position.set(0,BRIDGE_Y,0);bridge.material=MBridge;
-  _addCol(0,0,bridgeLen,3,BRIDGE_Y+0.2);
-
-  const railing1=B.MeshBuilder.CreateBox('bridge_rail_n',{width:bridgeLen,height:1.2,depth:0.15},_scene);
-  railing1.position.set(0,BRIDGE_Y+0.6,1.5);railing1.material=MTower;
-  const railing2=B.MeshBuilder.CreateBox('bridge_rail_s',{width:bridgeLen,height:1.2,depth:0.15},_scene);
-  railing2.position.set(0,BRIDGE_Y+0.6,-1.5);railing2.material=MTower;
-
-  strip('bridge_gn',bridgeLen,0.08,0.15,0,BRIDGE_Y+0.06,1.4);
-  strip('bridge_gs',bridgeLen,0.08,0.15,0,BRIDGE_Y+0.06,-1.4);
-
-  const bLight=new B.PointLight('bridge_light',new B.Vector3(0,BRIDGE_Y+2,0),_scene);
-  bLight.diffuse=new B.Color3(0.8,0.2,0.9);bLight.intensity=1.5;bLight.range=10;
 
   // ── SPOTLIGHT ──
   const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
