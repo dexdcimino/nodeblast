@@ -909,7 +909,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .profile-col{flex:1;min-width:0;position:relative;}
 #profile-col-catalysts{min-height:0;}
 #profile-col-catalysts[style*="display: none"],#profile-col-catalysts[style*="display:none"]{min-height:0;}
-#profile-col-pinned,#profile-col-following{flex:1 1 0;min-width:280px;min-height:120px;background:var(--bg2);border:1px solid var(--bdr);border-radius:24px;padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;}
+#profile-col-pinned,#profile-col-following{flex:1 1 0;min-width:280px;min-height:200px;background:var(--bg2);border:1px solid var(--bdr);border-radius:24px;padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;}
 [data-theme="light"] #profile-col-pinned,[data-theme="light"] #profile-col-following{background:var(--bg4);}
 [data-theme="light"] .profile-col-title{background:var(--bg4);}
 #profile-col-following{gap:12px;overflow-y:auto;}
@@ -926,7 +926,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .profile-col-filter-btn{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx3);cursor:pointer;padding:5px 8px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease),background var(--ease);}
 .profile-col-filter-btn:hover{color:var(--tx);border-color:var(--clr-adj);background:var(--bg3);}
 .profile-col-filter-btn svg{width:14px;height:14px;}
-.profile-col-empty{display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:14px;text-align:center;padding:30px 20px;line-height:1.55;}
+.profile-col-empty{display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:14px;text-align:center;padding:40px 20px;line-height:1.55;flex:1;min-height:120px;}
 .pinned-tile-wrap{position:relative;display:inline-block;}
 .profile-col-unpin{position:absolute;top:6px;right:6px;z-index:10;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.55);border:1.5px solid rgba(255,255,255,0.25);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s ease,background .15s ease;pointer-events:all;}
 .profile-col-search{width:100%;padding:8px 14px;border:1px solid var(--bdr);border-radius:10px;background:var(--bg3);color:var(--tx);font-family:var(--fn);font-size:13px;outline:none;box-sizing:border-box;transition:border-color var(--ease);}

@@ -213,12 +213,14 @@ function _killRemotePlayer(id){
   setTimeout(()=>{if(_remotePlayers.has(id)){p.root.setEnabled(true);if(p.hbFill){p.hbFill.scaling.x=1;p.hbFill.position.x=0;}}},5200);
 }
 
-function _addCol(x,z,w,d,h){_colBlocks.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2,maxY:h});}
+function _addCol(x,z,w,d,h,minY){_colBlocks.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2,maxY:h,minY:minY||0});}
 
 function _resolveCollision(nx,nz,cy){
   const PR=0.45;let rx=nx,rz=nz;
   for(const b of _colBlocks){
-    if(cy-GROUND_Y>=b.maxY-0.05)continue;
+    const feetY=cy-GROUND_Y;
+    if(feetY>=b.maxY-0.05)continue;
+    if(feetY+GROUND_Y<b.minY)continue;
     if(!(rx>b.minX-PR&&rx<b.maxX+PR&&rz>b.minZ-PR&&rz<b.maxZ+PR))continue;
     const pushes=[{a:'x',v:b.minX-PR-rx},{a:'x',v:b.maxX+PR-rx},{a:'z',v:b.minZ-PR-rz},{a:'z',v:b.maxZ+PR-rz}];
     const best=pushes.reduce((a,c)=>Math.abs(c.v)<Math.abs(a.v)?c:a);
@@ -674,7 +676,7 @@ function _updateProjectiles(){
     const steps=Math.max(1,Math.ceil(tLen/0.12));const step=travel.scale(1/steps);
     outer:for(let s=0;s<=steps;s++){
       const sp=prev.add(step.scale(s));const sx=sp.x,sy=sp.y,sz=sp.z;
-      for(const b of _colBlocks){const m=0.1;if(sx>b.minX-m&&sx<b.maxX+m&&sz>b.minZ-m&&sz<b.maxZ+m&&sy<b.maxY+m&&sy>-0.5){hit=true;hitPos=sp.clone();hitBlock=b;break outer;}}
+      for(const b of _colBlocks){const m=0.1;if(sx>b.minX-m&&sx<b.maxX+m&&sz>b.minZ-m&&sz<b.maxZ+m&&sy<b.maxY+m&&sy>b.minY-m){hit=true;hitPos=sp.clone();hitBlock=b;break outer;}}
       const enemyIdx=checkEnemyHit(sp);
       if(enemyIdx>=0){const sDmg=p._sniperDmg?100:20;damageEnemyNode(enemyIdx,sDmg);hit=true;hitPos=sp.clone();break outer;}
       // Remote player hit check
@@ -1382,7 +1384,7 @@ function _buildArenaCollision(){
   // Center hex platform
   _addCol(0,0,20,20,1.2);
   _addCol(0,0,3,3,8);   // pillar
-  _addCol(0,0,5.5,5.5,8.3); // top platform
+  _addCol(0,0,5.5,5.5,8.3,7.8); // top platform
 
   // 6 zone structures (same positions as _buildArenaProc)
   const HEX_R=90;
@@ -1393,7 +1395,7 @@ function _buildArenaCollision(){
 
     if(i===0){
       _addCol(cx-8,cz,4,4,9);_addCol(cx+8,cz,4,4,9);
-      _addCol(cx,cz,18,4,9.5);_addCol(cx,cz,20,8,0.6);
+      _addCol(cx,cz,18,4,9.5,8.8);_addCol(cx,cz,20,8,0.6);
     }else if(i===1){
       _addCol(cx,cz,16,16,1.5);_addCol(cx,cz,10,10,3);_addCol(cx,cz,5,5,5);
     }else if(i===2){
@@ -1479,7 +1481,7 @@ function _buildArenaProc(){
 
     if(i===0){
       box('zt0_tL',4,9,4,cx-8,cz,MD);box('zt0_tR',4,9,4,cx+8,cz,MD);
-      box('zt0_bridge',18,0.5,4,cx,cz,MC);strip('zt0_bg',18,0.1,4,cx,9.3,cz);
+      const zt0b=B.MeshBuilder.CreateBox('zt0_bridge',{width:18,height:0.5,depth:4},_scene);zt0b.position.set(cx,9,cz);zt0b.material=MC;strip('zt0_bg',18,0.1,4,cx,9.3,cz);
       box('zt0_base',20,0.6,8,cx,cz,MD);
       strip('zt0_glow',20,0.12,8,cx,0.66,cz);
     }else if(i===1){

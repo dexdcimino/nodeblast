@@ -1029,7 +1029,7 @@ function _renderProfileView(user, catalysts, isOwn) {
           const card = _buildCommunityCard(group);
           followingCol.appendChild(card);
         });
-        if (followingCol.children.length === 0) {
+        if (followingCol.children.length <= 1) {
           const empty = document.createElement('div');
           empty.className = 'profile-col-empty';
           empty.textContent = 'No catalysts from pinned alchemists yet';
