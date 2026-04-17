@@ -505,6 +505,7 @@ function _isAnyModalOpen() {
 }
 
 export function openAccountMenu() {
+  closeColorPopup();
   const menu = document.getElementById('acct-menu');
   const btn = document.getElementById('acct-btn');
   if (!menu || !btn) return;
