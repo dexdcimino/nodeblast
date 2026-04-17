@@ -2856,7 +2856,7 @@ function initLogoPicker() {
   };
   const hide = () => {
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => picker.classList.remove('open'), 180);
+    hideTimer = setTimeout(() => picker.classList.remove('open'), 350);
   };
   logoEl.addEventListener('mouseenter', show);
   logoEl.addEventListener('mouseleave', hide);
