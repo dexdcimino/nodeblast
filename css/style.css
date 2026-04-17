@@ -838,14 +838,17 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card.pill .community-vote-pill{display:none;}
 
 /* MD#1: absolute-positioned vote pills — bottom-left frost, bottom-right fire */
-.community-vote-pill{position:absolute;bottom:12px;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:9999px;border:1px solid var(--bdr);background:color-mix(in srgb,var(--bg3) 60%,transparent);font-size:20px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;color:var(--tx2);line-height:1;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:3;}
-.community-vote-pill.frost{left:28px;}
-.community-vote-pill.fire{right:28px;}
+.community-vote-pill{position:absolute;bottom:14px;display:inline-flex;align-items:center;padding:6px;border-radius:50%;border:1px solid var(--bdr);background:color-mix(in srgb,var(--bg3) 60%,transparent);font-size:20px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s,border-radius .2s,padding .2s;color:var(--tx2);line-height:1;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:3;}
+.community-vote-pill.frost{left:14px;}
+.community-vote-pill.fire{right:14px;}
+.community-vote-pill.has-count{border-radius:9999px;}
+.community-vote-pill.has-count.frost{padding:6px 12px 6px 6px;}
+.community-vote-pill.has-count.fire{padding:6px 6px 6px 12px;flex-direction:row-reverse;}
 .community-vote-pill:hover{border-color:var(--clr-adj);background:var(--bg4);}
 .community-vote-pill:active{transform:scale(0.93);}
 .community-vote-pill.active.fire{border-color:#ff6b35;background:rgba(255,107,53,0.12);}
 .community-vote-pill.active.frost{border-color:#a07850;background:rgba(160,120,80,0.12);}
-.community-vote-count{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--tx);}
+.community-vote-count{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--tx);margin:0 4px;}
 .community-empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px;}
 
 /* MD02: QR Share Modal */

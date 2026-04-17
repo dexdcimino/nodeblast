@@ -1827,7 +1827,8 @@ function _buildCommunityCard(group) {
     frostPill.dataset.creatorUid = group.uid;
     frostPill.setAttribute('data-tip', 'Poop');
     const frostCount = group.frostVoteCount || 0;
-    frostPill.innerHTML = `💩${frostCount > 0 ? `<span class="community-vote-count">${frostCount}</span>` : ''}`;
+    if (frostCount > 0) frostPill.classList.add('has-count');
+    frostPill.innerHTML = `💩${frostCount > 0 ? `<span class="community-vote-count">${_formatVoteCount(frostCount)}</span>` : ''}`;
     card.appendChild(frostPill);
 
     const firePill = document.createElement('button');
@@ -1837,7 +1838,8 @@ function _buildCommunityCard(group) {
     firePill.dataset.creatorUid = group.uid;
     firePill.setAttribute('data-tip', 'Fire');
     const fireCount = group.fireVoteCount || 0;
-    firePill.innerHTML = `🔥${fireCount > 0 ? `<span class="community-vote-count">${fireCount}</span>` : ''}`;
+    if (fireCount > 0) firePill.classList.add('has-count');
+    firePill.innerHTML = `🔥${fireCount > 0 ? `<span class="community-vote-count">${_formatVoteCount(fireCount)}</span>` : ''}`;
     card.appendChild(firePill);
 
     [firePill, frostPill].forEach((btn) => {
@@ -1873,6 +1875,11 @@ function _buildCommunityCard(group) {
           if (nextSib === 0) sibCountEl.remove();
           else sibCountEl.textContent = String(nextSib);
         }
+        // Update has-count class for pill/circle shape
+        [btn, sibling].forEach((pill) => {
+          const ce = pill.querySelector('.community-vote-count');
+          pill.classList.toggle('has-count', !!(ce && parseInt(ce.textContent) > 0));
+        });
         const result = await voteCreator(group.uid, voteType);
         if (result !== null) _updateCreatorVoteUI(group.uid, result.type);
       });
