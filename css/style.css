@@ -1656,9 +1656,9 @@ body.cat-modal-open{overflow:hidden;}
 }
 /* Play button uses --clr-adj (light-mode adjusted) for bg and
    --clr-adj-on for text so contrast adapts to both themes. */
-.hdr-play-btn{background:var(--clr-bot,var(--clr-adj));color:var(--clr-bot-on,#fff);border:none;border-radius:10px;padding:7px 18px;font-family:var(--fn);font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:7px;}
+.hdr-play-btn{background:var(--clr-bot,var(--clr-adj));color:var(--clr-bot-on,#fff);border:none;border-radius:10px;padding:7px 18px;font-family:var(--fn);font-size:16px;font-weight:600;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:7px;}
 .hdr-play-btn:hover{opacity:.85;}
-.hdr-play-btn svg{display:block;flex-shrink:0;}
+.hdr-play-btn svg{display:block;flex-shrink:0;width:17px;height:17px;}
 /* MD04: header hidden in play mode */
 #hdr.play-mode{background:transparent !important;border-bottom:none !important;box-shadow:none !important;visibility:hidden;}
 #play-exit-btn{z-index:220;}
