@@ -142,7 +142,7 @@ export function initPhoton({ onPlayerUpdate, onPlayerLeave, onConnected, onPlaye
     // Also read their actor properties for immediate name/color display
     try {
       const props = actor.getCustomProperties?.() || {};
-      if (props.username && _onPlayerUpdate) {
+      if (props.username && _onPlayerUpdate && actor.actorNr !== _myId) {
         // Trigger a player update with last known position (0,0,0) so the pill appears
         // Their real position arrives with the next event
         _onPlayerUpdate(actor.actorNr, 0, 1.8, 0, 0, 0, props.username, props.hex || '5aaa72');

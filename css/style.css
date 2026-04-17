@@ -1453,19 +1453,19 @@ body.cat-modal-open{overflow:hidden;}
 .player-list-pill{
   display:flex;
   align-items:center;
-  gap:7px;
-  padding:4px 10px 4px 8px;
+  gap:9px;
+  padding:6px 14px 6px 10px;
   border-radius:20px;
   background:rgba(0,0,0,0.55);
   border:1px solid rgba(255,255,255,0.07);
   backdrop-filter:blur(4px);
   font-family:'Outfit',sans-serif;
-  font-size:12px;
+  font-size:15px;
   color:rgba(255,255,255,0.75);
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  max-width:180px;
+  max-width:220px;
   transition:background 0.2s;
 }
 
@@ -1477,8 +1477,8 @@ body.cat-modal-open{overflow:hidden;}
 }
 
 .player-list-dot{
-  width:9px;
-  height:9px;
+  width:12px;
+  height:12px;
   border-radius:50%;
   flex-shrink:0;
 }
@@ -1505,7 +1505,7 @@ body.cat-modal-open{overflow:hidden;}
   top:38px;
   right:20px;
   font-family:'Outfit',sans-serif;
-  font-size:11px;
+  font-size:14px;
   color:rgba(255,255,255,0.4);
   letter-spacing:0.04em;
   pointer-events:none;
