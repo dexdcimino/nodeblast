@@ -886,17 +886,17 @@ function _buildGunPickups() {
   });
 
   // Sniper pickup on sky bridge center
-  const sniperY = 30.4; // East tower top
+  const sniperY = 30.4; // bridge surface
   const sniperModel = _buildPickupGunModel(5);
-  sniperModel.position.set(75, sniperY + 0.6, 0);
+  sniperModel.position.set(0, sniperY + 0.6, 0);
   const sniperGlow = B.MeshBuilder.CreateTorus('sniper_glow', { diameter: 2, thickness: 0.1, tessellation: 6 }, _scene);
-  sniperGlow.position.set(75, sniperY + 0.1, 0); sniperGlow.material = new B.StandardMaterial('sniper_glow_m', _scene);
+  sniperGlow.position.set(0, sniperY + 0.1, 0); sniperGlow.material = new B.StandardMaterial('sniper_glow_m', _scene);
   sniperGlow.material.emissiveColor = new B.Color3(0.8, 0.2, 0.9); sniperGlow.material.disableLighting = true;
-  const sniperPt = new B.PointLight('sniper_pickup_pt', new B.Vector3(75, sniperY + 1.5, 0), _scene);
+  const sniperPt = new B.PointLight('sniper_pickup_pt', new B.Vector3(0, sniperY + 1.5, 0), _scene);
   sniperPt.diffuse = new B.Color3(0.8, 0.2, 0.9); sniperPt.intensity = 1; sniperPt.range = 6;
   _gunPickups.push({
     tableTop: null, glowRing: sniperGlow, pt: sniperPt, gunModel: sniperModel,
-    pos: new B.Vector3(75, sniperY + 0.6, 0),
+    pos: new B.Vector3(0, sniperY + 0.6, 0),
     slot: 5,
     _currentGunId: 'sniper',
   });
@@ -1297,6 +1297,7 @@ function _physicsTick() {
   for (let k = 1; k <= 6; k++) {
     if (_keys['Digit' + k] && !_prevKeys['Digit' + k]) {
       setActiveSlot(k - 1);
+      if(_scoped){_scoped=false;if(_camera)_camera.fov=1.22;const s=document.getElementById('play-scope-overlay');if(s)s.style.display='none';}
     }
   }
 
@@ -1437,6 +1438,10 @@ function _buildArenaCollision(){
     _addCol(t.x-t.facing*TW/2,0,0.5,TW-1,TOWER_H,3.5);
     _addCol(t.x,0,TW+3,TW+3,TOWER_H+0.2,TOWER_H-0.2);
   });
+
+  // Sky bridge collision
+  const bridgeLen=TX*2-TW;
+  _addCol(0,0,bridgeLen,3.5,TOWER_H+0.2,TOWER_H-0.2);
 
   // Spotlight
   const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
@@ -1668,6 +1673,27 @@ function _buildArenaProc(){
     const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,TOWER_H+2,0),_scene);
     tLight.diffuse=new B.Color3(0.1,1,0.5);tLight.intensity=1.5;tLight.range=20;
   });
+
+  // ── SKY BRIDGE ──
+  const BRIDGE_Y=TOWER_H;
+  const bridgeLen=TX*2-TW;
+  const bridgeMesh=B.MeshBuilder.CreateBox('sky_bridge',{width:bridgeLen,height:0.4,depth:3.5},_scene);
+  bridgeMesh.position.set(0,BRIDGE_Y,0);bridgeMesh.material=MC;
+  _addCol(0,0,bridgeLen,3.5,BRIDGE_Y+0.2,BRIDGE_Y-0.2);
+
+  const rail1=B.MeshBuilder.CreateBox('bridge_rail_n',{width:bridgeLen,height:1,depth:0.12},_scene);
+  rail1.position.set(0,BRIDGE_Y+0.5,1.7);rail1.material=MTw;
+  const rail2=B.MeshBuilder.CreateBox('bridge_rail_s',{width:bridgeLen,height:1,depth:0.12},_scene);
+  rail2.position.set(0,BRIDGE_Y+0.5,-1.7);rail2.material=MTw;
+
+  strip('bridge_gn',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,1.6);
+  strip('bridge_gs',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,-1.6);
+
+  const bLight=new B.PointLight('bridge_light',new B.Vector3(0,BRIDGE_Y+2,0),_scene);
+  bLight.diffuse=new B.Color3(0.8,0.2,0.9);bLight.intensity=1.5;bLight.range=10;
+
+  const sniperMarker=B.MeshBuilder.CreateTorus('sniper_marker',{diameter:2,thickness:0.1,tessellation:6},_scene);
+  sniperMarker.position.set(0,BRIDGE_Y+0.3,0);sniperMarker.material=MG;
 
   // ── SPOTLIGHT ──
   const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
