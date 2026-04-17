@@ -1389,7 +1389,7 @@ function _buildArenaCollision(){
   // 6 zone structures (same positions as _buildArenaProc)
   const HEX_R=90;
   for(let i=0;i<6;i++){
-    const angle=Math.PI/3*i+Math.PI/6;
+    const angle=Math.PI/3*i;
     const cx=Math.cos(angle)*HEX_R*0.55;
     const cz=Math.sin(angle)*HEX_R*0.55;
 
@@ -1449,11 +1449,11 @@ function _buildArenaProc(){
   gndExt.position.y=-0.02;gndExt.material=mkMat('gnd_ext',0.03,0.03,0.05);
 
   const hexFloor=B.MeshBuilder.CreateDisc('hex_floor',{radius:115,tessellation:6},_scene);
-  hexFloor.rotation.x=Math.PI/2;hexFloor.rotation.y=Math.PI/6;
+  hexFloor.rotation.x=Math.PI/2;hexFloor.rotation.y=0;
   hexFloor.position.y=0.01;hexFloor.material=mkMat('hex_gnd',0.06,0.07,0.09);
 
   const hexInner=B.MeshBuilder.CreateDisc('hex_inner_ring',{radius:70,tessellation:6},_scene);
-  hexInner.rotation.x=Math.PI/2;hexInner.rotation.y=Math.PI/6;
+  hexInner.rotation.x=Math.PI/2;hexInner.rotation.y=0;
   hexInner.position.y=0.02;hexInner.material=mkMat('hex_inner',0.07,0.08,0.10);
 
   // ── CENTER PLATFORM ──
@@ -1475,7 +1475,7 @@ function _buildArenaProc(){
   // ── 6 ZONE STRUCTURES ──
   const HEX_R=90;
   for(let i=0;i<6;i++){
-    const angle=Math.PI/3*i+Math.PI/6;
+    const angle=Math.PI/3*i;
     const cx=Math.cos(angle)*HEX_R*0.55;
     const cz=Math.sin(angle)*HEX_R*0.55;
 
@@ -1556,7 +1556,7 @@ function _buildArenaProc(){
   wallGlowMat.emissiveColor=new B.Color3(0.0,0.7,0.25);wallGlowMat.disableLighting=true;
 
   for(let i=0;i<6;i++){
-    const a1=Math.PI/3*i+Math.PI/6,a2=Math.PI/3*(i+1)+Math.PI/6;
+    const a1=Math.PI/3*i,a2=Math.PI/3*(i+1);
     const x1=Math.cos(a1)*WALL_R,z1=Math.sin(a1)*WALL_R;
     const x2=Math.cos(a2)*WALL_R,z2=Math.sin(a2)*WALL_R;
     const mx=(x1+x2)/2,mz=(z1+z2)/2;
@@ -1567,14 +1567,13 @@ function _buildArenaProc(){
     const wall=B.MeshBuilder.CreateBox('hex_wall_'+i,{width:segLen,height:WALL_H,depth:0.5},_scene);
     wall.position.set(mx,WALL_H/2,mz);wall.rotation.y=wallAngle;wall.material=wallMat;
 
-    // Collision — use many small segments along the wall instead of one giant AABB
-    const SEG_COUNT = 12;
-    for(let s=0;s<SEG_COUNT;s++){
-      const t=(s+0.5)/SEG_COUNT;
-      const sx=x1+(x2-x1)*t, sz=z1+(z2-z1)*t;
-      const segW=segLen/SEG_COUNT;
-      const perpX=Math.abs(Math.sin(wallAngle))*segW/2+0.5;
-      const perpZ=Math.abs(Math.cos(wallAngle))*segW/2+0.5;
+    // Collision — segmented along wall for accurate hit detection
+    const SEGS=12;
+    for(let s=0;s<SEGS;s++){
+      const t=(s+0.5)/SEGS;
+      const sx=x1+(x2-x1)*t,sz=z1+(z2-z1)*t;
+      const perpX=Math.abs(dz/segLen)*segLen/SEGS/2+1;
+      const perpZ=Math.abs(dx/segLen)*segLen/SEGS/2+1;
       _addCol(sx,sz,perpX*2,perpZ*2,WALL_H);
     }
 
@@ -1599,7 +1598,7 @@ function _buildArenaProc(){
 
   // ── VERTEX PILLARS ──
   for(let i=0;i<6;i++){
-    const a=Math.PI/3*i+Math.PI/6;
+    const a=Math.PI/3*i;
     const vx=Math.cos(a)*WALL_R,vz=Math.sin(a)*WALL_R;
     const pil=B.MeshBuilder.CreateCylinder('hex_vpil_'+i,{height:8,diameter:2.5,tessellation:6},_scene);
     pil.position.set(vx,4,vz);pil.material=MD;
@@ -1678,7 +1677,7 @@ function _buildColorNodes(){
   ];
   const nodePositions = [];
   for(let i=0;i<6;i++){
-    const angle=Math.PI/3*i+Math.PI/6;
+    const angle=Math.PI/3*i;
     nodePositions.push({ x: Math.round(Math.cos(angle)*55), z: Math.round(Math.sin(angle)*55) });
   }
   nodePositions.push({ x: 15, z: 0 }, { x: -15, z: 0 });
