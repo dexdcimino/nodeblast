@@ -909,8 +909,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #profile-col-pinned,#profile-col-following{flex:1 1 0;min-width:280px;min-height:120px;background:var(--bg2);border:1px solid var(--bdr);border-radius:24px;padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;}
 [data-theme="light"] #profile-col-pinned,[data-theme="light"] #profile-col-following{background:var(--bg4);}
 [data-theme="light"] .profile-col-title{background:var(--bg4);}
-#profile-col-following{gap:16px;overflow-y:auto;}
+#profile-col-following{gap:12px;overflow-y:auto;}
 #profile-col-following .community-card{flex-basis:auto;width:100%;min-width:0;}
+#profile-col-following .community-card.collapsed{width:100%;}
+#profile-col-following .community-card.pill{width:100%;flex-basis:auto;}
 #profile-col-pinned .hex-tile{position:relative;width:auto;max-width:none;}
 #profile-col-pinned{flex-direction:column;overflow-y:auto;}
 #profile-col-pinned .profile-col-tiles{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;}
