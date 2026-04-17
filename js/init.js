@@ -2718,6 +2718,16 @@ function markSelectedSwatches() {
     .forEach((b) => b.classList.toggle('selected', b.dataset.color.toLowerCase() === botLc));
 }
 
+function _repaintSwatches() {
+  document.querySelectorAll('#logo-picker .logo-swatch').forEach((btn) => {
+    const raw = btn.dataset.color;
+    if (!raw) return;
+    const adjusted = getThemeAdjustedLogoColor(raw);
+    btn.style.background = adjusted;
+    btn.querySelectorAll('.swatch-splat circle').forEach((c) => c.setAttribute('fill', adjusted));
+  });
+}
+
 // Apply both colors end-to-end: SVG paint, wordmark color, the
 // site-wide accent (driven by the TOP color), favicon, swatch
 // rings, and localStorage. Firestore persistence is layered on
@@ -2743,6 +2753,7 @@ function setLogoColors(top, bot, mode) {
   _applyBotClrVars();
   applyFavicon(_logoTop, _logoBot, _logoMode);
   markSelectedSwatches();
+  _repaintSwatches();
   _updateVariantToggle();
   try {
     localStorage.setItem(LOGO_TOP_KEY, _logoTop);
@@ -2847,6 +2858,7 @@ function initLogoPicker() {
     paintLogo(_logoTop, _logoBot, _logoMode);
     _applyBotClrVars();
     _updateVariantToggle();
+    _repaintSwatches();
   });
 
   let hideTimer = null;
