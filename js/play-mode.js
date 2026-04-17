@@ -19,6 +19,7 @@ let _engine = null;
 let _modalWired = false;
 let _exitModalOpen = false;
 let _returnPath = '/games';
+let _loadTimeout = null;
 
 const MAX_VISIBLE_PLAYERS = 8;
 
@@ -191,6 +192,14 @@ export async function renderPlayRoute(gameId) {
     if (loadBar) loadBar.style.width = '0%';
   }
 
+  // Safety timeout — if loading takes more than 15 seconds, bail out
+  _loadTimeout = setTimeout(() => {
+    console.error('[play] loading timed out — redirecting to /games');
+    try { document.exitPointerLock(); } catch {}
+    if (loadOverlay) loadOverlay.style.display = 'none';
+    navigate('/games');
+  }, 15000);
+
   function _setLoadProgress(pct, label) {
     if (loadBar)   loadBar.style.width   = pct + '%';
     if (loadLabel) loadLabel.textContent = label || 'Loading Arena...';
@@ -247,6 +256,7 @@ export async function renderPlayRoute(gameId) {
     // Arena is built and rendering — hide loading overlay now
     // (multiplayer connection happens in background)
     _setLoadProgress(100, 'Ready!');
+    clearTimeout(_loadTimeout);
     setTimeout(_hideLoadOverlay, 300);
 
     // Wire damage bridges
@@ -359,13 +369,16 @@ export async function renderPlayRoute(gameId) {
     });
     window._nbPhotonInRoom = isInRoom;
   } catch (err) {
+    clearTimeout(_loadTimeout);
     console.error('[play] failed to init:', err);
+    try { document.exitPointerLock(); } catch {}
     if (loadOverlay) loadOverlay.style.display = 'none';
-    view.innerHTML = '<div style="color:#f66;padding:2rem;font:14px monospace">Failed to load: ' + (err.message || err) + '</div>';
+    navigate('/games');
   }
 }
 
 export function destroyPlayRoute() {
+  if (_loadTimeout) { clearTimeout(_loadTimeout); _loadTimeout = null; }
   closeExitModal(true);
   destroyHathora();
   destroyPhoton();
