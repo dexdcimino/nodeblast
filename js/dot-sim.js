@@ -20,6 +20,7 @@ let _canvas = null, _ctx = null, _raf = null, _paused = false;
 let _agents = [], _food = [], _tick = 0, _lastTime = 0, _fps = 0, _fpsFrames = 0, _fpsLast = 0;
 let _gridW = 0, _gridH = 0, _grid = null;
 let _foodCooldowns = [];
+let _zones = [];
 
 let _cfg = {
   speed: 1.0,
@@ -91,7 +92,35 @@ function _spawnAgent(tribe, x, y, parentTraits) {
 }
 
 function _spawnFood() {
+  const fertiles = _zones.filter(z => z.type === 'FERTILE');
+  if (fertiles.length > 0 && Math.random() < 0.6) {
+    const z = fertiles[Math.floor(Math.random() * fertiles.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * z.radius;
+    return { x: z.x + Math.cos(angle) * dist, y: z.y + Math.sin(angle) * dist, energy: 30, radius: 4 };
+  }
   return { x: _rand(20, _canvas.width - 20), y: _rand(20, _canvas.height - 20), energy: 30, radius: 4 };
+}
+
+function _generateZones() {
+  _zones = [];
+  const W = _canvas.width, H = _canvas.height;
+  // Fertile patches (3)
+  for (let i = 0; i < 3; i++) {
+    _zones.push({ type: 'FERTILE', x: _rand(120, W - 120), y: _rand(120, H - 120), radius: _rand(60, 120) });
+  }
+  // Hazard zones (2)
+  for (let i = 0; i < 2; i++) {
+    _zones.push({ type: 'HAZARD', x: _rand(100, W - 100), y: _rand(100, H - 100), radius: _rand(40, 80) });
+  }
+  // Tribe nests (4, one per quadrant)
+  const quads = [
+    { x: W * 0.2, y: H * 0.2 }, { x: W * 0.8, y: H * 0.2 },
+    { x: W * 0.2, y: H * 0.8 }, { x: W * 0.8, y: H * 0.8 },
+  ];
+  for (let t = 0; t < 4; t++) {
+    _zones.push({ type: 'NEST', tribe: t, x: quads[t].x, y: quads[t].y, radius: 50 });
+  }
 }
 
 // ── Simulation tick ──
@@ -232,6 +261,14 @@ function _simTick(dt) {
     if (a.y < pad) { a.y = pad; a.vy = Math.abs(a.vy) * 0.5; }
     if (a.y > _canvas.height - pad) { a.y = _canvas.height - pad; a.vy = -Math.abs(a.vy) * 0.5; }
 
+    // Zone effects
+    for (const zone of _zones) {
+      const dz = _dist(a, zone);
+      if (dz > zone.radius) continue;
+      if (zone.type === 'HAZARD') { a.energy -= 0.08 * spd; }
+      else if (zone.type === 'NEST' && zone.tribe === a.tribe) { a.energy = Math.min(100, a.energy + 0.04 * spd); }
+    }
+
     // Trail
     a.trailPoints.push({ x: a.x, y: a.y });
     if (a.trailPoints.length > TRAIL_LEN) a.trailPoints.shift();
@@ -255,6 +292,47 @@ function _render() {
   _ctx.clearRect(0, 0, W, H);
   _ctx.fillStyle = '#0a0b0f';
   _ctx.fillRect(0, 0, W, H);
+
+  // Zones
+  for (const zone of _zones) {
+    if (zone.type === 'FERTILE') {
+      const gr = _ctx.createRadialGradient(zone.x, zone.y, 0, zone.x, zone.y, zone.radius);
+      gr.addColorStop(0, 'rgba(0,200,80,0.12)');
+      gr.addColorStop(0.7, 'rgba(0,200,80,0.04)');
+      gr.addColorStop(1, 'rgba(0,200,80,0)');
+      _ctx.fillStyle = gr;
+      _ctx.beginPath();
+      _ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      _ctx.fill();
+    } else if (zone.type === 'HAZARD') {
+      const pulse = 0.08 + Math.sin(_tick * 0.02) * 0.04;
+      const gr = _ctx.createRadialGradient(zone.x, zone.y, 0, zone.x, zone.y, zone.radius);
+      gr.addColorStop(0, `rgba(200,50,0,${pulse})`);
+      gr.addColorStop(0.7, `rgba(200,50,0,${pulse * 0.4})`);
+      gr.addColorStop(1, 'rgba(200,50,0,0)');
+      _ctx.fillStyle = gr;
+      _ctx.beginPath();
+      _ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      _ctx.fill();
+    } else if (zone.type === 'NEST') {
+      const tc = TRIBES[zone.tribe].color;
+      const rgb = _hexToRgb(tc);
+      const gr = _ctx.createRadialGradient(zone.x, zone.y, 0, zone.x, zone.y, zone.radius);
+      gr.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.05)`);
+      gr.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
+      _ctx.fillStyle = gr;
+      _ctx.beginPath();
+      _ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      _ctx.fill();
+      _ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`;
+      _ctx.lineWidth = 1.5;
+      _ctx.setLineDash([6, 4]);
+      _ctx.beginPath();
+      _ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      _ctx.stroke();
+      _ctx.setLineDash([]);
+    }
+  }
 
   const skipTrails = _agents.length > 80;
 
@@ -399,9 +477,16 @@ export function dotSimInit(canvas, config) {
   if (rect) { canvas.width = rect.width; canvas.height = rect.height; }
 
   // Spawn starting dots
+  _generateZones();
   const perTribe = _clamp(_cfg.startingDots, 3, 15);
+  const nestZones = _zones.filter(z => z.type === 'NEST');
   for (let t = 0; t < 4; t++) {
-    for (let i = 0; i < perTribe; i++) _agents.push(_spawnAgent(t));
+    const nest = nestZones.find(z => z.tribe === t);
+    for (let i = 0; i < perTribe; i++) {
+      const nx = nest ? nest.x + _rand(-40, 40) : undefined;
+      const ny = nest ? nest.y + _rand(-40, 40) : undefined;
+      _agents.push(_spawnAgent(t, nx, ny));
+    }
   }
 
   // Spawn food
@@ -416,7 +501,7 @@ export function dotSimInit(canvas, config) {
 export function dotSimDestroy() {
   if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
   if (_ctx && _canvas) _ctx.clearRect(0, 0, _canvas.width, _canvas.height);
-  _agents = []; _food = []; _foodCooldowns = [];
+  _agents = []; _food = []; _foodCooldowns = []; _zones = [];
   _canvas = null; _ctx = null; _grid = null;
 }
 
