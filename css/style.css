@@ -188,7 +188,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-btn:focus,#acct-btn:focus-visible{outline:none;}
 #acct-avatar-sm{width:24px;height:24px;border-radius:50%;border:2px solid var(--acct-hex,var(--clr-adj));background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--clr-adj);overflow:hidden;flex-shrink:0;}
 #acct-avatar-sm img{width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none;}
-#acct-name-short{font-size:14px;font-weight:500;color:var(--tx);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;}
+#acct-name-short{font-size:16px;font-weight:500;color:var(--tx);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;}
 
 /* ══════════════════════════════════════
    ACCOUNT MENU
@@ -223,7 +223,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-hex-row{display:flex;align-items:center;gap:6px;margin-top:5px;}
 #acct-hex-dot{width:13px;height:13px;border-radius:50%;border:0.5px solid var(--bdr);background:var(--acct-hex,var(--clr-adj));flex-shrink:0;cursor:pointer;transition:transform var(--ease);}
 #acct-hex-dot:hover{transform:scale(1.3);}
-#acct-hex-label{font-size:15px;color:var(--tx2);font-family:var(--fn);letter-spacing:0;font-weight:400;cursor:pointer;transition:color var(--ease);}
+#acct-hex-label{font-size:17px;color:var(--tx2);font-family:var(--fn);letter-spacing:0;font-weight:400;cursor:pointer;transition:color var(--ease);}
 #acct-hex-label:hover{color:var(--clr-adj);}
 #acct-hex-label span{opacity:0.8;}
 #acct-hex-copy-btn{background:none;border:none;padding:0;display:flex;align-items:center;justify-content:center;color:var(--tx3);cursor:pointer;transition:color var(--ease);flex-shrink:0;width:15px;height:15px;}
