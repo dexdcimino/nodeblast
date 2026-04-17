@@ -801,7 +801,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-follow.icon-only svg{flex-shrink:0;}
 .community-card.collapsed .community-card-hdr{flex-wrap:nowrap;overflow:hidden;}
 
-.community-tiles{position:relative;display:flex;flex-wrap:nowrap;gap:12px;justify-content:flex-start;align-items:flex-start;padding-bottom:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;-webkit-overflow-scrolling:touch;}
+.community-tiles{position:relative;display:flex;flex-wrap:nowrap;gap:12px;justify-content:flex-start;align-items:flex-start;padding:14px;overflow-x:auto;overflow-y:clip;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;margin:-14px;margin-bottom:0;}
 .community-tiles::-webkit-scrollbar{height:4px;}
 .community-tiles::-webkit-scrollbar-track{background:transparent;}
 .community-tiles::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px;}
@@ -812,7 +812,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-collapse svg{width:18px;height:18px;}
 .community-card.collapsed .community-tiles > *:not(:first-child){display:none;}
 .community-card.collapsed{min-height:0;padding-bottom:28px;}
-.community-card.collapsed .community-tiles{padding-bottom:0;justify-content:center;}
+.community-card.collapsed .community-tiles{justify-content:center;}
 .community-card.collapsed .community-tiles > *:first-child{width:180px !important;height:208px !important;}
 .community-tiles .hex-tile{width:180px !important;height:208px !important;flex-shrink:0;}
 .community-card.collapsed .community-card-hdr{overflow:visible;text-overflow:unset;white-space:normal;}
@@ -921,7 +921,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-tile::before{content:'';position:absolute;inset:0;background-image:var(--thumb,none);background-size:cover;background-position:center;opacity:1;transition:filter .25s ease;}
 .hex-tile:hover::before{filter:brightness(1.05);}
 .hex-tile:hover{transform:scale(1.12);z-index:10;filter:brightness(1.05);transition:transform .2s cubic-bezier(.34,1.56,.64,1), filter .2s ease;}
-.hex-tile-flow:hover{transform:scale(1.1);}
+.hex-tile-flow:hover{transform:scale(1.08);z-index:15;}
 
 /* MD21+MD26: faded yin-yang placeholder shown on no-thumb catalyst
    tiles. Centered with ~20% margin from each edge so the logo stays
