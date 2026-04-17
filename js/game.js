@@ -1746,7 +1746,7 @@ export function destroyGame(engine){
   _muzzleOffset=null;
   window._nbGetPlayerState=null;
   _velX=0;_velZ=0;_velY=0;_onGround=true;_sprinting=false;_jumpHeld=false;_jumpsLeft=2;_jpFuel=JP_MAX_FUEL;_jpActive=false;
-  _colBlocks.length=0;Object.keys(_keys).forEach(k=>delete _keys[k]);
+  _colBlocks.length=0;Object.keys(_keys).forEach(k=>delete _keys[k]);Object.keys(_prevKeys).forEach(k=>delete _prevKeys[k]);
   _scene=null;_camera=null;_canvas=null;_engine=null;
   if(engine){engine.stopRenderLoop();engine.dispose();}
 }
