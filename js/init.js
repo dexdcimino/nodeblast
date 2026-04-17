@@ -1658,64 +1658,73 @@ function _buildCommunityCard(group) {
   // header + first tile. State is session-only (Set keyed by uid).
   const COLLAPSE_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="21" y2="3"/><line x1="3" y1="21" x2="14" y2="10"/></svg>';
   const EXPAND_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+  const PILL_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="9" width="20" height="6" rx="3"/></svg>';
+
+  function getCardState(el) {
+    if (el.classList.contains('pill')) return 'pill';
+    if (el.classList.contains('collapsed')) return 'collapsed';
+    return 'expanded';
+  }
+  function setCardState(el, state, btn) {
+    el.classList.remove('collapsed', 'pill');
+    if (state === 'collapsed') {
+      el.classList.add('collapsed');
+      el.dataset.count = '1';
+      btn.innerHTML = PILL_ICON;
+      btn.setAttribute('data-tip', 'Minimize to pill');
+    } else if (state === 'pill') {
+      el.classList.add('pill');
+      btn.innerHTML = EXPAND_ICON;
+      btn.setAttribute('data-tip', 'Expand');
+    } else {
+      const originalCount = group.catalysts.length >= 10
+        ? 'max' : String(Math.max(1, Math.min(group.catalysts.length, 9)));
+      el.dataset.count = originalCount;
+      btn.innerHTML = COLLAPSE_ICON;
+      btn.setAttribute('data-tip', 'Collapse');
+    }
+    const pinBtn = el.querySelector('.community-card-follow');
+    if (pinBtn && state === 'collapsed') {
+      pinBtn.dataset.fullText = pinBtn.textContent;
+      pinBtn.classList.add('icon-only');
+      pinBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>';
+    } else if (pinBtn && state === 'expanded') {
+      pinBtn.classList.remove('icon-only');
+      const isFollowing = pinBtn.classList.contains('following');
+      pinBtn.textContent = isFollowing ? 'Pinned' : '+ Pin';
+    }
+  }
+
   const collapseBtn = document.createElement('button');
   collapseBtn.type = 'button';
   collapseBtn.className = 'community-card-collapse';
   collapseBtn.setAttribute('aria-label', 'Collapse card');
   const startCollapsed = _collapsedCards.has(group.uid);
   if (startCollapsed) {
-    card.classList.add('collapsed');
-    card.dataset.count = '1';
-    collapseBtn.setAttribute('data-tip', 'Expand');
-    collapseBtn.innerHTML = EXPAND_ICON;
+    setCardState(card, 'collapsed', collapseBtn);
     // Defer pin icon shrink until after followBtn is appended
     requestAnimationFrame(() => {
       const _initPin = card.querySelector('.community-card-follow');
-      if (_initPin) {
-        _initPin.dataset.fullText = _initPin.textContent;
-        _initPin.classList.add('icon-only');
-        _initPin.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>';
-      }
+      if (_initPin) setCardState(card, 'collapsed', collapseBtn);
     });
   } else {
-    collapseBtn.setAttribute('data-tip', 'Collapse');
-    collapseBtn.innerHTML = COLLAPSE_ICON;
+    setCardState(card, 'expanded', collapseBtn);
   }
   collapseBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const nowCollapsed = !card.classList.contains('collapsed');
-    _collapseUndoStack.push({ uid: group.uid, action: nowCollapsed ? 'collapse' : 'expand' });
+    const currentState = getCardState(card);
+    const nextState = currentState === 'expanded' ? 'collapsed'
+      : currentState === 'collapsed' ? 'pill'
+      : 'expanded';
+    _collapseUndoStack.push({ uid: group.uid, action: nextState, prev: currentState });
     if (_collapseUndoStack.length > MAX_UNDO) _collapseUndoStack.shift();
     _collapseRedoStack.length = 0;
-    if (nowCollapsed) {
+    if (nextState === 'collapsed' || nextState === 'pill') {
       _collapsedCards.add(group.uid);
-      card.classList.add('collapsed');
-      card.dataset.count = '1';
-      collapseBtn.setAttribute('data-tip', 'Expand');
-      collapseBtn.innerHTML = EXPAND_ICON;
-      const _pinBtn = card.querySelector('.community-card-follow');
-      if (_pinBtn) {
-        _pinBtn.dataset.fullText = _pinBtn.textContent;
-        _pinBtn.classList.add('icon-only');
-        _pinBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>';
-      }
     } else {
       _collapsedCards.delete(group.uid);
-      card.classList.remove('collapsed');
-      const _pinBtn2 = card.querySelector('.community-card-follow');
-      if (_pinBtn2) {
-        _pinBtn2.classList.remove('icon-only');
-        const _isFollowing = _pinBtn2.classList.contains('following');
-        _pinBtn2.textContent = _isFollowing ? 'Pinned' : '+ Pin';
-      }
-      // Restore original size tier so the card resizes back correctly.
-      const originalCount = group.catalysts.length >= 10
-        ? 'max'
-        : String(Math.max(1, Math.min(group.catalysts.length, 9)));
-      card.dataset.count = originalCount;
-      collapseBtn.setAttribute('data-tip', 'Collapse');
-      collapseBtn.innerHTML = COLLAPSE_ICON;
     }
+    setCardState(card, nextState, collapseBtn);
   });
   hdr.appendChild(collapseBtn);
 
