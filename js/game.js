@@ -1234,6 +1234,12 @@ function _physicsTick() {
   const dropTip = document.getElementById('play-drop-tip');
   if (dropTip) dropTip.style.opacity = '0';
 
+  // Clamp camera pitch to prevent upside-down flips
+  if (_camera) {
+    if (_camera.rotation.x > 1.5) _camera.rotation.x = 1.5;
+    if (_camera.rotation.x < -1.5) _camera.rotation.x = -1.5;
+  }
+
   // FOV kick: sprint widens FOV slightly for speed feel
   if (_camera) {
     const targetFov = _sprinting && ml > 0 ? 1.32 : 1.22;
@@ -1615,6 +1621,17 @@ export function initGame(canvas){
     const wasLocked=_pointerLocked;
     _pointerLocked=document.pointerLockElement===canvas;
     const ch=document.getElementById('play-crosshair');if(ch)ch.style.opacity=_pointerLocked?'1':'0.35';
+    // Detach/reattach camera to prevent stale mouse deltas from causing rotation snaps
+    if(_camera&&_canvas){
+      if(_pointerLocked&&!wasLocked){ _camera.attachControl(_canvas,true); }
+      else if(!_pointerLocked&&wasLocked){ _camera.detachControl(); }
+    }
+    // Clear held keys — browser doesn't fire keyup when pointer lock drops
+    if(!_pointerLocked){
+      Object.keys(_keys).forEach(k=>delete _keys[k]);
+      Object.keys(_prevKeys).forEach(k=>delete _prevKeys[k]);
+      _mouseHeld=false;
+    }
     // Browser exits pointer lock on Escape before keydown fires —
     // open exit modal when pointer lock is lost (not during death/respawn)
     if(wasLocked&&!_pointerLocked&&!_isDead&&!window._nbPlayExitModalOpen){
@@ -1687,7 +1704,10 @@ export function attachCameraInput() {
   if (_camera && _canvas) {
     _camera.rotation.x = 0;
     _camera.rotation.y = 0;
-    _camera.attachControl(_canvas, true);
+    // Only attach if not already attached — plcHandler also manages this
+    if (!_pointerLocked) {
+      _camera.attachControl(_canvas, true);
+    }
   }
 }
 
