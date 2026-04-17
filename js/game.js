@@ -1122,9 +1122,10 @@ function _physicsTick() {
   _nearPickup = null;
   for (const pu of _gunPickups) {
     const dx   = _camera.position.x - pu.pos.x;
+    const dy   = _camera.position.y - pu.pos.y;
     const dz   = _camera.position.z - pu.pos.z;
-    const dist = Math.sqrt(dx*dx + dz*dz);
-    if (dist < 2.5) { _nearPickup = pu; break; }
+    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if (dist < 3.5) { _nearPickup = pu; break; }
   }
 
   const eRingWrap = document.getElementById('play-e-ring-wrap');
@@ -1497,8 +1498,16 @@ function _buildArenaProc(){
     const wall=B.MeshBuilder.CreateBox('hex_wall_'+i,{width:segLen,height:WALL_H,depth:0.5},_scene);
     wall.position.set(mx,WALL_H/2,mz);wall.rotation.y=wallAngle;wall.material=wallMat;
 
-    const hw=segLen/2,colCos=Math.abs(Math.cos(wallAngle)),colSin=Math.abs(Math.sin(wallAngle));
-    _addCol(mx,mz,hw*colSin*2+0.5,hw*colCos*2+0.5,WALL_H);
+    // Collision — use many small segments along the wall instead of one giant AABB
+    const SEG_COUNT = 12;
+    for(let s=0;s<SEG_COUNT;s++){
+      const t=(s+0.5)/SEG_COUNT;
+      const sx=x1+(x2-x1)*t, sz=z1+(z2-z1)*t;
+      const segW=segLen/SEG_COUNT;
+      const perpX=Math.abs(Math.sin(wallAngle))*segW/2+0.5;
+      const perpZ=Math.abs(Math.cos(wallAngle))*segW/2+0.5;
+      _addCol(sx,sz,perpX*2,perpZ*2,WALL_H);
+    }
 
     const topGlow=B.MeshBuilder.CreateBox('hex_wall_top_'+i,{width:segLen,height:0.08,depth:0.55},_scene);
     topGlow.position.set(mx,WALL_H+0.04,mz);topGlow.rotation.y=wallAngle;topGlow.material=wallGlowMat;
