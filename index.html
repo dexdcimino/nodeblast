@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="css/style.css?v=69" />
+  <link rel="stylesheet" href="css/style.css?v=70" />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -362,6 +362,9 @@
           <line x1="20" y1="16" x2="30" y2="16" stroke="white" stroke-width="2" stroke-linecap="round"/>
           <circle cx="16" cy="16" r="2" fill="white" opacity="0.8"/>
         </svg>
+      </div>
+      <div id="play-scope-overlay" style="display:none;">
+        <div class="scope-ring"></div>
       </div>
       <div id="play-status">connecting...</div>
       <div id="play-latency" data-tip="Server latency"></div>
@@ -1246,7 +1249,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=69"></script>
+  <script type="module" src="js/init.js?v=70"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

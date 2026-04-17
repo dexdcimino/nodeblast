@@ -73,7 +73,8 @@ let _nearPickup=null;
 let _eHeld=false;
 let _eHoldTimer=0;
 const E_HOLD_TIME=30;
-let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandler=null,_plcHandler=null,_canvasClickHandler=null;
+let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandler=null,_plcHandler=null,_canvasClickHandler=null,_rightClickHandler=null;
+let _scoped=false;
 let _mouseHeld=false;
 let _lastShot=0;const SHOT_COOLDOWN=220;const _projectiles=[];const _gooSplats=[];
 const _remotePlayers=new Map();
@@ -525,6 +526,30 @@ function _buildGun(){
           _applyGlowMat(orb, 'orb', pc);
           break;
         }
+        case 'sniper': {
+          const barrel = B.MeshBuilder.CreateCylinder('gun_barrel', { diameter: 0.035, height: 0.5, tessellation: 10 }, _scene);
+          barrel.parent = _gunRoot; barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0, 0.18);
+          _applyMat(barrel, 'barrel', 0.14, 0.14, 0.18);
+          const body = B.MeshBuilder.CreateBox('gun_body', { width: 0.06, height: 0.055, depth: 0.2 }, _scene);
+          body.parent = _gunRoot; body.position.set(0, -0.01, 0.02);
+          _applyMat(body, 'body', 0.16, 0.14, 0.20);
+          const stock = B.MeshBuilder.CreateBox('gun_stock', { width: 0.04, height: 0.06, depth: 0.14 }, _scene);
+          stock.parent = _gunRoot; stock.position.set(0, -0.02, -0.14); stock.rotation.x = 0.1;
+          _applyMat(stock, 'stock', 0.12, 0.12, 0.15);
+          const grip = B.MeshBuilder.CreateBox('gun_grip', { width: 0.04, height: 0.10, depth: 0.05 }, _scene);
+          grip.parent = _gunRoot; grip.position.set(0, -0.08, 0.0);
+          _applyMat(grip, 'grip', 0.10, 0.10, 0.14);
+          const scope = B.MeshBuilder.CreateCylinder('gun_scope', { diameter: 0.04, height: 0.12, tessellation: 8 }, _scene);
+          scope.parent = _gunRoot; scope.rotation.x = Math.PI / 2; scope.position.set(0, 0.045, 0.08);
+          _applyColorMat(scope, 'scope', pc);
+          const lens = B.MeshBuilder.CreateSphere('gun_lens', { diameter: 0.04, segments: 6 }, _scene);
+          lens.parent = _gunRoot; lens.position.set(0, 0.045, 0.14);
+          _applyGlowMat(lens, 'lens', pc);
+          const orb = B.MeshBuilder.CreateSphere('gun_orb', { diameter: 0.03, segments: 6 }, _scene);
+          orb.parent = _gunRoot; orb.position.set(0, 0, 0.44);
+          _applyGlowMat(orb, 'orb', pc);
+          break;
+        }
       }
     }
   );
@@ -554,6 +579,20 @@ function _shoot(){
     const dir = _camera.getDirection(B.Vector3.Forward()).normalize();
     const origin = _muzzleOffset ? _muzzleOffset.clone() : _camera.position.add(dir.scale(0.4));
     _fireRocket(origin, dir, pc);
+    return;
+  }
+  if (gun.id === 'sniper') {
+    const B = window.BABYLON, dir = _camera.getDirection(B.Vector3.Forward()).normalize();
+    const origin = _muzzleOffset ? _muzzleOffset.clone() : _camera.position.add(dir.scale(0.4));
+    const pc = getProjectileColor();
+    const ball = B.MeshBuilder.CreateSphere('sniper_proj_' + Date.now(), { diameter: 0.08, segments: 4 }, _scene);
+    ball.position.copyFrom(origin);
+    const mat = new B.StandardMaterial('spm_' + Date.now(), _scene);
+    mat.emissiveColor = new B.Color3(pc.r, pc.g, pc.b); mat.disableLighting = true; ball.material = mat;
+    const flash = new B.PointLight('smf_' + Date.now(), origin.clone(), _scene);
+    flash.diffuse = new B.Color3(pc.r, pc.g, pc.b); flash.intensity = 5; flash.range = 10;
+    setTimeout(() => { try { flash.dispose(); } catch {} }, 60);
+    _projectiles.push({ mesh: ball, vel: dir.scale(4.5), life: 100, _sniperDmg: true });
     return;
   }
   const B=window.BABYLON,dir=_camera.getDirection(B.Vector3.Forward()).normalize();
@@ -637,14 +676,14 @@ function _updateProjectiles(){
       const sp=prev.add(step.scale(s));const sx=sp.x,sy=sp.y,sz=sp.z;
       for(const b of _colBlocks){const m=0.1;if(sx>b.minX-m&&sx<b.maxX+m&&sz>b.minZ-m&&sz<b.maxZ+m&&sy<b.maxY+m&&sy>-0.5){hit=true;hitPos=sp.clone();hitBlock=b;break outer;}}
       const enemyIdx=checkEnemyHit(sp);
-      if(enemyIdx>=0){damageEnemyNode(enemyIdx,20);hit=true;hitPos=sp.clone();break outer;}
+      if(enemyIdx>=0){const sDmg=p._sniperDmg?100:20;damageEnemyNode(enemyIdx,sDmg);hit=true;hitPos=sp.clone();break outer;}
       // Remote player hit check
       for(const[rpId,rp] of _remotePlayers){
         if(!rp.root.isEnabled())continue;
         const rdx=sp.x-rp.root.position.x,rdy=sp.y-(rp.root.position.y+GROUND_Y*0.5),rdz=sp.z-rp.root.position.z;
         if(Math.sqrt(rdx*rdx+rdy*rdy+rdz*rdz)<0.7){
           hit=true;hitPos=sp.clone();
-          if(window._nbSendDamage)window._nbSendDamage(rpId,20,_playerUsername);
+          if(window._nbSendDamage)window._nbSendDamage(rpId,p._sniperDmg?100:20,_playerUsername);
           break outer;
         }
       }
@@ -775,6 +814,18 @@ function _buildPickupGunModel(gunIndex) {
       orb.material = _mkGlow('orb');
       break;
     }
+    case 'sniper': {
+      const barrel = B.MeshBuilder.CreateCylinder('pg_barrel', { diameter: 0.035, height: 0.5, tessellation: 10 }, _scene);
+      barrel.parent = root; barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0, 0);
+      barrel.material = _mkMat('barrel', 0.14, 0.14, 0.18);
+      const scope = B.MeshBuilder.CreateCylinder('pg_scope', { diameter: 0.04, height: 0.12, tessellation: 8 }, _scene);
+      scope.parent = root; scope.rotation.x = Math.PI / 2; scope.position.set(0, 0.04, 0);
+      scope.material = _mkGlow('scope');
+      const orb = B.MeshBuilder.CreateSphere('pg_orb', { diameter: 0.03, segments: 6 }, _scene);
+      orb.parent = root; orb.position.set(0, 0, 0.26);
+      orb.material = _mkGlow('orb');
+      break;
+    }
   }
   return root;
 }
@@ -830,6 +881,22 @@ function _buildGunPickups() {
     pos: new B.Vector3(PICKUP_POS.x, TABLE_BASE_Y + TABLE_H + 0.6, PICKUP_POS.z),
     slot: 4,
     _currentGunId: 'rocket',
+  });
+
+  // Sniper pickup on sky bridge center
+  const sniperY = 33.4;
+  const sniperModel = _buildPickupGunModel(5);
+  sniperModel.position.set(0, sniperY + 0.6, 0);
+  const sniperGlow = B.MeshBuilder.CreateTorus('sniper_glow', { diameter: 2, thickness: 0.1, tessellation: 6 }, _scene);
+  sniperGlow.position.set(0, sniperY + 0.1, 0); sniperGlow.material = new B.StandardMaterial('sniper_glow_m', _scene);
+  sniperGlow.material.emissiveColor = new B.Color3(0.8, 0.2, 0.9); sniperGlow.material.disableLighting = true;
+  const sniperPt = new B.PointLight('sniper_pickup_pt', new B.Vector3(0, sniperY + 1.5, 0), _scene);
+  sniperPt.diffuse = new B.Color3(0.8, 0.2, 0.9); sniperPt.intensity = 1; sniperPt.range = 6;
+  _gunPickups.push({
+    tableTop: null, glowRing: sniperGlow, pt: sniperPt, gunModel: sniperModel,
+    pos: new B.Vector3(0, sniperY + 0.6, 0),
+    slot: 5,
+    _currentGunId: 'sniper',
   });
 }
 
@@ -1225,7 +1292,7 @@ function _physicsTick() {
   }
 
   // 1-4 key switching (only switch to unlocked slots)
-  for (let k = 1; k <= 5; k++) {
+  for (let k = 1; k <= 6; k++) {
     if (_keys['Digit' + k] && !_prevKeys['Digit' + k]) {
       setActiveSlot(k - 1);
     }
@@ -1538,6 +1605,52 @@ function _buildArenaProc(){
     vLight.diffuse=new B.Color3(0.1,1,0.5);vLight.intensity=0.8;vLight.range=12;
   }
 
+  // ── TWIN TOWERS + SKY BRIDGE ──
+  const TOWER_H=35, TOWER_W=6, TOWER_X=80, BRIDGE_Y=TOWER_H-2;
+  const MTower=mkMat('mtower',0.12,0.12,0.16);
+  const MBridge=mkMat('mbridge',0.14,0.14,0.18);
+
+  [{x:TOWER_X,z:0},{x:-TOWER_X,z:0}].forEach((t,ti)=>{
+    box('tw_n_'+ti,TOWER_W,TOWER_H,0.5,t.x,t.z+TOWER_W/2,MTower);
+    box('tw_s_'+ti,TOWER_W,TOWER_H,0.5,t.x,t.z-TOWER_W/2,MTower);
+    box('tw_back_'+ti,0.5,TOWER_H,TOWER_W,t.x+(ti===0?TOWER_W/2:-TOWER_W/2),t.z,MTower);
+    box('tw_front_upper_'+ti,0.5,TOWER_H-4,TOWER_W,t.x+(ti===0?-TOWER_W/2:TOWER_W/2),t.z,MTower,true);
+    _addCol(t.x+(ti===0?-TOWER_W/2:TOWER_W/2),t.z,0.5,TOWER_W,TOWER_H);
+
+    for(let h=3;h<TOWER_H-3;h+=4){
+      const side=(Math.floor(h/4)%2===0)?1:-1;
+      const px=t.x+side*(TOWER_W/2-1.5);
+      const plat=B.MeshBuilder.CreateBox('ladder_'+ti+'_'+h,{width:2.5,height:0.3,depth:TOWER_W-1},_scene);
+      plat.position.set(px,h,t.z);plat.material=MHex;
+      _addCol(px,t.z,2.5,TOWER_W-1,h+0.15);
+    }
+
+    box('tw_top_'+ti,TOWER_W+2,0.4,TOWER_W+2,t.x,t.z,MC);
+    _addCol(t.x,t.z,TOWER_W+2,TOWER_W+2,TOWER_H+0.2);
+
+    const tRing=B.MeshBuilder.CreateTorus('tw_ring_'+ti,{diameter:TOWER_W+2,thickness:0.12,tessellation:6},_scene);
+    tRing.position.set(t.x,TOWER_H+0.5,t.z);tRing.material=MG;
+
+    const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,TOWER_H+2,t.z),_scene);
+    tLight.diffuse=new B.Color3(0.1,1,0.5);tLight.intensity=1.5;tLight.range=20;
+  });
+
+  const bridgeLen=TOWER_X*2-TOWER_W;
+  const bridge=B.MeshBuilder.CreateBox('sky_bridge',{width:bridgeLen,height:0.4,depth:3},_scene);
+  bridge.position.set(0,BRIDGE_Y,0);bridge.material=MBridge;
+  _addCol(0,0,bridgeLen,3,BRIDGE_Y+0.2);
+
+  const railing1=B.MeshBuilder.CreateBox('bridge_rail_n',{width:bridgeLen,height:1.2,depth:0.15},_scene);
+  railing1.position.set(0,BRIDGE_Y+0.6,1.5);railing1.material=MTower;
+  const railing2=B.MeshBuilder.CreateBox('bridge_rail_s',{width:bridgeLen,height:1.2,depth:0.15},_scene);
+  railing2.position.set(0,BRIDGE_Y+0.6,-1.5);railing2.material=MTower;
+
+  strip('bridge_gn',bridgeLen,0.08,0.15,0,BRIDGE_Y+0.06,1.4);
+  strip('bridge_gs',bridgeLen,0.08,0.15,0,BRIDGE_Y+0.06,-1.4);
+
+  const bLight=new B.PointLight('bridge_light',new B.Vector3(0,BRIDGE_Y+2,0),_scene);
+  bLight.diffuse=new B.Color3(0.8,0.2,0.9);bLight.intensity=1.5;bLight.range=10;
+
   // ── SPOTLIGHT ──
   const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
   spot.intensity=0.6;spot.diffuse=new B.Color3(0.85,0.95,1.0);
@@ -1634,6 +1747,25 @@ export function initGame(canvas){
     }
   };
   document.addEventListener('mousedown',_mouseDownHandler);
+  _rightClickHandler=e=>{
+    if(e.button===2&&_pointerLocked){
+      e.preventDefault();
+      const gun=getActiveGun();
+      if(gun.id==='sniper'){
+        _scoped=!_scoped;
+        _camera.fov=_scoped?0.3:1.22;
+        const scope=document.getElementById('play-scope-overlay');
+        if(scope)scope.style.display=_scoped?'block':'none';
+      }
+    }
+  };
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  document.addEventListener('mousedown',_rightClickHandler);
+  window._nbUnscope=()=>{
+    _scoped=false;if(_camera)_camera.fov=1.22;
+    const scope=document.getElementById('play-scope-overlay');
+    if(scope)scope.style.display='none';
+  };
   _mouseUpHandler=e=>{if(e.button===0)_mouseHeld=false;};
   document.addEventListener('mouseup',_mouseUpHandler);
   _buildArena();
@@ -1703,7 +1835,9 @@ export function destroyGame(engine){
   _mouseHeld=false;
   if(_plcHandler){document.removeEventListener('pointerlockchange',_plcHandler);_plcHandler=null;}
   if(_canvasClickHandler&&_canvas){try{_canvas.removeEventListener('click',_canvasClickHandler);}catch{}_canvasClickHandler=null;}
-  _pointerLocked=false;
+  if(_rightClickHandler){document.removeEventListener('mousedown',_rightClickHandler);_rightClickHandler=null;}
+  _pointerLocked=false;_scoped=false;
+  window._nbUnscope=null;
   if(_scene&&_obsHandler){_scene.onBeforeRenderObservable.remove(_obsHandler);_obsHandler=null;}
   if(_resizeHandler){window.removeEventListener('resize',_resizeHandler);_resizeHandler=null;}
   _projectiles.forEach(p=>{try{p.mesh.dispose();}catch{}});_projectiles.length=0;

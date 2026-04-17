@@ -900,36 +900,40 @@ function _renderProfileView(user, catalysts, isOwn) {
     _profileBarEl?.classList.remove('has-grid');
   }
 
+  function _buildSectionTitle(titleText, searchPlaceholder, parentCol) {
+    const row = document.createElement('div');
+    row.className = 'profile-col-title';
+    const search = document.createElement('input');
+    search.type = 'text';
+    search.className = 'profile-col-search';
+    search.placeholder = searchPlaceholder;
+    search.addEventListener('input', () => {
+      const q = search.value.toLowerCase();
+      parentCol.querySelectorAll('.hex-tile, .community-card, .pinned-tile-wrap').forEach((el) => {
+        const text = el.textContent.toLowerCase();
+        el.style.display = text.includes(q) || !q ? '' : 'none';
+      });
+    });
+    row.appendChild(search);
+    const label = document.createElement('span');
+    label.className = 'profile-col-title-label';
+    label.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> ' + titleText;
+    row.appendChild(label);
+    const filter = document.createElement('button');
+    filter.type = 'button';
+    filter.className = 'profile-col-filter-btn';
+    filter.setAttribute('data-tip', 'Filter');
+    filter.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>';
+    row.appendChild(filter);
+    return row;
+  }
+
   // Pinned column — always visible
   const pinnedCol = document.getElementById('profile-col-pinned');
   if (pinnedCol) {
     pinnedCol.style.display = '';
     pinnedCol.innerHTML = '';
-    const pinnedTitle = document.createElement('div');
-    pinnedTitle.className = 'profile-col-title';
-    pinnedTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Catalysts';
-    const pinnedSpacer = document.createElement('div');
-    pinnedSpacer.className = 'profile-col-title-spacer';
-    pinnedTitle.appendChild(pinnedSpacer);
-    const pinnedSearch = document.createElement('input');
-    pinnedSearch.type = 'text';
-    pinnedSearch.className = 'profile-col-search';
-    pinnedSearch.placeholder = 'Search...';
-    pinnedSearch.addEventListener('input', () => {
-      const q = pinnedSearch.value.toLowerCase();
-      pinnedCol.querySelectorAll('.hex-tile, .community-card').forEach((el) => {
-        const text = el.textContent.toLowerCase();
-        el.style.display = text.includes(q) || !q ? '' : 'none';
-      });
-    });
-    pinnedTitle.appendChild(pinnedSearch);
-    const pinnedFilter = document.createElement('button');
-    pinnedFilter.type = 'button';
-    pinnedFilter.className = 'profile-col-filter-btn';
-    pinnedFilter.setAttribute('data-tip', 'Filter');
-    pinnedFilter.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>';
-    pinnedTitle.appendChild(pinnedFilter);
-    pinnedCol.appendChild(pinnedTitle);
+    pinnedCol.appendChild(_buildSectionTitle('Catalysts', 'Search...', pinnedCol));
     console.log('[profile-view] rendering pinned col, isOwn:', isOwn, 'tracked:', _myTrackedCatalysts?.length);
     if (isOwn && _myTrackedCatalysts.length > 0) {
       const tilesWrap = document.createElement('div');
@@ -980,31 +984,7 @@ function _renderProfileView(user, catalysts, isOwn) {
   if (followingCol) {
     followingCol.style.display = '';
     followingCol.innerHTML = '';
-    const followingTitle = document.createElement('div');
-    followingTitle.className = 'profile-col-title';
-    followingTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Alchemists';
-    const alchSpacer = document.createElement('div');
-    alchSpacer.className = 'profile-col-title-spacer';
-    followingTitle.appendChild(alchSpacer);
-    const alchSearch = document.createElement('input');
-    alchSearch.type = 'text';
-    alchSearch.className = 'profile-col-search';
-    alchSearch.placeholder = 'Search...';
-    alchSearch.addEventListener('input', () => {
-      const q = alchSearch.value.toLowerCase();
-      followingCol.querySelectorAll('.community-card').forEach((el) => {
-        const text = el.textContent.toLowerCase();
-        el.style.display = text.includes(q) || !q ? '' : 'none';
-      });
-    });
-    followingTitle.appendChild(alchSearch);
-    const alchFilter = document.createElement('button');
-    alchFilter.type = 'button';
-    alchFilter.className = 'profile-col-filter-btn';
-    alchFilter.setAttribute('data-tip', 'Filter');
-    alchFilter.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>';
-    followingTitle.appendChild(alchFilter);
-    followingCol.appendChild(followingTitle);
+    followingCol.appendChild(_buildSectionTitle('Alchemists', 'Search...', followingCol));
     const alchemistsToShow = isOwn
       ? _myTrackedAlchemists
       : (_viewedUserTracked?.alchemists || []);
@@ -1027,10 +1007,7 @@ function _renderProfileView(user, catalysts, isOwn) {
         // Abort if the profile view has moved on.
         if (!_currentProfileView || _currentProfileView.user?.uid !== requestUid) return;
         followingCol.innerHTML = '';
-        const t = document.createElement('div');
-        t.className = 'profile-col-title';
-        t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Alchemists';
-        followingCol.appendChild(t);
+        followingCol.appendChild(_buildSectionTitle('Alchemists', 'Search...', followingCol));
         alchemistsToShow.forEach((alch) => {
           const cats = catMap.get(alch.uid) || [];
           // INFRA-MD01: canonical-first read with legacy fallback
@@ -2055,10 +2032,7 @@ async function renderGamesRoute() {
   if (pinnedCol) {
     pinnedCol.style.display = '';
     pinnedCol.innerHTML = '';
-    const pTitle = document.createElement('div');
-    pTitle.className = 'profile-col-title';
-    pTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Catalysts';
-    pinnedCol.appendChild(pTitle);
+    pinnedCol.appendChild(_buildSectionTitle('Catalysts', 'Search...', pinnedCol));
     const pinned = getGamesAsCatalysts();
     if (pinned.length > 0) {
       const tilesWrap = document.createElement('div');
@@ -2085,10 +2059,7 @@ async function renderGamesRoute() {
   if (followingCol) {
     followingCol.style.display = '';
     followingCol.innerHTML = '';
-    const fTitle = document.createElement('div');
-    fTitle.className = 'profile-col-title';
-    fTitle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Alchemists';
-    followingCol.appendChild(fTitle);
+    followingCol.appendChild(_buildSectionTitle('Alchemists', 'Search...', followingCol));
 
     const loading = document.createElement('div');
     loading.className = 'profile-col-empty';
@@ -2100,10 +2071,7 @@ async function renderGamesRoute() {
         const dexUser = await getUserByUsernameHex('dex', null);
         followingCol.innerHTML = '';
         if (dexUser) {
-          const t2 = document.createElement('div');
-          t2.className = 'profile-col-title';
-          t2.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> Alchemists';
-          followingCol.appendChild(t2);
+          followingCol.appendChild(_buildSectionTitle('Alchemists', 'Search...', followingCol));
           const group = {
             uid: dexUser.uid,
             displayName: dexUser.displayName || 'dex',
