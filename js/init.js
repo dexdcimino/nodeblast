@@ -407,6 +407,10 @@ function showProfileBar(user, catalystCount, isOwn) {
     if (msgBtnHide) msgBtnHide.style.display = 'none';
     const addLinksBtnHide = document.getElementById('profile-bar-add-links');
     if (addLinksBtnHide) addLinksBtnHide.style.display = 'none';
+    // Hide collapse toggle + disable click-to-collapse on system profile
+    const toggleBtnHide = document.getElementById('profile-bar-toggle');
+    if (toggleBtnHide) toggleBtnHide.style.display = 'none';
+    if (bar) { bar._nbToggleCollapse = null; bar.classList.remove('collapsed'); }
     _viewingOther = null;
     return;
   }
