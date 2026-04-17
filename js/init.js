@@ -2660,9 +2660,26 @@ let _logoTop = DEFAULT_LOGO_TOP;
 let _logoBot = DEFAULT_LOGO_BOT;
 let _logoMode = 'dual';
 
+const DUAL_SVG_INNER = '<path id="nodeblast_logo_left" d="M0,117.3s.7,28.6,19,46c18.3,17.4,45.1,18.1,45.1,18.1,35.3,0,64-28.7,64-64s28.6-64,64-64h.6c15.1,0,24.6-16.1,17.1-29.2C201.1,9.2,185.2,0,167.9,0h-79.7c-17.3,0-33.3,9.2-41.9,24.2,0,0-22.5,38.9-27.8,48.1C13.2,81.5,0,99.7,0,117.3ZM40,115.8c.8-12,10.5-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5Z"/>'
+  + '<path id="nodeblast_logo_right" d="M46.2,210.4c8.7,15,24.6,24.2,41.9,24.2h79.7c17.3,0,33.3-9.2,41.9-24.2,0,0,22.5-38.9,27.8-48.1,5.3-9.2,18.5-27.4,18.5-45,0,0,.2-28.5-19.8-46.7-20-18.2-44.3-17.4-44.3-17.4-35.3,0-64,28.7-64,64s-28.6,64-64,64h-.6c-15.1,0-24.6,16.1-17.1,29.2h0ZM168.1,115.7c.8-12,10.5-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5Z"/>'
+  + '<path id="nodeblast_circle_left" fill="transparent" d="M65.5,141.3c-14.5.9-26.4-11-25.5-25.5.8-12,10.5-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4Z"/>'
+  + '<path id="nodeblast_circle_right" fill="transparent" d="M190.5,93.4c14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5.8-12,10.5-21.6,22.4-22.4Z"/>';
+
+const MONO_SVG_INNER = '<path id="nodeblast_logo_left" d="M7.9,117s.7,26.9,17.9,43.3c17.2,16.4,42.5,17,42.5,17,33.3,0,60.3-27,60.3-60.3s26.9-60.3,60.3-60.3h.6c14.2,0,23.2-15.2,16.1-27.5-8.2-14.1-23.2-22.8-39.5-22.8h-75.1c-16.3,0-31.4,8.7-39.5,22.8,0,0-21.2,36.6-26.2,45.3-5,8.7-17.4,25.8-17.4,42.4ZM45.6,115.6c.8-11.3,9.9-20.3,21.1-21.1,13.7-.8,24.9,10.4,24,24-.8,11.3-9.9,20.3-21.1,21.1-13.7.8-24.9-10.4-24-24Z"/>'
+  + '<path id="nodeblast_logo_right" d="M166,234h-75.1c-18.5,0-35.8-10-45.1-26h0c-4.5-7.8-4.4-17.1,0-24.8,4.5-7.8,12.6-12.5,21.7-12.5h.6c29.7,0,53.8-24.1,53.8-53.8s29.9-66.7,66.7-66.8c2.2,0,26.2-.1,46.2,18.1,20.7,18.9,20.8,47.6,20.8,48.8,0,15.8-9.4,31-15.6,41.1-1.1,1.7-2,3.2-2.7,4.5-5,8.7-26.2,45.3-26.2,45.3-9.2,16.1-26.5,26-45.1,26ZM57.1,201.5c7,12.1,20,19.5,33.8,19.5h75.1c14,0,26.9-7.5,33.8-19.5,0,0,21.2-36.7,26.2-45.3.8-1.4,1.8-3.1,2.9-4.8,5.4-8.8,13.7-22.2,13.7-34.4,0-.3-.1-24.3-16.5-39.2-16.5-15-37-14.7-37.2-14.7h-.2c-29.7,0-53.8,24.1-53.8,53.8s-30,66.8-66.8,66.8h-.6c-4.4,0-8.3,2.2-10.5,6-2.2,3.7-2.2,8,0,11.8Z"/>'
+  + '<path d="M166.3,115.5c.8-11.3,9.9-20.3,21.1-21.1,13.7-.8,24.9,10.4,24,24-.8,11.3-9.9,20.3-21.1,21.1-13.7.8-24.9-10.4-24-24Z"/>';
+
 function paintLogo(top, bot, mode) {
   const topAdj = getThemeAdjustedLogoColor(top);
   const botAdj = getThemeAdjustedLogoColor(bot);
+
+  // Swap the header SVG paths — mono is a different shape, not just recolored
+  const hdrSvg = document.getElementById('hdr-logo-svg');
+  if (hdrSvg) {
+    hdrSvg.innerHTML = mode === 'mono' ? MONO_SVG_INNER : DUAL_SVG_INNER;
+  }
+
+  // Color the paths AFTER innerHTML swap so the new IDs exist
   const leftHalf = document.getElementById('nodeblast_logo_left');
   const rightHalf = document.getElementById('nodeblast_logo_right');
   const nodeEl = document.getElementById('brand-node');
@@ -2678,12 +2695,11 @@ function paintLogo(top, bot, mode) {
     if (nodeEl) nodeEl.style.color = topAdj;
     if (rightHalf) rightHalf.setAttribute('fill', botAdj);
     if (blastEl) blastEl.style.color = botAdj;
+    const circL = document.getElementById('nodeblast_circle_left');
+    const circR = document.getElementById('nodeblast_circle_right');
+    if (circL) circL.setAttribute('fill', 'transparent');
+    if (circR) circR.setAttribute('fill', 'transparent');
   }
-
-  const circL = document.getElementById('nodeblast_circle_left');
-  const circR = document.getElementById('nodeblast_circle_right');
-  if (circL) circL.setAttribute('fill', 'transparent');
-  if (circR) circR.setAttribute('fill', 'transparent');
 
   const loadTop = document.getElementById('loading-path-top');
   const loadBot = document.getElementById('loading-path-bot');

@@ -127,10 +127,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #hdr-logo:hover svg{transform:scale(1.1);}
 
 /* Logo color picker — two columns, one for each yin-yang half */
-#logo-picker{display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:150;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:8px;box-shadow:0 14px 36px rgba(0,0,0,.5);flex-direction:row;gap:8px;}
+#logo-picker{display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:150;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:8px;box-shadow:0 14px 36px rgba(0,0,0,.5);flex-direction:row;gap:8px;flex-wrap:wrap;}
 #logo-picker.open{display:flex;}
 .logo-picker-col{display:flex;flex-direction:column;gap:6px;}
-.logo-variant-toggle{display:flex;justify-content:center;padding:6px 0 2px;border-top:1px solid var(--bdr);margin-top:4px;cursor:pointer;}
+.logo-variant-toggle{width:100%;display:flex;justify-content:center;padding:6px 0 2px;border-top:1px solid var(--bdr);margin-top:0;cursor:pointer;}
 .logo-variant-toggle svg{width:28px;height:28px;opacity:.45;transition:opacity .15s ease,transform .15s ease;}
 .logo-variant-toggle:hover svg{opacity:.8;transform:scale(1.1);}
 .logo-swatch{width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;transition:transform var(--ease),box-shadow var(--ease);box-shadow:0 0 0 1px rgba(255,255,255,.08);}
