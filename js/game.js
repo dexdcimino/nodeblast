@@ -1605,7 +1605,7 @@ export function initGame(canvas){
   const dir=new B.DirectionalLight('dir',new B.Vector3(-0.5,-1,-0.3),_scene);dir.intensity=0.65;dir.diffuse=new B.Color3(0.85,0.82,0.75);dir.position=new B.Vector3(30,50,30);
   _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=isLowEnd?0.003:0.004;
   _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-48),_scene);_camera.setTarget(B.Vector3.Zero());
-  _camera.attachControl(canvas,true);_camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
+  _camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
   _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;
   window._nbSetSpawn=(x,z)=>{if(_camera){_camera.position.x=x;_camera.position.z=z;_camera.position.y=GROUND_Y;_velX=0;_velZ=0;_velY=0;}};
   _pointerLocked=false;
@@ -1681,6 +1681,14 @@ export function initGame(canvas){
   // Expose current delta for enemy-nodes and other modules
   Object.defineProperty(window, '_nbDelta', { get: () => _delta, configurable: true });
   return{engine:_engine,scene:_scene};
+}
+
+export function attachCameraInput() {
+  if (_camera && _canvas) {
+    _camera.rotation.x = 0;
+    _camera.rotation.y = 0;
+    _camera.attachControl(_canvas, true);
+  }
 }
 
 export function destroyGame(engine){

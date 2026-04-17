@@ -6,7 +6,7 @@
 // ══════════════════════════════════════
 
 import State from './state.js';
-import { initGame, destroyGame, addOrUpdateRemotePlayer, removeRemotePlayer, getRemotePlayerIds, damageRemotePlayer, getRemotePlayerData } from './game.js';
+import { initGame, destroyGame, attachCameraInput, addOrUpdateRemotePlayer, removeRemotePlayer, getRemotePlayerIds, damageRemotePlayer, getRemotePlayerData } from './game.js';
 import { initPhoton, destroyPhoton, setPhotonStatus, photonSendDamage, isInRoom } from './photon-client.js';
 import { initHathora, destroyHathora, hathoraSendMove, isHathoraConnected } from './hathora-client.js';
 import { navigate } from './router.js';
@@ -196,6 +196,9 @@ export async function renderPlayRoute(gameId) {
   function _hideLoadOverlay() {
     if (!loadOverlay) return;
     loadOverlay.classList.add('hidden');
+    // Attach camera input NOW — not during loading — so mouse movement
+    // during the loading screen doesn't accumulate into camera rotation
+    attachCameraInput();
     // Remove from DOM after transition so it doesn't intercept clicks
     setTimeout(() => {
       if (loadOverlay.parentNode) loadOverlay.style.display = 'none';
