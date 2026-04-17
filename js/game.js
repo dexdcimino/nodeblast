@@ -1442,7 +1442,7 @@ function _buildArenaProc(){
       ftLight.diffuse=new B.Color3(0.2,0.6,1);ftLight.intensity=1.5;ftLight.range=20;
     }else if(i===4){
       for(let p=0;p<5;p++){
-        const px=cx+(_rand(-12,12)),pz=cz+(_rand(-12,12));
+        const px=cx+(Math.random()*24-12),pz=cz+(Math.random()*24-12);
         const ph=3+Math.random()*4;
         box('zt4_pil_'+p,2.5,ph,2.5,px,pz,MD);
         strip('zt4_pilg_'+p,2.5,0.08,2.5,px,ph+0.04,pz);
