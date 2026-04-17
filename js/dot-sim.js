@@ -88,6 +88,7 @@ function _spawnAgent(tribe, x, y, parentTraits) {
     cooldowns: { attack: 0, reproduce: 0 },
     glowPhase: Math.random() * Math.PI * 2,
     trailPoints: [],
+    dying: 0,
   };
 }
 
@@ -153,7 +154,8 @@ function _simTick(dt) {
 
     // Energy drain
     a.energy -= (0.03 + a.traits.metabolism * 0.04) * spd;
-    if (a.energy <= 0) { dead.push(a); continue; }
+    if (a.energy <= 0 && a.dying === 0) { a.dying = 30; }
+    if (a.dying > 0) { a.dying--; if (a.dying <= 0) { dead.push(a); } continue; }
 
     // Perception
     const percR = 50 + a.traits.sociality * 30;
@@ -286,6 +288,128 @@ function _simTick(dt) {
 
 // ── Rendering ──
 
+function _drawCreature(ctx, a) {
+  const c = TRIBES[a.tribe].color;
+  const rgb = _hexToRgb(c);
+  const glow = 0.3 + Math.sin(a.glowPhase + _tick * 0.06) * 0.1;
+
+  // Death fade
+  let scale = 1;
+  let alpha = 1;
+  if (a.dying > 0) {
+    const t = a.dying / 30;
+    scale = t;
+    alpha = t;
+  }
+
+  ctx.save();
+  ctx.translate(a.x, a.y);
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = alpha;
+
+  // Outer glow
+  const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, a.radius * 2.5);
+  gr.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${glow})`);
+  gr.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
+  ctx.fillStyle = gr;
+  ctx.beginPath();
+  ctx.arc(0, 0, a.radius * 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body — ellipse based on traits
+  const bw = a.radius * (1 + a.traits.metabolism * 0.3);
+  const bh = a.radius * (1 + a.traits.sociality * 0.15);
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, bw, bh, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Aggression spikes
+  if (a.traits.aggression > 0.5) {
+    const count = Math.floor(a.traits.aggression * 4);
+    const spikeH = a.radius * 0.4 * a.traits.aggression;
+    ctx.fillStyle = c;
+    for (let i = 0; i < count; i++) {
+      const angle = -Math.PI * 0.5 + (i - (count - 1) / 2) * 0.4;
+      const sx = Math.cos(angle) * bw;
+      const sy = Math.sin(angle) * bh;
+      const tx = Math.cos(angle) * (bw + spikeH);
+      const ty = Math.sin(angle) * (bh + spikeH);
+      ctx.beginPath();
+      ctx.moveTo(sx - 2, sy);
+      ctx.lineTo(tx, ty);
+      ctx.lineTo(sx + 2, sy);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Inner highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath();
+  ctx.arc(-a.radius * 0.25, -a.radius * 0.3, a.radius * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes (skip for tiny babies)
+  if (a.radius > 3) {
+    const speed = Math.sqrt(a.vx * a.vx + a.vy * a.vy) || 0.01;
+    const lookX = (a.vx / speed) * a.radius * 0.15;
+    const lookY = (a.vy / speed) * a.radius * 0.15;
+    const eyeR = a.radius * 0.22;
+    const eyeSpacing = a.radius * 0.35;
+    // White
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.arc(-eyeSpacing + lookX, -a.radius * 0.1 + lookY, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(eyeSpacing + lookX, -a.radius * 0.1 + lookY, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+    // Pupils
+    ctx.fillStyle = '#111';
+    const pupR = eyeR * 0.55;
+    ctx.beginPath();
+    ctx.arc(-eyeSpacing + lookX * 1.5, -a.radius * 0.1 + lookY * 1.5, pupR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(eyeSpacing + lookX * 1.5, -a.radius * 0.1 + lookY * 1.5, pupR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // State ring
+  let ringColor = c;
+  let ringAlpha = 0.3;
+  if (a.state === 'seeking') { ringColor = '#ffffff'; ringAlpha = 0.5 + Math.sin(_tick * 0.15) * 0.3; }
+  else if (a.state === 'fighting') { ringColor = '#ff3333'; ringAlpha = 0.8; }
+  else if (a.state === 'fleeing') { ringColor = '#ffdd44'; ringAlpha = 0.6; }
+  else if (a.state === 'reproducing') { ringColor = c; ringAlpha = 0.9; }
+  ctx.strokeStyle = ringColor;
+  ctx.globalAlpha = alpha * ringAlpha;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.max(bw, bh) + 2, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+
+  // Fleeing speed lines
+  if (a.state === 'fleeing' && !a.dying) {
+    const speed = Math.sqrt(a.vx * a.vx + a.vy * a.vy) || 0.01;
+    const dx = -(a.vx / speed), dy = -(a.vy / speed);
+    ctx.strokeStyle = TRIBES[a.tribe].color;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const ox = (i - 1) * 3 * dy, oy = (i - 1) * -3 * dx;
+      ctx.beginPath();
+      ctx.moveTo(a.x + ox, a.y + oy);
+      ctx.lineTo(a.x + dx * 12 + ox, a.y + dy * 12 + oy);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
 function _render() {
   if (!_ctx || !_canvas) return;
   const W = _canvas.width, H = _canvas.height;
@@ -374,47 +498,9 @@ function _render() {
     _ctx.restore();
   }
 
-  // Dots
+  // Creatures
   for (const a of _agents) {
-    const c = TRIBES[a.tribe].color;
-    const rgb = _hexToRgb(c);
-    const glow = 0.3 + Math.sin(a.glowPhase + _tick * 0.06) * 0.1;
-
-    // Outer glow
-    const gr = _ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.radius * 2.5);
-    gr.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${glow})`);
-    gr.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
-    _ctx.fillStyle = gr;
-    _ctx.beginPath();
-    _ctx.arc(a.x, a.y, a.radius * 2.5, 0, Math.PI * 2);
-    _ctx.fill();
-
-    // Body
-    _ctx.fillStyle = c;
-    _ctx.beginPath();
-    _ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
-    _ctx.fill();
-
-    // Inner highlight
-    _ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    _ctx.beginPath();
-    _ctx.arc(a.x - a.radius * 0.25, a.y - a.radius * 0.3, a.radius * 0.4, 0, Math.PI * 2);
-    _ctx.fill();
-
-    // State ring
-    let ringColor = c;
-    let ringAlpha = 0.3;
-    if (a.state === 'seeking') { ringColor = '#ffffff'; ringAlpha = 0.5 + Math.sin(_tick * 0.15) * 0.3; }
-    else if (a.state === 'fighting') { ringColor = '#ff3333'; ringAlpha = 0.8; }
-    else if (a.state === 'fleeing') { ringColor = '#ffdd44'; ringAlpha = 0.6; }
-    else if (a.state === 'reproducing') { ringColor = c; ringAlpha = 0.9; }
-    _ctx.strokeStyle = ringColor;
-    _ctx.globalAlpha = ringAlpha;
-    _ctx.lineWidth = 1.2;
-    _ctx.beginPath();
-    _ctx.arc(a.x, a.y, a.radius + 2, 0, Math.PI * 2);
-    _ctx.stroke();
-    _ctx.globalAlpha = 1;
+    _drawCreature(_ctx, a);
   }
 
   // Tribe population bars (top-left)
