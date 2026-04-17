@@ -24,6 +24,8 @@ let _zones = [];
 let _activePower = null;
 let _powerCooldowns = { food: 0, rally: 0, smite: 0, barrier: 0 };
 let _barriers = [];
+let _popHistory = [];
+const POP_HISTORY_MAX = 300;
 
 let _cfg = {
   speed: 1.0,
@@ -382,6 +384,14 @@ function _simTick(dt) {
   // Add births
   for (const b of births) _agents.push(b);
 
+  // Population history
+  if (_tick % 60 === 0) {
+    const counts = [0, 0, 0, 0];
+    for (const a of _agents) counts[a.tribe]++;
+    _popHistory.push({ tick: _tick, counts });
+    if (_popHistory.length > POP_HISTORY_MAX) _popHistory.shift();
+  }
+
   // Win/lose check
   if (_gameMode === 'competitive' && !_gameOver && _tick % 60 === 0 && _tick > 120) {
     const counts = [0, 0, 0, 0];
@@ -515,6 +525,39 @@ function _drawCreature(ctx, a) {
   }
 }
 
+function _drawPopGraph(ctx, W) {
+  if (_popHistory.length < 2) return;
+  const gx = W - 220, gy = 12, gw = 200, gh = 80;
+
+  ctx.fillStyle = 'rgba(10,11,15,0.7)';
+  ctx.beginPath();
+  ctx.roundRect(gx, gy, gw, gh, 6);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(gx + 4, gy + gh / 2);
+  ctx.lineTo(gx + gw - 4, gy + gh / 2);
+  ctx.stroke();
+
+  const len = _popHistory.length;
+  const step = (gw - 8) / (len - 1);
+  for (let t = 0; t < 4; t++) {
+    ctx.strokeStyle = TRIBES[t].color;
+    ctx.globalAlpha = 0.8;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < len; i++) {
+      const x = gx + 4 + i * step;
+      const y = gy + gh - 4 - (_popHistory[i].counts[t] / MAX_PER_TRIBE) * (gh - 8);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
 function _render() {
   if (!_ctx || !_canvas) return;
   const W = _canvas.width, H = _canvas.height;
@@ -639,6 +682,30 @@ function _render() {
     _ctx.fill();
     _ctx.globalAlpha = 1;
   }
+
+  // Population graph
+  _drawPopGraph(_ctx, W);
+
+  // Enhanced stats overlay (canvas-rendered)
+  const totalPop = _agents.length;
+  const gameSec = Math.floor(_tick / 60);
+  const mm = String(Math.floor(gameSec / 60)).padStart(2, '0');
+  const ss = String(gameSec % 60).padStart(2, '0');
+
+  _ctx.font = '14px ' + (getComputedStyle(document.documentElement).getPropertyValue('--fn') || 'Outfit, sans-serif');
+  _ctx.textAlign = 'right';
+  _ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  _ctx.fillText(`${totalPop} dots  ·  ${mm}:${ss}  ·  ${_fps} fps`, W - 18, H - 18);
+
+  if (_gameMode === 'competitive' && _playerTribe >= 0) {
+    const tribe = TRIBES[_playerTribe];
+    const count = _agents.filter(a => a.tribe === _playerTribe).length;
+    _ctx.fillStyle = tribe.color;
+    _ctx.globalAlpha = 0.7;
+    _ctx.fillText(`${tribe.name} — ${count} alive`, W - 18, H - 38);
+    _ctx.globalAlpha = 1;
+  }
+  _ctx.textAlign = 'left';
 }
 
 // ── Main loop ──
@@ -707,6 +774,7 @@ export function dotSimDestroy() {
   _agents = []; _food = []; _foodCooldowns = []; _zones = [];
   _gameOver = false; _gameResult = null; _gameMode = 'competitive'; _playerTribe = -1;
   _activePower = null; _powerCooldowns = { food: 0, rally: 0, smite: 0, barrier: 0 }; _barriers = [];
+  _popHistory = [];
   _canvas = null; _ctx = null; _grid = null;
 }
 
