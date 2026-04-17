@@ -2095,6 +2095,7 @@ async function renderGamesRoute() {
           const card = _buildCommunityCard(group);
           followingCol.appendChild(card);
         } else {
+          followingCol.appendChild(_buildSectionTitle('Alchemists', 'Search...', followingCol));
           const empty = document.createElement('div');
           empty.className = 'profile-col-empty';
           empty.textContent = 'No alchemists pinned yet';
