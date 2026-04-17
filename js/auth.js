@@ -103,6 +103,7 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     isAdmin: !!topData?.isAdmin || emailIsAdmin,
     logoTopColor: topData?.logoTopColor || null,
     logoBotColor: topData?.logoBotColor || null,
+    logoMode: topData?.logoMode || 'dual',
     bio,
     socialLinks,
     // MD18: tracked (pinned/followed) privacy flag. Default false
@@ -229,6 +230,7 @@ export async function saveLogoColors(updates) {
   const patch = {};
   if (updates.logoTopColor) patch.logoTopColor = updates.logoTopColor;
   if (updates.logoBotColor) patch.logoBotColor = updates.logoBotColor;
+  if (updates.logoMode) patch.logoMode = updates.logoMode;
   if (Object.keys(patch).length === 0) return;
   try {
     await setDoc(doc(db, 'users', State.user.uid), {

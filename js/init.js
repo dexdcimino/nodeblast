@@ -12,6 +12,8 @@ import {
   DEFAULT_LOGO_BOT,
   getThemeAdjustedLogoColor,
   onThemeChange,
+  buildMonoLogoSvg,
+  buildLogoSvg,
 } from './theme.js';
 import { initColorPicker, syncSlotsFromFirestore } from './color.js';
 import {
@@ -2555,8 +2557,9 @@ function updateAuthUI(user, profile) {
       ? profile.logoTopColor : DEFAULT_LOGO_TOP;
     const nextBot = (profile.logoBotColor && _ps.has(profile.logoBotColor.toLowerCase()))
       ? profile.logoBotColor : DEFAULT_LOGO_BOT;
-    if (nextTop !== _logoTop || nextBot !== _logoBot) {
-      setLogoColors(nextTop, nextBot);
+    const nextMode = profile?.logoMode || 'dual';
+    if (nextTop !== _logoTop || nextBot !== _logoBot || nextMode !== _logoMode) {
+      setLogoColors(nextTop, nextBot, nextMode);
     }
   }
 
@@ -2651,39 +2654,41 @@ function updateAuthUI(user, profile) {
 
 const LOGO_TOP_KEY = 'nb-logo-top-color';
 const LOGO_BOT_KEY = 'nb-logo-bot-color';
+const LOGO_MODE_KEY = 'nb-logo-mode';
 
 let _logoTop = DEFAULT_LOGO_TOP;
 let _logoBot = DEFAULT_LOGO_BOT;
+let _logoMode = 'dual';
 
-function paintLogo(top, bot) {
-  // V2 IDs match visual sides: logo_left = visual left, logo_right =
-  // visual right. top = left column picker color, bot = right column.
+function paintLogo(top, bot, mode) {
   const topAdj = getThemeAdjustedLogoColor(top);
   const botAdj = getThemeAdjustedLogoColor(bot);
-
-  // Left column (top) → left half + "node" wordmark.
   const leftHalf = document.getElementById('nodeblast_logo_left');
-  const nodeEl = document.getElementById('brand-node');
-  if (leftHalf) leftHalf.setAttribute('fill', topAdj);
-  if (nodeEl) nodeEl.style.color = topAdj;
-
-  // Right column (bot) → right half + "blast" wordmark.
   const rightHalf = document.getElementById('nodeblast_logo_right');
+  const nodeEl = document.getElementById('brand-node');
   const blastEl = document.getElementById('brand-blast');
-  if (rightHalf) rightHalf.setAttribute('fill', botAdj);
-  if (blastEl) blastEl.style.color = botAdj;
 
-  // Circles → transparent (hole-punched by compound paths).
+  if (mode === 'mono') {
+    if (leftHalf) leftHalf.setAttribute('fill', topAdj);
+    if (rightHalf) rightHalf.setAttribute('fill', topAdj);
+    if (nodeEl) nodeEl.style.color = topAdj;
+    if (blastEl) blastEl.style.color = topAdj;
+  } else {
+    if (leftHalf) leftHalf.setAttribute('fill', topAdj);
+    if (nodeEl) nodeEl.style.color = topAdj;
+    if (rightHalf) rightHalf.setAttribute('fill', botAdj);
+    if (blastEl) blastEl.style.color = botAdj;
+  }
+
   const circL = document.getElementById('nodeblast_circle_left');
   const circR = document.getElementById('nodeblast_circle_right');
   if (circL) circL.setAttribute('fill', 'transparent');
   if (circR) circR.setAttribute('fill', 'transparent');
 
-  // Sync loading screen logo colors (may already be hidden — fine)
   const loadTop = document.getElementById('loading-path-top');
   const loadBot = document.getElementById('loading-path-bot');
   if (loadTop) loadTop.setAttribute('fill', topAdj);
-  if (loadBot) loadBot.setAttribute('fill', botAdj);
+  if (loadBot) loadBot.setAttribute('fill', mode === 'mono' ? topAdj : botAdj);
 }
 
 function markSelectedSwatches() {
@@ -2711,18 +2716,50 @@ function _applyBotClrVars() {
   document.documentElement.style.setProperty('--clr-bot-on', botYiq >= 150 ? '#111111' : '#ffffff');
 }
 
-function setLogoColors(top, bot) {
+function setLogoColors(top, bot, mode) {
   _logoTop = top || DEFAULT_LOGO_TOP;
   _logoBot = bot || DEFAULT_LOGO_BOT;
-  paintLogo(_logoTop, _logoBot);
-  applyAccent(_logoTop);            // site --clr follows the top color
-  _applyBotClrVars();               // MD#63: second logo color drives the play button
-  applyFavicon(_logoTop, _logoBot); // rebuild the browser tab icon
+  _logoMode = mode || 'dual';
+  paintLogo(_logoTop, _logoBot, _logoMode);
+  applyAccent(_logoTop);
+  _applyBotClrVars();
+  applyFavicon(_logoTop, _logoBot, _logoMode);
   markSelectedSwatches();
+  _updateVariantToggle();
   try {
     localStorage.setItem(LOGO_TOP_KEY, _logoTop);
     localStorage.setItem(LOGO_BOT_KEY, _logoBot);
+    localStorage.setItem(LOGO_MODE_KEY, _logoMode);
   } catch {}
+}
+
+function _buildVariantToggle(picker) {
+  const wrap = document.createElement('div');
+  wrap.className = 'logo-variant-toggle';
+  wrap.id = 'logo-variant-toggle';
+  wrap.title = 'Switch logo style';
+  picker.appendChild(wrap);
+  _updateVariantToggle();
+  wrap.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const newMode = _logoMode === 'dual' ? 'mono' : 'dual';
+    setLogoColors(_logoTop, _logoBot, newMode);
+    if (State.user) saveLogoColors({ logoTopColor: _logoTop, logoBotColor: _logoBot, logoMode: newMode });
+  });
+}
+
+function _updateVariantToggle() {
+  const wrap = document.getElementById('logo-variant-toggle');
+  if (!wrap) return;
+  if (_logoMode === 'dual') {
+    const c = getThemeAdjustedLogoColor(_logoTop);
+    wrap.innerHTML = buildMonoLogoSvg(c);
+  } else {
+    wrap.innerHTML = buildLogoSvg(
+      getThemeAdjustedLogoColor(_logoTop),
+      getThemeAdjustedLogoColor(_logoBot)
+    );
+  }
 }
 
 function buildPickerColumn(col) {
@@ -2755,6 +2792,7 @@ function initLogoPicker() {
   picker.innerHTML = '';
   picker.appendChild(buildPickerColumn('top'));
   picker.appendChild(buildPickerColumn('bot'));
+  _buildVariantToggle(picker);
 
   // Initial paint — respect any cached values the user picked on a
   // previous visit, else fall back to the defaults. If the saved
@@ -2775,15 +2813,17 @@ function initLogoPicker() {
   if (rawBot && !botValid) {
     try { localStorage.setItem(LOGO_BOT_KEY, initialBot); } catch {}
   }
-  setLogoColors(initialTop, initialBot);
+  const savedMode = localStorage.getItem(LOGO_MODE_KEY) || 'dual';
+  setLogoColors(initialTop, initialBot, savedMode);
 
   // Re-paint the logo whenever the theme toggles so the light-mode
   // darkening is recomputed against the current _logoTop/_logoBot.
   // applyFavicon uses the raw (unadjusted) colors intentionally — a
   // darkened favicon would look worse on dark OS chrome.
   onThemeChange(() => {
-    paintLogo(_logoTop, _logoBot);
+    paintLogo(_logoTop, _logoBot, _logoMode);
     _applyBotClrVars();
+    _updateVariantToggle();
   });
 
   let hideTimer = null;
@@ -2818,8 +2858,8 @@ function initLogoPicker() {
     } else {
       nextBot = newColor;
     }
-    setLogoColors(nextTop, nextBot);
-    if (State.user) saveLogoColors({ logoTopColor: nextTop, logoBotColor: nextBot });
+    setLogoColors(nextTop, nextBot, _logoMode);
+    if (State.user) saveLogoColors({ logoTopColor: nextTop, logoBotColor: nextBot, logoMode: _logoMode });
   });
 }
 
