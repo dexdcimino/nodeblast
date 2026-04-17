@@ -887,12 +887,10 @@ function _respawn() {
   const screen = document.getElementById('play-death-screen');
   if (screen) screen.classList.remove('visible');
   if (window._nbSetSpawn) {
-    const spawnAngle = (window._nbMyActorId % 6) * (Math.PI / 3);
-    const sx = Math.cos(spawnAngle) * 30 + (Math.random() - 0.5) * 4;
-    const sz = Math.sin(spawnAngle) * 30 + (Math.random() - 0.5) * 4;
-    window._nbSetSpawn(sx, sz);
+    const spawnSide = (window._nbMyActorId || 0) % 2 === 0 ? 1 : -1;
+    window._nbSetSpawn((Math.random() - 0.5) * 4, spawnSide * 70);
   } else {
-    _camera.position.set(0, GROUND_Y, -30);
+    _camera.position.set(0, GROUND_Y, -70);
   }
   _updateHealthHUD();
   setTimeout(() => {
@@ -1470,13 +1468,15 @@ function _buildArenaProc(){
     strip('mid_g_'+i,5,0.08,5,mx,2.56,mz);
   }
 
-  // ── SPAWN PADS ──
-  for(let i=0;i<6;i++){
-    const angle=Math.PI/3*i;
-    const sx=Math.cos(angle)*30,sz=Math.sin(angle)*30;
-    const pad=B.MeshBuilder.CreateDisc('spawn_'+i,{radius:2.5,tessellation:6},_scene);
-    pad.rotation.x=Math.PI/2;pad.position.set(sx,0.03,sz);pad.material=MGD;
-  }
+  // ── SPAWN PADS (2, on opposite sides) ──
+  const SPAWN_DIST=70;
+  [{x:0,z:SPAWN_DIST},{x:0,z:-SPAWN_DIST}].forEach((s,i)=>{
+    const pad=B.MeshBuilder.CreateDisc('spawn_'+i,{radius:3,tessellation:6},_scene);
+    pad.rotation.x=Math.PI/2;pad.position.set(s.x,0.03,s.z);pad.material=MGD;
+    // Glow ring around spawn
+    const ring=B.MeshBuilder.CreateTorus('spawn_ring_'+i,{diameter:7,thickness:0.1,tessellation:6},_scene);
+    ring.position.set(s.x,0.05,s.z);ring.material=MG;
+  });
 
   // ── HEX BOUNDARY WALLS ──
   const WALL_R=110,WALL_H=4;
@@ -1594,7 +1594,7 @@ export function initGame(canvas){
   const hemi=new B.HemisphericLight('hemi',new B.Vector3(0,1,0),_scene);hemi.intensity=0.30;hemi.diffuse=new B.Color3(0.55,0.60,0.85);hemi.groundColor=new B.Color3(0.04,0.04,0.07);
   const dir=new B.DirectionalLight('dir',new B.Vector3(-0.5,-1,-0.3),_scene);dir.intensity=0.65;dir.diffuse=new B.Color3(0.85,0.82,0.75);dir.position=new B.Vector3(30,50,30);
   _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=isLowEnd?0.003:0.004;
-  _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-30),_scene);_camera.setTarget(B.Vector3.Zero());
+  _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-70),_scene);_camera.setTarget(B.Vector3.Zero());
   _camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
   _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;
   window._nbSetSpawn=(x,z)=>{if(_camera){_camera.position.x=x;_camera.position.z=z;_camera.position.y=GROUND_Y;_velX=0;_velZ=0;_velY=0;}};
