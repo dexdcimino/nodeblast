@@ -3386,3 +3386,44 @@ document.addEventListener('DOMContentLoaded', () => {
     if (le) setTimeout(() => { le.style.display = ''; }, 5000);
   }
 });
+
+// DEV ONLY — seed fake profiles for testing. Console: _seedTestProfiles()
+window._seedTestProfiles = async function() {
+  const { getFirestore, collection, doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+  const db = getFirestore();
+  const names = ['AlphaNode','BetaWave','CosmicRay','DeltaForce','EchoVault','FluxCore','GammaBeam','HyperLink','IonSpark','JadeCircuit','KiloVolt','LunarByte','MegaPulse','NeonDrift','OmegaGrid','PixelStorm','QuantumLeap','RetroBit','SolarFlare','TurboMesh','UltraNode','VectorPrime','WarpDrive','XenonGlow','ZeroPoint'];
+  const catalystCounts = [1,1,2,2,3,3,5,5,5,10,10,10,20,20,1,2,3,5,1,2,3,5,10,1,3];
+  const colors = ['ff4444','44aaff','44dd66','ffaa22','dd44ff','22ddcc','ff6699','8855ff','ddaa33','66ccff','ff3366','33cc99','aa66ff','ff8833','4488ff','cc3355','55cc44','ff5544','3399ff','bb44dd','ee6633','44bbaa','ff77aa','6644ff','cccc33'];
+  console.log('[seed] Creating 25 test profiles...');
+  for (let i = 0; i < 25; i++) {
+    const uid = 'test_user_' + String(i).padStart(3, '0');
+    const name = names[i];
+    const hex = colors[i];
+    const catCount = catalystCounts[i];
+    await setDoc(doc(db, 'users', uid), { displayName: name, usernameLower: name.toLowerCase(), hexCode: hex, photoURL: '', isAdmin: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(doc(db, 'userLookup', name.toLowerCase()), { uid, displayName: name, hexCode: hex }, { merge: true });
+    for (let c = 0; c < catCount; c++) {
+      const catId = uid + '_cat_' + c;
+      await setDoc(doc(db, 'catalysts', catId), { title: name + ' Project ' + (c + 1), ownerId: uid, ownerName: name, ownerHex: hex, accentColor: '#' + colors[(i + c) % colors.length], thumbURL: '', status: c === 0 && catCount > 3 ? 'placeholder' : 'published', gameId: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), fireCount: Math.floor(Math.random() * 50), frostCount: Math.floor(Math.random() * 10), isLocked: false, isPublic: true, slug: (name.toLowerCase() + '-project-' + (c + 1)).replace(/\s+/g, '-') });
+    }
+    console.log(`[seed] Created ${name}#${hex} with ${catCount} catalysts`);
+  }
+  console.log('[seed] Done! Refresh the page.');
+};
+
+// DEV ONLY — delete all seeded test profiles. Console: _deleteTestProfiles()
+window._deleteTestProfiles = async function() {
+  const { getFirestore, collection, doc, deleteDoc, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+  const db = getFirestore();
+  const names = ['AlphaNode','BetaWave','CosmicRay','DeltaForce','EchoVault','FluxCore','GammaBeam','HyperLink','IonSpark','JadeCircuit','KiloVolt','LunarByte','MegaPulse','NeonDrift','OmegaGrid','PixelStorm','QuantumLeap','RetroBit','SolarFlare','TurboMesh','UltraNode','VectorPrime','WarpDrive','XenonGlow','ZeroPoint'];
+  for (let i = 0; i < 25; i++) {
+    const uid = 'test_user_' + String(i).padStart(3, '0');
+    const name = names[i];
+    const catsSnap = await getDocs(query(collection(db, 'catalysts'), where('ownerId', '==', uid)));
+    for (const d of catsSnap.docs) await deleteDoc(d.ref);
+    await deleteDoc(doc(db, 'users', uid));
+    await deleteDoc(doc(db, 'userLookup', name.toLowerCase()));
+    console.log(`[seed] Deleted ${name}`);
+  }
+  console.log('[seed] All test profiles deleted. Refresh the page.');
+};
