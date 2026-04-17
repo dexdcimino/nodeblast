@@ -818,6 +818,25 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card.collapsed .community-card-hdr{overflow:visible;text-overflow:unset;white-space:normal;}
 .community-card.collapsed .community-card-name{white-space:normal;overflow:visible;text-overflow:unset;}
 
+/* Pill collapse — third level: compact horizontal pill */
+.community-card.pill{padding:10px 16px;border-radius:9999px;max-width:calc(1 * 180px + 56px + 60px);}
+.community-card.pill .community-tiles{display:none;}
+.community-card.pill .community-card-hdr{border-bottom:none;margin-bottom:0;padding-bottom:0;gap:8px;}
+.community-card.pill .community-card-avatar{width:28px;height:28px;font-size:11px;}
+.community-card.pill .community-card-name{font-size:13px;}
+.community-card.pill .community-card-hex{font-size:11px;}
+.community-card.pill .community-card-hex-dot{width:6px;height:6px;}
+.community-card.pill .community-card-count,
+.community-card.pill .community-card-count-hex,
+.community-card.pill .community-card-socials,
+.community-card.pill .community-card-share,
+.community-card.pill .community-card-follow,
+.community-card.pill .community-card-hdr-spacer{display:none;}
+.community-card.pill .community-card-collapse svg{width:14px;height:14px;}
+.community-card.pill .community-card-collapse{padding:4px;}
+.community-card.pill .community-card-meta{gap:1px;}
+.community-card.pill .community-card-meta-group{gap:6px;}
+
 /* MD#1: absolute-positioned vote pills — bottom-left frost, bottom-right fire */
 .community-vote-pill{position:absolute;bottom:12px;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:9999px;border:1px solid var(--bdr);background:color-mix(in srgb,var(--bg3) 60%,transparent);font-size:20px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;color:var(--tx2);line-height:1;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:3;}
 .community-vote-pill.frost{left:28px;}
