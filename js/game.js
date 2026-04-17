@@ -968,6 +968,77 @@ function _respawn() {
   }, 200);
 }
 
+function _drawMinimap(){
+  const mc=document.getElementById('play-minimap');
+  if(!mc||!_camera)return;
+  const ctx=mc.getContext('2d');
+  if(!ctx)return;
+  const W=mc.width,H=mc.height,cx=W/2,cy=H/2;
+  const SCALE=0.7;
+
+  ctx.clearRect(0,0,W,H);
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(-_camera.rotation.y);
+
+  // Hex boundary outline (pointy-top)
+  const HR=110*SCALE;
+  ctx.strokeStyle='rgba(0,255,140,0.25)';
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  for(let i=0;i<6;i++){
+    const a=Math.PI/3*i-Math.PI/2;
+    const hx=Math.cos(a)*HR,hy=Math.sin(a)*HR;
+    if(i===0)ctx.moveTo(hx,hy);else ctx.lineTo(hx,hy);
+  }
+  ctx.closePath();ctx.stroke();
+
+  // Zone structure markers
+  ctx.fillStyle='rgba(255,255,255,0.15)';
+  const ZONE_R=90;
+  for(let i=0;i<6;i++){
+    const a=Math.PI/3*i;
+    const zx=-_camera.position.x*SCALE+Math.cos(a)*ZONE_R*0.55*SCALE;
+    const zy=-_camera.position.z*SCALE+Math.sin(a)*ZONE_R*0.55*SCALE;
+    ctx.beginPath();
+    ctx.arc(zx,zy,4,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // Tower markers
+  ctx.fillStyle='rgba(0,255,140,0.3)';
+  [{x:75,z:0},{x:-75,z:0}].forEach(t=>{
+    const tx=(-_camera.position.x+t.x)*SCALE;
+    const tz=(-_camera.position.z+t.z)*SCALE;
+    ctx.fillRect(tx-3,tz-3,6,6);
+  });
+
+  // Center platform
+  ctx.fillStyle='rgba(255,255,255,0.2)';
+  const pcx=-_camera.position.x*SCALE;
+  const pcz=-_camera.position.z*SCALE;
+  ctx.beginPath();
+  ctx.arc(pcx,pcz,8,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.restore();
+
+  // Player dot (always center)
+  ctx.fillStyle='#00ff8c';
+  ctx.beginPath();
+  ctx.arc(cx,cy,3,0,Math.PI*2);
+  ctx.fill();
+
+  // Player direction indicator
+  ctx.strokeStyle='#00ff8c';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx,cy-8);
+  ctx.stroke();
+}
+
 function _physicsTick() {
   if (!_camera || !_scene) return;
   const B = window.BABYLON;
@@ -1368,6 +1439,9 @@ function _physicsTick() {
         : _fpsValue >= 30 ? 'rgba(255,200,50,0.5)' : 'rgba(255,80,80,0.7)';
     }
   }
+
+  // Mini-map
+  _drawMinimap();
 }
 
 function _createSkybox(){

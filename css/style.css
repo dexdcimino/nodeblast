@@ -1465,6 +1465,7 @@ body.cat-modal-open{overflow:hidden;}
 #play-hud{position:absolute;inset:0;pointer-events:none;}
 #play-exit-btn{pointer-events:all;position:absolute;top:16px;left:16px;background:rgba(0,0,0,0.55);color:#fff;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:6px 14px;font-family:var(--fn);font-size:13px;cursor:pointer;transition:background .15s;}
 #play-exit-btn:hover{background:rgba(255,255,255,0.1);}
+#play-minimap{position:absolute;bottom:16px;left:16px;width:160px;height:160px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(5,5,10,0.6);backdrop-filter:blur(4px);pointer-events:none;z-index:10;}
 #play-crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;user-select:none;opacity:0.85;filter:drop-shadow(0 0 4px rgba(100,255,160,0.6));}
 #play-scope-overlay{position:absolute;inset:0;z-index:15;pointer-events:none;display:flex;align-items:center;justify-content:center;}
 .scope-ring{width:min(80vh,80vw);height:min(80vh,80vw);border-radius:50%;border:3px solid rgba(255,255,255,0.3);box-shadow:0 0 0 2000px rgba(0,0,0,0.85);position:relative;}
