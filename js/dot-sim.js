@@ -36,6 +36,10 @@ function _rand(lo, hi) { return lo + Math.random() * (hi - lo); }
 function _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function _dist(a, b) { const dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); }
 let _nextId = 0;
+let _gameMode = 'competitive';
+let _playerTribe = -1;
+let _gameOver = false;
+let _gameResult = null;
 
 function _hexToRgb(hex) {
   const h = hex.replace('#', '');
@@ -284,6 +288,14 @@ function _simTick(dt) {
 
   // Add births
   for (const b of births) _agents.push(b);
+
+  // Win/lose check
+  if (_gameMode === 'competitive' && !_gameOver && _tick % 60 === 0 && _tick > 120) {
+    const counts = [0, 0, 0, 0];
+    for (const a of _agents) counts[a.tribe]++;
+    if (counts[_playerTribe] === 0) { _gameOver = true; _gameResult = 'lose'; }
+    else if (counts.every((c, i) => i === _playerTribe || c === 0)) { _gameOver = true; _gameResult = 'win'; }
+  }
 }
 
 // ── Rendering ──
@@ -588,6 +600,7 @@ export function dotSimDestroy() {
   if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
   if (_ctx && _canvas) _ctx.clearRect(0, 0, _canvas.width, _canvas.height);
   _agents = []; _food = []; _foodCooldowns = []; _zones = [];
+  _gameOver = false; _gameResult = null; _gameMode = 'competitive'; _playerTribe = -1;
   _canvas = null; _ctx = null; _grid = null;
 }
 
@@ -610,7 +623,14 @@ export function dotSimGetStats() {
       avgEnergy: members.length ? Math.round(members.reduce((s, a) => s + a.energy, 0) / members.length) : 0,
     };
   });
-  return { tribes, totalDots: _agents.length, fps: _fps, tick: _tick };
+  return { tribes, totalDots: _agents.length, fps: _fps, tick: _tick, gameOver: _gameOver, gameResult: _gameResult, playerTribe: _playerTribe, gameMode: _gameMode };
+}
+
+export function dotSimSetMode(mode, playerTribe) {
+  _gameMode = mode;
+  _playerTribe = (mode === 'competitive') ? playerTribe : -1;
+  _gameOver = false;
+  _gameResult = null;
 }
 
 export function dotSimPause() { _paused = true; }

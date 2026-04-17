@@ -1815,6 +1815,23 @@ body.cat-modal-open{overflow:hidden;}
 .chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .dot-sim-btn-icon{background:transparent;border:none;color:#888;cursor:pointer;padding:10px;border-radius:8px;display:flex;align-items:center;transition:color .15s,background .15s;}
 .dot-sim-btn-icon:hover{color:#fff;background:rgba(255,255,255,0.07);}
+.ds-tribe-select{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px;background:#0a0b0f;}
+.ds-tribe-select-title{font-size:28px;font-weight:700;color:#e0e0e0;font-family:var(--fn);}
+.ds-tribe-select-sub{font-size:15px;color:#666;margin-top:8px;font-family:var(--fn);}
+.ds-tribe-select-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;max-width:560px;width:100%;margin:32px auto 0;}
+.ds-tribe-card{padding:24px;border-radius:14px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.03);cursor:pointer;transition:all .2s;font-family:var(--fn);text-align:center;}
+.ds-tribe-card:hover{transform:scale(1.03);background:rgba(255,255,255,0.06);}
+.ds-tribe-card-name{font-size:20px;font-weight:700;margin-bottom:6px;}
+.ds-tribe-card-traits{font-size:13px;color:#888;}
+.ds-mode-toggle{display:inline-flex;border-radius:24px;border:1px solid rgba(255,255,255,0.1);overflow:hidden;margin-top:28px;}
+.ds-mode-btn{padding:10px 24px;font-size:14px;background:transparent;color:#888;border:none;cursor:pointer;font-family:var(--fn);transition:all .15s;}
+.ds-mode-btn.active{background:rgba(0,255,140,0.15);color:#00ff8c;}
+.ds-game-over{display:none;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,5,10,0.85);backdrop-filter:blur(8px);z-index:5;font-family:var(--fn);}
+.ds-game-over.open{display:flex;}
+.ds-game-over-title{font-size:42px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;}
+.ds-game-over-sub{font-size:16px;color:#888;margin-top:8px;}
+.ds-game-over-btn{margin-top:28px;padding:14px 36px;border-radius:28px;border:2px solid #00ff8c;background:rgba(0,255,140,0.1);color:#00ff8c;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--fn);}
+.ds-game-over-btn:hover{background:rgba(0,255,140,0.25);}
 
 /* DS-03: game picker cards in edit catalyst modal */
 .cat-game-cards{display:flex;flex-direction:column;gap:8px;}
