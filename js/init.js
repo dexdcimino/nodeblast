@@ -2806,8 +2806,11 @@ function initLogoPicker() {
   if (!picker || !logoEl) return;
 
   picker.innerHTML = '';
-  picker.appendChild(buildPickerColumn('top'));
-  picker.appendChild(buildPickerColumn('bot'));
+  const colsWrap = document.createElement('div');
+  colsWrap.className = 'logo-picker-cols';
+  colsWrap.appendChild(buildPickerColumn('top'));
+  colsWrap.appendChild(buildPickerColumn('bot'));
+  picker.appendChild(colsWrap);
   _buildVariantToggle(picker);
 
   // Initial paint — respect any cached values the user picked on a
