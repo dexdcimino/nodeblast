@@ -123,7 +123,7 @@ function openExitModal() {
   }
 }
 
-function closeExitModal() {
+function closeExitModal(skipRelock) {
   _exitModalOpen = false;
   const modal = document.getElementById('play-exit-modal');
   if (modal) {
@@ -131,12 +131,15 @@ function closeExitModal() {
     modal.setAttribute('aria-hidden', 'true');
   }
   // Re-acquire pointer lock so mouse immediately controls camera again
-  setTimeout(() => {
-    const canvas = document.getElementById('play-canvas');
-    if (canvas && !document.pointerLockElement) {
-      canvas.requestPointerLock().catch(() => {});
-    }
-  }, 80);
+  // BUT skip if we're exiting the game entirely
+  if (!skipRelock) {
+    setTimeout(() => {
+      const canvas = document.getElementById('play-canvas');
+      if (canvas && !document.pointerLockElement) {
+        canvas.requestPointerLock().catch(() => {});
+      }
+    }, 80);
+  }
 }
 
 // ── Route lifecycle ──
@@ -225,7 +228,7 @@ export async function renderPlayRoute(gameId) {
     });
     document.getElementById('play-exit-btn')?.addEventListener('click', () => openExitModal());
     document.getElementById('play-exit-yes')?.addEventListener('click', () => {
-      closeExitModal();
+      closeExitModal(true);
       navigate(_returnPath || '/games');
     });
     document.getElementById('play-exit-no')?.addEventListener('click', () => closeExitModal());
@@ -363,7 +366,7 @@ export async function renderPlayRoute(gameId) {
 }
 
 export function destroyPlayRoute() {
-  closeExitModal();
+  closeExitModal(true);
   destroyHathora();
   destroyPhoton();
   if (_engine) {
@@ -382,4 +385,5 @@ export function destroyPlayRoute() {
   window._nbPhotonSendDamage = null;
   window._nbPhotonInRoom = null;
   try { document.exitPointerLock(); } catch {}
+  document.body.style.cursor = '';
 }

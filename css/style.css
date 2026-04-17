@@ -894,7 +894,12 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #profile-col-pinned .hex-tile{position:relative;width:auto;max-width:none;}
 #profile-col-pinned{flex-direction:column;}
 #profile-col-pinned .profile-col-tiles{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;}
-.profile-col-title{font-size:16px;font-weight:700;color:var(--tx);margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.profile-col-title{font-size:16px;font-weight:700;color:var(--tx);margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.profile-col-title-spacer{flex:1 1 auto;min-width:8px;}
+.profile-col-title .profile-col-search{width:auto;flex:0 0 25%;min-width:100px;max-width:180px;padding:5px 10px 5px 28px;font-size:12px;border-radius:8px;margin-bottom:0;background:var(--bg3) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 8px center;background-size:14px;}
+.profile-col-filter-btn{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx3);cursor:pointer;padding:5px 8px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease),background var(--ease);}
+.profile-col-filter-btn:hover{color:var(--tx);border-color:var(--clr-adj);background:var(--bg3);}
+.profile-col-filter-btn svg{width:14px;height:14px;}
 .profile-col-empty{display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:14px;text-align:center;padding:30px 20px;line-height:1.55;}
 .pinned-tile-wrap{position:relative;display:inline-block;}
 .profile-col-unpin{position:absolute;top:6px;right:6px;z-index:10;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.55);border:1.5px solid rgba(255,255,255,0.25);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s ease,background .15s ease;pointer-events:all;}
