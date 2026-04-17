@@ -73,7 +73,7 @@ let _nearPickup=null;
 let _eHeld=false;
 let _eHoldTimer=0;
 const E_HOLD_TIME=30;
-let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandler=null;
+let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandler=null,_plcHandler=null,_canvasClickHandler=null;
 let _mouseHeld=false;
 let _lastShot=0;const SHOT_COOLDOWN=220;const _projectiles=[];const _gooSplats=[];
 const _remotePlayers=new Map();
@@ -1609,8 +1609,9 @@ export function initGame(canvas){
   _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;
   window._nbSetSpawn=(x,z)=>{if(_camera){_camera.position.x=x;_camera.position.z=z;_camera.position.y=GROUND_Y;_velX=0;_velZ=0;_velY=0;}};
   _pointerLocked=false;
-  canvas.addEventListener('click',()=>{if(!_pointerLocked)canvas.requestPointerLock().catch(()=>{});});
-  document.addEventListener('pointerlockchange',()=>{
+  _canvasClickHandler=()=>{if(!_pointerLocked)canvas.requestPointerLock().catch(()=>{});};
+  canvas.addEventListener('click',_canvasClickHandler);
+  _plcHandler=()=>{
     const wasLocked=_pointerLocked;
     _pointerLocked=document.pointerLockElement===canvas;
     const ch=document.getElementById('play-crosshair');if(ch)ch.style.opacity=_pointerLocked?'1':'0.35';
@@ -1619,7 +1620,8 @@ export function initGame(canvas){
     if(wasLocked&&!_pointerLocked&&!_isDead&&!window._nbPlayExitModalOpen){
       if(window._nbOpenExitModal)window._nbOpenExitModal();
     }
-  });
+  };
+  document.addEventListener('pointerlockchange',_plcHandler);
   _keyDownHandler=e=>{_keys[e.code]=true;if(e.code==='Space')e.preventDefault();};
   _keyUpHandler=e=>{delete _keys[e.code];};
   document.addEventListener('keydown',_keyDownHandler);document.addEventListener('keyup',_keyUpHandler);
