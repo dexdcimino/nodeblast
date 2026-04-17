@@ -1689,6 +1689,9 @@ export function destroyGame(engine){
   if(_mouseDownHandler){document.removeEventListener('mousedown',_mouseDownHandler);_mouseDownHandler=null;}
   if(_mouseUpHandler){document.removeEventListener('mouseup',_mouseUpHandler);_mouseUpHandler=null;}
   _mouseHeld=false;
+  if(_plcHandler){document.removeEventListener('pointerlockchange',_plcHandler);_plcHandler=null;}
+  if(_canvasClickHandler&&_canvas){try{_canvas.removeEventListener('click',_canvasClickHandler);}catch{}_canvasClickHandler=null;}
+  _pointerLocked=false;
   if(_scene&&_obsHandler){_scene.onBeforeRenderObservable.remove(_obsHandler);_obsHandler=null;}
   if(_resizeHandler){window.removeEventListener('resize',_resizeHandler);_resizeHandler=null;}
   _projectiles.forEach(p=>{try{p.mesh.dispose();}catch{}});_projectiles.length=0;
