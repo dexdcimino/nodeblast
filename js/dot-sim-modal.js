@@ -108,6 +108,12 @@ function _updateStats() {
   const activePower = dotSimGetActivePower();
   const canvasEl = document.getElementById('dot-sim-canvas');
   if (canvasEl) canvasEl.style.cursor = activePower ? 'crosshair' : 'default';
+
+  // Dismiss inspect panel on game over
+  if (_inspectedId !== null && stats.gameOver) {
+    document.getElementById('ds-inspect').style.display = 'none';
+    _inspectedId = null;
+  }
 }
 
 function _wireSlider(id, valId, key, fmt) {
@@ -143,6 +149,39 @@ function _renderTribeCards() {
     card.addEventListener('click', () => _startGame(_selectedMode, t.index));
     grid.appendChild(card);
   });
+}
+
+function _showInspectPanel(agent, mouseX, mouseY) {
+  const panel = document.getElementById('ds-inspect');
+  if (!panel) return;
+  if (!agent) { panel.style.display = 'none'; _inspectedId = null; return; }
+  _inspectedId = agent.id;
+
+  document.getElementById('ds-inspect-tribe').textContent = agent.tribeName;
+  document.getElementById('ds-inspect-tribe').style.color = agent.tribeColor;
+  document.getElementById('ds-inspect-state').textContent = agent.state;
+  document.getElementById('ds-inspect-age').textContent = 'Age: ' + agent.age;
+  document.getElementById('ds-inspect-energy').textContent = 'Energy: ' + agent.energy;
+
+  const barsEl = document.getElementById('ds-inspect-bars');
+  barsEl.innerHTML = '';
+  for (const [key, val] of Object.entries(agent.traits)) {
+    const row = document.createElement('div');
+    row.className = 'ds-inspect-bar-row';
+    row.innerHTML = `<span class="ds-inspect-bar-label">${key}</span><div class="ds-inspect-bar-track"><div class="ds-inspect-bar-fill" style="width:${Math.round(val * 100)}%;background:${agent.tribeColor};"></div></div>`;
+    barsEl.appendChild(row);
+  }
+
+  const wrap = document.querySelector('.dot-sim-canvas-wrap');
+  const wr = wrap.getBoundingClientRect();
+  let left = mouseX - wr.left + 20;
+  let top = mouseY - wr.top - 40;
+  if (left + 200 > wr.width) left = left - 220;
+  if (top < 10) top = 10;
+  if (top + 200 > wr.height) top = wr.height - 210;
+  panel.style.left = left + 'px';
+  panel.style.top = top + 'px';
+  panel.style.display = 'block';
 }
 
 function _startGame(mode, tribeIndex) {
@@ -199,6 +238,10 @@ function _startGame(mode, tribeIndex) {
       if (dotSimGetActivePower()) {
         const used = dotSimCanvasClick(cx, cy);
         if (used) { document.querySelectorAll('.ds-power-btn').forEach(b => b.classList.remove('active')); }
+      } else {
+        // Inspect creature
+        const agent = dotSimAgentAt(cx, cy);
+        _showInspectPanel(agent, e.clientX, e.clientY);
       }
     });
   }
@@ -320,6 +363,9 @@ export function closeDotSim() {
   if (!_open) return;
   _open = false;
   dotSimDestroy();
+  const inspect = document.getElementById('ds-inspect');
+  if (inspect) inspect.style.display = 'none';
+  _inspectedId = null;
   if (_statsInterval) { clearInterval(_statsInterval); _statsInterval = null; }
   if (_resizeObs) { _resizeObs.disconnect(); _resizeObs = null; }
   if (_escHandler) { document.removeEventListener('keydown', _escHandler, true); _escHandler = null; }
