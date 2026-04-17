@@ -1142,6 +1142,25 @@
           <div class="dot-sim-slider-row"><label>Fertility</label><input type="range" id="ds-fertility" min="0" max="2" step="0.05" value="1"><span class="ds-slider-val" id="ds-fertility-val">1×</span></div>
           <div class="dot-sim-slider-row"><label>Food</label><input type="range" id="ds-food" min="0.1" max="3" step="0.1" value="1"><span class="ds-slider-val" id="ds-food-val">1×</span></div>
         </div>
+        <div class="ds-power-bar" id="ds-power-bar">
+          <div class="ds-power-label">Powers</div>
+          <button class="ds-power-btn" id="ds-power-food" data-power="food" title="Food Drop — click canvas to place">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15 10H9L12 2ZM12 22L9 14H15L12 22ZM2 12L10 9V15L2 12ZM22 12L14 15V9L22 12Z"/></svg>
+            <span class="ds-power-cd" id="ds-power-food-cd"></span>
+          </button>
+          <button class="ds-power-btn" id="ds-power-rally" data-power="rally" title="Rally — buff nearby allies">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V4l12 4-12 4"/><line x1="4" y1="21" x2="4" y2="14"/></svg>
+            <span class="ds-power-cd" id="ds-power-rally-cd"></span>
+          </button>
+          <button class="ds-power-btn" id="ds-power-smite" data-power="smite" title="Smite — kill an enemy">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span class="ds-power-cd" id="ds-power-smite-cd"></span>
+          </button>
+          <button class="ds-power-btn" id="ds-power-barrier" data-power="barrier" title="Barrier — place a temporary wall">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span class="ds-power-cd" id="ds-power-barrier-cd"></span>
+          </button>
+        </div>
         <div class="dot-sim-tribe-strip" id="dot-sim-tribe-strip"></div>
       </div>
     </div>
