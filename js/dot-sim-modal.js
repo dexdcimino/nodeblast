@@ -6,7 +6,8 @@
 import {
   dotSimInit, dotSimDestroy, dotSimSetConfig,
   dotSimHatch, dotSimGetStats, dotSimPause, dotSimResume,
-  dotSimSetMode,
+  dotSimSetMode, dotSimSetActivePower, dotSimGetActivePower,
+  dotSimCanvasClick, dotSimGetPowerCooldowns,
 } from './dot-sim.js';
 
 let _open = false;
@@ -85,6 +86,27 @@ function _updateStats() {
       dotSimPause();
     }
   }
+
+  // Power cooldown badges
+  const cds = dotSimGetPowerCooldowns();
+  for (const power of ['food', 'rally', 'smite', 'barrier']) {
+    const btn = document.getElementById('ds-power-' + power);
+    const cdEl = document.getElementById('ds-power-' + power + '-cd');
+    if (!btn) continue;
+    if (cds[power] > 0) {
+      btn.classList.add('on-cd');
+      btn.classList.remove('active');
+      if (cdEl) cdEl.textContent = Math.ceil(cds[power] / 60) + 's';
+    } else {
+      btn.classList.remove('on-cd');
+      if (cdEl) cdEl.textContent = '';
+    }
+  }
+
+  // Cursor for active power
+  const activePower = dotSimGetActivePower();
+  const canvasEl = document.getElementById('dot-sim-canvas');
+  if (canvasEl) canvasEl.style.cursor = activePower ? 'crosshair' : 'default';
 }
 
 function _wireSlider(id, valId, key, fmt) {
@@ -150,6 +172,35 @@ function _startGame(mode, tribeIndex) {
   _paused = false;
   const pauseBtn = document.getElementById('dot-sim-pause-btn');
   if (pauseBtn) pauseBtn.innerHTML = PAUSE_SVG;
+
+  // Power buttons
+  document.querySelectorAll('.ds-power-btn').forEach(btn => {
+    btn.classList.remove('active', 'on-cd');
+    btn.addEventListener('click', () => {
+      const power = btn.dataset.power;
+      const cds = dotSimGetPowerCooldowns();
+      if (cds[power] > 0) return;
+      document.querySelectorAll('.ds-power-btn').forEach(b => b.classList.remove('active'));
+      if (dotSimGetActivePower() === power) { dotSimSetActivePower(null); return; }
+      dotSimSetActivePower(power);
+      btn.classList.add('active');
+    });
+  });
+
+  // Canvas click for powers
+  if (canvas) {
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const cx = (e.clientX - rect.left) * scaleX;
+      const cy = (e.clientY - rect.top) * scaleY;
+      if (dotSimGetActivePower()) {
+        const used = dotSimCanvasClick(cx, cy);
+        if (used) { document.querySelectorAll('.ds-power-btn').forEach(b => b.classList.remove('active')); }
+      }
+    });
+  }
 
   if (!_statsInterval) {
     _statsInterval = setInterval(_updateStats, 250);

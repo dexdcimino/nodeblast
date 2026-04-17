@@ -21,6 +21,9 @@ let _agents = [], _food = [], _tick = 0, _lastTime = 0, _fps = 0, _fpsFrames = 0
 let _gridW = 0, _gridH = 0, _grid = null;
 let _foodCooldowns = [];
 let _zones = [];
+let _activePower = null;
+let _powerCooldowns = { food: 0, rally: 0, smite: 0, barrier: 0 };
+let _barriers = [];
 
 let _cfg = {
   speed: 1.0,
@@ -134,6 +137,11 @@ function _simTick(dt) {
   _tick++;
   const spd = _cfg.speed * dt;
   _buildGrid();
+
+  // Power cooldowns
+  for (const k in _powerCooldowns) { if (_powerCooldowns[k] > 0) _powerCooldowns[k] -= spd; }
+  // Barrier TTLs
+  for (let i = _barriers.length - 1; i >= 0; i--) { _barriers[i].ttl -= spd; if (_barriers[i].ttl <= 0) _barriers.splice(i, 1); }
 
   // Food cooldowns
   for (let i = _foodCooldowns.length - 1; i >= 0; i--) {
@@ -320,6 +328,9 @@ function _simTick(dt) {
     a.vx *= 0.92;
     a.vy *= 0.92;
 
+    // Rally buff
+    if (a._rallied > 0) { a._rallied -= spd; a.vx *= 1.008; a.vy *= 1.008; }
+
     // Speed cap
     const speed = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
     const maxSpd = 1.5 + a.traits.metabolism * 1.2;
@@ -335,6 +346,19 @@ function _simTick(dt) {
     if (a.x > _canvas.width - pad) { a.x = _canvas.width - pad; a.vx = -Math.abs(a.vx) * 0.5; }
     if (a.y < pad) { a.y = pad; a.vy = Math.abs(a.vy) * 0.5; }
     if (a.y > _canvas.height - pad) { a.y = _canvas.height - pad; a.vy = -Math.abs(a.vy) * 0.5; }
+
+    // Barrier bounce
+    for (const b of _barriers) {
+      const bd = _dist(a, b);
+      if (bd < b.radius + a.radius) {
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+        a.x = b.x + (dx / d) * (b.radius + a.radius + 1);
+        a.y = b.y + (dy / d) * (b.radius + a.radius + 1);
+        a.vx = (dx / d) * Math.abs(a.vx) * 0.5;
+        a.vy = (dy / d) * Math.abs(a.vy) * 0.5;
+      }
+    }
 
     // Zone effects
     for (const zone of _zones) {
@@ -560,6 +584,18 @@ function _render() {
     }
   }
 
+  // Barriers
+  for (const b of _barriers) {
+    const pulse = 0.2 + Math.sin(_tick * 0.08) * 0.1;
+    _ctx.strokeStyle = `rgba(0,255,140,${pulse})`;
+    _ctx.lineWidth = 2;
+    _ctx.beginPath();
+    _ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+    _ctx.stroke();
+    _ctx.fillStyle = `rgba(0,255,140,${pulse * 0.15})`;
+    _ctx.fill();
+  }
+
   // Food
   const ft = _tick * 0.03;
   for (const f of _food) {
@@ -670,6 +706,7 @@ export function dotSimDestroy() {
   if (_ctx && _canvas) _ctx.clearRect(0, 0, _canvas.width, _canvas.height);
   _agents = []; _food = []; _foodCooldowns = []; _zones = [];
   _gameOver = false; _gameResult = null; _gameMode = 'competitive'; _playerTribe = -1;
+  _activePower = null; _powerCooldowns = { food: 0, rally: 0, smite: 0, barrier: 0 }; _barriers = [];
   _canvas = null; _ctx = null; _grid = null;
 }
 
@@ -700,6 +737,43 @@ export function dotSimSetMode(mode, playerTribe) {
   _playerTribe = (mode === 'competitive') ? playerTribe : -1;
   _gameOver = false;
   _gameResult = null;
+}
+
+export function dotSimSetActivePower(power) { _activePower = power; }
+export function dotSimGetActivePower() { return _activePower; }
+export function dotSimGetPowerCooldowns() { return { ..._powerCooldowns }; }
+
+export function dotSimCanvasClick(cx, cy) {
+  if (!_activePower || _gameOver) return false;
+  if (_powerCooldowns[_activePower] > 0) return false;
+
+  const COOLDOWNS = { food: 480, rally: 900, smite: 1200, barrier: 1500 };
+
+  if (_activePower === 'food') {
+    for (let i = 0; i < 5; i++) {
+      _food.push({ x: cx + _rand(-25, 25), y: cy + _rand(-25, 25), energy: 30, radius: 4 });
+    }
+  } else if (_activePower === 'rally') {
+    for (const a of _agents) {
+      if (a.tribe === _playerTribe && _dist(a, { x: cx, y: cy }) < 150) {
+        a._rallied = 300;
+      }
+    }
+  } else if (_activePower === 'smite') {
+    let closest = null, closestDist = 30;
+    for (const a of _agents) {
+      if (a.tribe === _playerTribe) continue;
+      const d = _dist(a, { x: cx, y: cy });
+      if (d < closestDist) { closestDist = d; closest = a; }
+    }
+    if (closest) { closest.energy = 0; } else { return false; }
+  } else if (_activePower === 'barrier') {
+    _barriers.push({ x: cx, y: cy, radius: 30, ttl: 600 });
+  }
+
+  _powerCooldowns[_activePower] = (_gameMode === 'sandbox') ? 0 : COOLDOWNS[_activePower];
+  _activePower = null;
+  return true;
 }
 
 export function dotSimPause() { _paused = true; }
