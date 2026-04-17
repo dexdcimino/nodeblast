@@ -132,8 +132,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .logo-picker-cols{display:flex;flex-direction:row;gap:8px;}
 .logo-picker-col{display:flex;flex-direction:column;gap:6px;}
 .logo-variant-toggle{display:flex;justify-content:center;padding:6px 0 2px;border-top:1px solid var(--bdr);cursor:pointer;}
-.logo-variant-toggle svg{width:28px;height:28px;opacity:.45;transition:opacity .15s ease,transform .15s ease;}
-.logo-variant-toggle:hover svg{opacity:.8;transform:scale(1.1);}
+.logo-variant-toggle svg{width:28px;height:28px;opacity:.7;transition:opacity .15s ease,transform .15s ease;}
+.logo-variant-toggle:hover svg{opacity:1;transform:scale(1.1);}
 .logo-swatch{width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;transition:transform var(--ease),box-shadow var(--ease);box-shadow:0 0 0 1px rgba(255,255,255,.08);}
 .logo-swatch:hover{transform:scale(1.25);}
 .logo-swatch:active{transform:scale(1.35);}
