@@ -179,20 +179,35 @@ function _simTick(dt) {
       else { if (d < nearEnemyDist) { nearEnemyDist = d; nearestEnemy = n; } }
     }
 
+    // Count nearby allies + compute centroid
+    let allyCount = 0, allyCX = 0, allyCY = 0;
+    for (const n of neighbors) {
+      if (n.id !== a.id && n.tribe === a.tribe) {
+        allyCount++;
+        allyCX += n.x;
+        allyCY += n.y;
+      }
+    }
+    if (allyCount > 0) { allyCX /= allyCount; allyCY /= allyCount; }
+
+    // Find home nest
+    const homeNest = _zones ? _zones.find(z => z.type === 'NEST' && z.tribe === a.tribe) : null;
+
     // Decision
-    const agg = a.traits.aggression * _cfg.aggression;
+    const baseAgg = a.traits.aggression * _cfg.aggression;
     const fear = a.traits.fearfulness;
+    const packBonus = allyCount >= 4 ? 0.1 : 0;
+    const agg = baseAgg + packBonus;
     a.state = 'idle';
 
-    // Seek food if hungry
-    if (nearestFood && a.energy < 60) {
+    // PRIORITY 1: Desperate hunger — energy < 30, ignore everything else
+    if (a.energy < 30 && nearestFood) {
       a.state = 'seeking';
       const dx = nearestFood.x - a.x, dy = nearestFood.y - a.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const s = (0.8 + a.traits.metabolism * 0.8) * spd;
-      a.vx += (dx / d) * s * 0.12;
-      a.vy += (dy / d) * s * 0.12;
-      // Eat on contact
+      const s = (1.0 + a.traits.metabolism * 1.0) * spd;
+      a.vx += (dx / d) * s * 0.15;
+      a.vy += (dy / d) * s * 0.15;
       if (nearFoodDist < a.radius + nearestFood.radius) {
         a.energy = Math.min(100, a.energy + nearestFood.energy);
         a.state = 'eating';
@@ -200,36 +215,90 @@ function _simTick(dt) {
         if (idx >= 0) { _food.splice(idx, 1); _foodCooldowns.push(300 / _cfg.foodRate); }
       }
     }
-    // Cluster with tribe
+    // PRIORITY 2: Wounded retreat — energy < 25, flee to nest
+    else if (a.energy < 25 && homeNest) {
+      a.state = 'fleeing';
+      const dx = homeNest.x - a.x, dy = homeNest.y - a.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      a.vx += (dx / d) * 0.12 * spd;
+      a.vy += (dy / d) * 0.12 * spd;
+    }
+    // PRIORITY 3: Territorial defense — enemy in our nest zone
+    else if (nearestEnemy && homeNest && _dist(nearestEnemy, homeNest) < homeNest.radius * 1.5 && _dist(a, homeNest) < 200) {
+      a.state = 'fighting';
+      const dx = nearestEnemy.x - a.x, dy = nearestEnemy.y - a.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      a.vx += (dx / d) * 0.12 * spd;
+      a.vy += (dy / d) * 0.12 * spd;
+      if (nearEnemyDist < 8 && a.cooldowns.attack <= 0) {
+        nearestEnemy.energy -= agg * 1.5 * 8;
+        a.cooldowns.attack = 45;
+      }
+    }
+    // PRIORITY 4: Seek food if moderately hungry
+    else if (nearestFood && a.energy < 60) {
+      a.state = 'seeking';
+      const dx = nearestFood.x - a.x, dy = nearestFood.y - a.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const s = (0.8 + a.traits.metabolism * 0.8) * spd;
+      a.vx += (dx / d) * s * 0.12;
+      a.vy += (dy / d) * s * 0.12;
+      if (nearFoodDist < a.radius + nearestFood.radius) {
+        a.energy = Math.min(100, a.energy + nearestFood.energy);
+        a.state = 'eating';
+        const idx = _food.indexOf(nearestFood);
+        if (idx >= 0) { _food.splice(idx, 1); _foodCooldowns.push(300 / _cfg.foodRate); }
+      }
+    }
+    // PRIORITY 5: Pack herding — move toward ally centroid
+    else if (allyCount >= 3 && a.traits.sociality > 0.4) {
+      const dx = allyCX - a.x, dy = allyCY - a.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      if (d > 25) {
+        a.vx += (dx / d) * 0.05 * spd;
+        a.vy += (dy / d) * 0.05 * spd;
+      }
+    }
+    // PRIORITY 5b: Cluster with nearest ally (existing behavior, lower ally count)
     else if (nearestAlly && nearAllyDist > 30 && a.traits.sociality > 0.4) {
       const dx = nearestAlly.x - a.x, dy = nearestAlly.y - a.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       a.vx += (dx / d) * 0.04 * spd;
       a.vy += (dy / d) * 0.04 * spd;
     }
-    // Enemy response
-    if (nearestEnemy && nearEnemyDist < percR) {
+
+    // Enemy response (runs alongside food/pack when energy > 30)
+    if (a.state !== 'seeking' && a.state !== 'eating' && a.state !== 'fleeing' && nearestEnemy && nearEnemyDist < percR) {
       if (agg > fear) {
         a.state = 'fighting';
         const dx = nearestEnemy.x - a.x, dy = nearestEnemy.y - a.y;
         const d = Math.sqrt(dx * dx + dy * dy) || 1;
         a.vx += (dx / d) * 0.1 * spd;
         a.vy += (dy / d) * 0.1 * spd;
-        // Deal damage on contact
         if (nearEnemyDist < 8 && a.cooldowns.attack <= 0) {
-          nearestEnemy.energy -= agg * 8;
+          const flankBonus = allyCount >= 2 ? 1.3 : 1.0;
+          nearestEnemy.energy -= agg * 8 * flankBonus;
           a.cooldowns.attack = 45;
         }
       } else {
         a.state = 'fleeing';
-        const dx = a.x - nearestEnemy.x, dy = a.y - nearestEnemy.y;
-        const d = Math.sqrt(dx * dx + dy * dy) || 1;
-        a.vx += (dx / d) * 0.12 * spd;
-        a.vy += (dy / d) * 0.12 * spd;
+        if (homeNest && a.energy < 50) {
+          // Flee toward nest
+          const dx = homeNest.x - a.x, dy = homeNest.y - a.y;
+          const d = Math.sqrt(dx * dx + dy * dy) || 1;
+          a.vx += (dx / d) * 0.12 * spd;
+          a.vy += (dy / d) * 0.12 * spd;
+        } else {
+          // Flee away from enemy
+          const dx = a.x - nearestEnemy.x, dy = a.y - nearestEnemy.y;
+          const d = Math.sqrt(dx * dx + dy * dy) || 1;
+          a.vx += (dx / d) * 0.12 * spd;
+          a.vy += (dy / d) * 0.12 * spd;
+        }
       }
     }
 
-    // Reproduce
+    // Reproduce (unchanged logic)
     const fert = a.traits.fertility * _cfg.fertility;
     if (a.energy > 88 && a.cooldowns.reproduce <= 0 && tribeCounts[a.tribe] < MAX_PER_TRIBE && _agents.length + births.length < MAX_TOTAL) {
       if (fert > _rand(0, 1.2)) {
