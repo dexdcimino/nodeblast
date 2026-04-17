@@ -316,8 +316,9 @@ export async function renderPlayRoute(gameId) {
         console.log('[play] photon connected, actor:', myId);
         console.log('[play] multiplayer connected');
         // Assign spawn based on actor number
-        const spawnZ = (myId % 2 === 1) ? -48 : 48;
-        const spawnX = (Math.random() - 0.5) * 6;
+        const spawnAngle = (myId % 6) * (Math.PI / 3);
+        const spawnX = Math.cos(spawnAngle) * 30 + (Math.random() - 0.5) * 4;
+        const spawnZ = Math.sin(spawnAngle) * 30 + (Math.random() - 0.5) * 4;
         if (window._nbSetSpawn) window._nbSetSpawn(spawnX, spawnZ);
         // Layer Hathora on top of Photon for authoritative state
         const name = State.profile?.displayName || 'player';

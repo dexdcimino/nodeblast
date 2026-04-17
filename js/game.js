@@ -781,8 +781,8 @@ function _buildPickupGunModel(gunIndex) {
 
 function _buildGunPickups() {
   const B = window.BABYLON;
-  const PICKUP_POS = { x: 55, z: -55 };
-  const TABLE_BASE_Y = 4.0; // sits on top of fortress upper platform
+  const PICKUP_POS = { x: 0, z: 0 };
+  const TABLE_BASE_Y = 8.3;
   const TABLE_W = 1.2, TABLE_D = 1.2, TABLE_H = 0.8;
   const LEG_W = 0.12, LEG_D = 0.12;
   const gc = GUNS[4].color;
@@ -887,10 +887,12 @@ function _respawn() {
   const screen = document.getElementById('play-death-screen');
   if (screen) screen.classList.remove('visible');
   if (window._nbSetSpawn) {
-    const spawnZ = (window._nbMyActorId % 2 === 1) ? -48 : 48;
-    window._nbSetSpawn((Math.random() - 0.5) * 6, spawnZ);
+    const spawnAngle = (window._nbMyActorId % 6) * (Math.PI / 3);
+    const sx = Math.cos(spawnAngle) * 30 + (Math.random() - 0.5) * 4;
+    const sz = Math.sin(spawnAngle) * 30 + (Math.random() - 0.5) * 4;
+    window._nbSetSpawn(sx, sz);
   } else {
-    _camera.position.set(0, GROUND_Y, -48);
+    _camera.position.set(0, GROUND_Y, -30);
   }
   _updateHealthHUD();
   setTimeout(() => {
@@ -1310,253 +1312,226 @@ function _createSkybox(){
 
 function _buildArenaCollision(){
   const B=window.BABYLON;
-  // Center
-  _addCol(0,0,18,18,0.7);_addCol(0,0,8,8,1.4);_addCol(0,0,2,2,5);
-  // Towers
-  [{x:28,z:28},{x:-28,z:28},{x:28,z:-28},{x:-28,z:-28}].forEach((t,i)=>{
-    _addCol(t.x,t.z,5,5,10);_addCol(t.x,t.z,7,7,0.5);
-    const pt=new B.PointLight('twp_'+i,new B.Vector3(t.x,1.5,t.z),_scene);pt.diffuse=new B.Color3(0.1,1,0.4);pt.intensity=1.4;pt.range=16;
-  });
-  // Low walls
-  [{x:14,z:14,w:1,d:6},{x:19,z:11,w:6,d:1},{x:-14,z:14,w:1,d:6},{x:-19,z:11,w:6,d:1},
-   {x:14,z:-14,w:1,d:6},{x:19,z:-11,w:6,d:1},{x:-14,z:-14,w:1,d:6},{x:-19,z:-11,w:6,d:1}].forEach(w=>_addCol(w.x,w.z,w.w,w.d,2.5));
-  // Bunkers
-  [{x:0,z:38},{x:0,z:-38},{x:38,z:0},{x:-38,z:0}].forEach(b=>{
-    const ns=b.x===0;
-    _addCol(b.x,b.z,ns?10:2,ns?2:10,1.4);
-    _addCol(b.x+(ns?-6:0),b.z+(ns?0:-6),ns?1:2,ns?2:1,2.5);
-    _addCol(b.x+(ns?6:0),b.z+(ns?0:6),ns?1:2,ns?2:1,2.5);
-  });
-  // Catwalks
-  _addCol(0,44,20,4,0.4);_addCol(-9,44,0.5,0.5,5);_addCol(9,44,0.5,0.5,5);
-  _addCol(0,-44,20,4,0.4);_addCol(-9,-44,0.5,0.5,5);_addCol(9,-44,0.5,0.5,5);
-  // Ramps
-  [1,2,3].forEach(s=>{_addCol(0,20+s*3,4,2,s*0.5);_addCol(0,-20-s*3,4,2,s*0.5);});
-  // Pillars
-  [{x:8,z:22},{x:-8,z:22},{x:8,z:-22},{x:-8,z:-22},{x:22,z:8},{x:22,z:-8},{x:-22,z:8},{x:-22,z:-8}].forEach(p=>_addCol(p.x,p.z,2,2,4));
-  // ══ EXPANDED ARENA — QUADRANT COLLISION ══
 
-  // NE Hex Platforms
-  _addCol(55, 55, 10, 10, 3.0);
-  _addCol(55, 55, 6, 6, 5.0);
-  _addCol(48, 48, 3, 3, 2.0);
-  _addCol(62, 48, 3, 3, 2.0);
-  _addCol(48, 62, 3, 3, 2.0);
-  _addCol(62, 62, 3, 3, 2.0);
-  _addCol(70, 55, 1, 8, 2.5);
-  _addCol(55, 70, 8, 1, 2.5);
+  // Center hex platform
+  _addCol(0,0,20,20,1.2);
+  _addCol(0,0,3,3,8);   // pillar
+  _addCol(0,0,5.5,5.5,8.3); // top platform
 
-  // NW Sunken Pit rim walls
-  _addCol(-55, 45, 20, 1, 1.5);
-  _addCol(-55, 65, 20, 1, 1.5);
-  _addCol(-45, 55, 1, 20, 1.5);
-  _addCol(-65, 55, 1, 20, 1.5);
-  _addCol(-52, 52, 2, 2, 4);
-  _addCol(-58, 58, 2, 2, 4);
-  _addCol(-52, 58, 2, 2, 3);
-  _addCol(-58, 52, 2, 2, 3);
+  // 6 zone structures (same positions as _buildArenaProc)
+  const HEX_R=90;
+  for(let i=0;i<6;i++){
+    const angle=Math.PI/3*i+Math.PI/6;
+    const cx=Math.cos(angle)*HEX_R*0.55;
+    const cz=Math.sin(angle)*HEX_R*0.55;
 
-  // SE Elevated Fortress
-  _addCol(55, -55, 14, 14, 2.0);
-  _addCol(55, -55, 8, 8, 4.0);
-  _addCol(55, -55, 3, 3, 7.0);
-  _addCol(48, -48, 4, 2, 0.7);
-  _addCol(48, -50, 4, 2, 1.3);
-  _addCol(48, -52, 4, 2, 2.0);
-  _addCol(68, -50, 1, 6, 2.5);
-  _addCol(50, -68, 6, 1, 2.5);
-
-  // SW Trench Network
-  _addCol(-50, -45, 1, 16, 2.0);
-  _addCol(-60, -45, 1, 16, 2.0);
-  _addCol(-55, -38, 10, 1, 2.0);
-  _addCol(-55, -53, 10, 1, 2.0);
-  _addCol(-55, -60, 10, 1, 2.0);
-  _addCol(-45, -55, 3, 3, 5);
-  _addCol(-65, -55, 3, 3, 5);
-  _addCol(-55, -55, 12, 2, 3.5);
-
-  // Mid-ring structures
-  _addCol(35, 0, 4, 7, 2.0);
-  _addCol(-35, 0, 4, 7, 2.0);
-  _addCol(0, 35, 7, 4, 2.0);
-  _addCol(0, -35, 7, 4, 2.0);
-  _addCol(25, 35, 3, 3, 3);
-  _addCol(-25, 35, 3, 3, 3);
-  _addCol(25, -35, 3, 3, 3);
-  _addCol(-25, -35, 3, 3, 3);
-
-  // Outer ring pillars
-  [{x:80,z:0},{x:-80,z:0},{x:0,z:80},{x:0,z:-80},
-   {x:75,z:75},{x:-75,z:75},{x:75,z:-75},{x:-75,z:-75}].forEach(p => {
-    _addCol(p.x, p.z, 2, 2, 6);
-  });
-
-  // Fence walls
-  const W=120,FH=3.5,FW=W*2;
-  [{x:0,z:W,rotY:0},{x:0,z:-W,rotY:0},{x:W,z:0,rotY:Math.PI/2},{x:-W,z:0,rotY:Math.PI/2}].forEach((fd,fi)=>{
-    _addCol(fd.x,fd.z,fd.rotY===0?FW:0.3,fd.rotY===0?0.3:FW,FH);
-    for(let pl=0;pl<Math.floor(FW/24);pl++){
-      const offset=-FW/2+pl*24+12;
-      const ptPos=fd.rotY===0?new B.Vector3(fd.x+offset,2,fd.z):new B.Vector3(fd.x,2,fd.z+offset);
-      const fpt=new B.PointLight('fence_pt_'+fi+'_'+pl,ptPos,_scene);fpt.diffuse=new B.Color3(0.0,0.8,0.3);fpt.intensity=0.5;fpt.range=10;
+    if(i===0){
+      _addCol(cx-8,cz,4,4,9);_addCol(cx+8,cz,4,4,9);
+      _addCol(cx,cz,18,4,9.5);_addCol(cx,cz,20,8,0.6);
+    }else if(i===1){
+      _addCol(cx,cz,16,16,1.5);_addCol(cx,cz,10,10,3);_addCol(cx,cz,5,5,5);
+    }else if(i===2){
+      _addCol(cx-5,cz,1,14,2.5);_addCol(cx+5,cz,1,14,2.5);
+      _addCol(cx,cz-4,10,1,2.5);_addCol(cx,cz+4,10,1,2.5);
+      _addCol(cx,cz,3,3,5);
+    }else if(i===3){
+      _addCol(cx,cz,14,14,2.5);_addCol(cx,cz,8,8,5);_addCol(cx,cz,3,3,8);
+      const rDir=Math.atan2(cz,cx);
+      for(let s=1;s<=3;s++){
+        const rx=cx-Math.cos(rDir)*(7+s*3),rz=cz-Math.sin(rDir)*(7+s*3);
+        _addCol(rx,rz,4,3,s*0.7);
+      }
+    }else if(i===4){
+      // Pillar positions are random — individual pillar cols are added by box() in _buildArenaProc
+    }else{
+      _addCol(cx,cz+8,16,1,1.5);_addCol(cx,cz-8,16,1,1.5);
+      _addCol(cx+8,cz,1,16,1.5);_addCol(cx-8,cz,1,16,1.5);
+      _addCol(cx-5,cz+5,2,2,4);_addCol(cx+5,cz-5,2,2,4);
+      _addCol(cx-5,cz-5,2,2,3);_addCol(cx+5,cz+5,2,2,3);
     }
-  });
-  const spot=new B.SpotLight('spot',new B.Vector3(0,30,0),new B.Vector3(0,-1,0),Math.PI/5,10,_scene);spot.intensity=0.55;spot.diffuse=new B.Color3(0.85,0.95,1.0);
+  }
+
+  // Mid-ring cover
+  for(let i=0;i<6;i++){
+    const angle=Math.PI/3*i;
+    const mx=Math.cos(angle)*40,mz=Math.sin(angle)*40;
+    _addCol(mx,mz,5,5,2.5);
+  }
+
+  // Hex boundary walls are added in _buildArenaProc via _addCol
+
+  // Spotlight
+  const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
+  spot.intensity=0.6;spot.diffuse=new B.Color3(0.85,0.95,1.0);
 }
 
 function _buildArenaProc(){
   const B=window.BABYLON;
   function mkMat(n,r,g,b,er,eg,eb){const m=new B.StandardMaterial(n,_scene);m.diffuseColor=new B.Color3(r,g,b);m.emissiveColor=new B.Color3(er||0,eg||0,eb||0);m.specularColor=new B.Color3(0.08,0.08,0.12);m.specularPower=48;return m;}
-  const MC=mkMat('mc',0.16,0.17,0.21),MD=mkMat('md',0.10,0.11,0.14),MG=mkMat('mg',0.03,0.18,0.09,0,0.6,0.25),MGD=mkMat('mgd',0.02,0.10,0.05,0,0.2,0.08);
-  const gnd=B.MeshBuilder.CreateGround('ground',{width:130,height:130,subdivisions:2},_scene);gnd.material=mkMat('gnd',0.06,0.07,0.09);
+  const MC=mkMat('mc',0.16,0.17,0.21),MD=mkMat('md',0.10,0.11,0.14);
+  const MG=mkMat('mg',0.03,0.18,0.09,0,0.6,0.25),MGD=mkMat('mgd',0.02,0.10,0.05,0,0.2,0.08);
+  const MHex=mkMat('mhex',0.08,0.15,0.10,0,0.3,0.12);
+  const MAccent=mkMat('maccent',0.05,0.20,0.12,0,0.5,0.2);
+
   function box(n,w,h,d,x,z,mat,nc){const m=B.MeshBuilder.CreateBox(n,{width:w,height:h,depth:d},_scene);m.position.set(x,h/2,z);m.material=mat;if(!nc)_addCol(x,z,w,d,h);return m;}
   function strip(n,w,h,d,x,y,z){const m=B.MeshBuilder.CreateBox(n,{width:w,height:h,depth:d},_scene);m.position.set(x,y,z);m.material=MG;return m;}
-  box('ctr_base',18,0.7,18,0,0,MD);box('ctr_inner',8,1.4,8,0,0,MC);box('ctr_pillar',2,5,2,0,0,MD);
-  strip('ctr_n',18,0.1,0.15,0,0.76,9);strip('ctr_s',18,0.1,0.15,0,0.76,-9);
-  strip('ctr_e',0.15,0.1,18,9,0.76,0);strip('ctr_w',0.15,0.1,18,-9,0.76,0);
-  strip('ctr_pn',2.1,0.08,0.1,0,5.1,1);strip('ctr_ps',2.1,0.08,0.1,0,5.1,-1);
-  [{x:28,z:28},{x:-28,z:28},{x:28,z:-28},{x:-28,z:-28}].forEach((t,i)=>{
-    box('tw_'+i,5,10,5,t.x,t.z,MD);box('twt_'+i,7,0.5,7,t.x,t.z,MC);
-    strip('twg_'+i,7,0.14,7,t.x,10.33,t.z);
-    const pt=new B.PointLight('twp_'+i,new B.Vector3(t.x,1.5,t.z),_scene);pt.diffuse=new B.Color3(0.1,1,0.4);pt.intensity=1.4;pt.range=16;
-  });
-  [{x:14,z:14,w:1,d:6},{x:19,z:11,w:6,d:1},{x:-14,z:14,w:1,d:6},{x:-19,z:11,w:6,d:1},
-   {x:14,z:-14,w:1,d:6},{x:19,z:-11,w:6,d:1},{x:-14,z:-14,w:1,d:6},{x:-19,z:-11,w:6,d:1}].forEach((w,i)=>box('lw_'+i,w.w,2.5,w.d,w.x,w.z,MC));
-  [{x:0,z:38},{x:0,z:-38},{x:38,z:0},{x:-38,z:0}].forEach((b,i)=>{
-    const ns=b.x===0;
-    box('bk_'+i,ns?10:2,1.4,ns?2:10,b.x,b.z,MD);
-    box('bkl_'+i,ns?1:2,2.5,ns?2:1,b.x+(ns?-6:0),b.z+(ns?0:-6),MC);
-    box('bkr_'+i,ns?1:2,2.5,ns?2:1,b.x+(ns?6:0),b.z+(ns?0:6),MC);
-    strip('bkg_'+i,ns?10:2,0.08,ns?2:10,b.x,1.46,b.z);
-  });
-  box('cat_n',20,0.4,4,0,44,MD);box('cnl',0.5,5,0.5,-9,44,MC);box('cnr',0.5,5,0.5,9,44,MC);
-  strip('cng',20,0.1,0.12,0,0.46,44);
-  box('cat_s',20,0.4,4,0,-44,MD);box('csl',0.5,5,0.5,-9,-44,MC);box('csr',0.5,5,0.5,9,-44,MC);
-  strip('csg',20,0.1,0.12,0,0.46,-44);
-  [1,2,3].forEach(s=>{box('rn_'+s,4,s*0.5,2,0,20+s*3,MC);box('rs_'+s,4,s*0.5,2,0,-20-s*3,MC);});
-  [{x:8,z:22},{x:-8,z:22},{x:8,z:-22},{x:-8,z:-22},{x:22,z:8},{x:22,z:-8},{x:-22,z:8},{x:-22,z:-8}].forEach((p,i)=>{
-    box('pl_'+i,2,4,2,p.x,p.z,MD);strip('plg_'+i,2,0.08,2,p.x,4.1,p.z);
-  });
-  [{x:0,z:-50},{x:0,z:50},{x:50,z:0},{x:-50,z:0}].forEach((s,i)=>{
-    const pad=B.MeshBuilder.CreateGround('sp_'+i,{width:4,height:4},_scene);pad.position.set(s.x,0.02,s.z);pad.material=MGD;
-  });
-  // ══ EXPANDED ARENA — VISUAL GEOMETRY ══
-  const MHex = mkMat('mhex', 0.08, 0.15, 0.10, 0, 0.3, 0.12);
 
-  // Extended ground
-  const gndExt = B.MeshBuilder.CreateGround('ground_ext', { width: 260, height: 260, subdivisions: 4 }, _scene);
-  gndExt.position.y = -0.01;
-  gndExt.material = mkMat('gnd_ext', 0.05, 0.06, 0.08);
+  // ── GROUND ──
+  const gndExt=B.MeshBuilder.CreateGround('ground_ext',{width:400,height:400,subdivisions:2},_scene);
+  gndExt.position.y=-0.02;gndExt.material=mkMat('gnd_ext',0.03,0.03,0.05);
 
-  // NE Hex Platforms
-  box('hex_base_ne', 10, 3, 10, 55, 55, MD);
-  box('hex_upper_ne', 6, 5, 6, 55, 55, MC);
-  strip('hex_glow_ne', 10, 0.12, 10, 55, 3.08, 55);
-  [{x:48,z:48},{x:62,z:48},{x:48,z:62},{x:62,z:62}].forEach((h, i) => {
-    box('hex_step_ne_' + i, 3, 2, 3, h.x, h.z, MHex);
-    strip('hex_step_g_ne_' + i, 3, 0.08, 3, h.x, 2.08, h.z);
-  });
-  box('hex_wall_ne_e', 1, 2.5, 8, 70, 55, MC);
-  box('hex_wall_ne_n', 8, 2.5, 1, 55, 70, MC);
+  const hexFloor=B.MeshBuilder.CreateDisc('hex_floor',{radius:115,tessellation:6},_scene);
+  hexFloor.rotation.x=Math.PI/2;hexFloor.rotation.y=Math.PI/6;
+  hexFloor.position.y=0.01;hexFloor.material=mkMat('hex_gnd',0.06,0.07,0.09);
 
-  // NW Sunken Pit
-  box('pit_s_nw', 20, 1.5, 1, -55, 45, MD);
-  box('pit_n_nw', 20, 1.5, 1, -55, 65, MD);
-  box('pit_e_nw', 1, 1.5, 20, -45, 55, MD);
-  box('pit_w_nw', 1, 1.5, 20, -65, 55, MD);
-  strip('pit_gs_nw', 20, 0.08, 1, -55, 1.56, 45);
-  strip('pit_gn_nw', 20, 0.08, 1, -55, 1.56, 65);
-  [{x:-52,z:52,h:4},{x:-58,z:58,h:4},{x:-52,z:58,h:3},{x:-58,z:52,h:3}].forEach((p, i) => {
-    box('pit_pil_' + i, 2, p.h, 2, p.x, p.z, MC);
-    strip('pit_pilg_' + i, 2, 0.08, 2, p.x, p.h + 0.05, p.z);
-  });
-  const pitLight = new B.PointLight('pit_light_nw', new B.Vector3(-55, 1, 55), _scene);
-  pitLight.diffuse = new B.Color3(0.1, 0.8, 0.4); pitLight.intensity = 1.2; pitLight.range = 18;
+  const hexInner=B.MeshBuilder.CreateDisc('hex_inner_ring',{radius:70,tessellation:6},_scene);
+  hexInner.rotation.x=Math.PI/2;hexInner.rotation.y=Math.PI/6;
+  hexInner.position.y=0.02;hexInner.material=mkMat('hex_inner',0.07,0.08,0.10);
 
-  // SE Elevated Fortress
-  box('fort_base_se', 14, 2, 14, 55, -55, MD);
-  box('fort_upper_se', 8, 4, 8, 55, -55, MC);
-  box('fort_tower_se', 3, 7, 3, 55, -55, MD);
-  strip('fort_glow_se', 14, 0.12, 14, 55, 2.08, -55);
-  strip('fort_glow2_se', 8, 0.1, 8, 55, 4.08, -55);
-  [{ z: -48, h: 0.7 }, { z: -50, h: 1.3 }, { z: -52, h: 2.0 }].forEach((r, i) => {
-    box('fort_ramp_' + i, 4, r.h, 2, 48, r.z, MC);
-  });
-  box('fort_wall_e', 1, 2.5, 6, 68, -50, MC);
-  box('fort_wall_s', 6, 2.5, 1, 50, -68, MC);
-  const fortLight = new B.PointLight('fort_light_se', new B.Vector3(55, 8, -55), _scene);
-  fortLight.diffuse = new B.Color3(0.2, 0.6, 1.0); fortLight.intensity = 1.5; fortLight.range = 20;
+  // ── CENTER PLATFORM ──
+  const ctrHex=B.MeshBuilder.CreateCylinder('ctr_hex',{height:1.2,diameter:22,tessellation:6},_scene);
+  ctrHex.position.y=0.6;ctrHex.material=MD;
 
-  // SW Trench Network
-  box('trench_w1', 1, 2, 16, -50, -45, MC);
-  box('trench_w2', 1, 2, 16, -60, -45, MC);
-  box('trench_h1', 10, 2, 1, -55, -38, MC);
-  box('trench_h2', 10, 2, 1, -55, -53, MC);
-  box('trench_h3', 10, 2, 1, -55, -60, MC);
-  box('trench_perch1', 3, 5, 3, -45, -55, MD);
-  box('trench_perch2', 3, 5, 3, -65, -55, MD);
-  const bridgeMesh = B.MeshBuilder.CreateBox('trench_bridge', { width: 12, height: 3.5, depth: 2 }, _scene);
-  bridgeMesh.position.set(-55, 3.5/2, -55); bridgeMesh.material = MC;
-  strip('trench_bg', 12, 0.08, 2, -55, 3.56, -55);
-  const trenchLight = new B.PointLight('trench_light_sw', new B.Vector3(-55, 2, -50), _scene);
-  trenchLight.diffuse = new B.Color3(1.0, 0.3, 0.1); trenchLight.intensity = 0.8; trenchLight.range = 14;
+  const ctrPillar=B.MeshBuilder.CreateCylinder('ctr_pillar',{height:8,diameter:3,tessellation:6},_scene);
+  ctrPillar.position.y=4;ctrPillar.material=MC;
 
-  // Mid-ring hex cover
-  [{x:35,z:0},{x:-35,z:0}].forEach((m, i) => {
-    box('mid_hex_ew_' + i, 4, 2, 7, m.x, m.z, MHex);
-    strip('mid_hex_g_ew_' + i, 4, 0.08, 7, m.x, 2.08, m.z);
-  });
-  [{x:0,z:35},{x:0,z:-35}].forEach((m, i) => {
-    box('mid_hex_ns_' + i, 7, 2, 4, m.x, m.z, MHex);
-    strip('mid_hex_g_ns_' + i, 7, 0.08, 4, m.x, 2.08, m.z);
-  });
-  [{x:25,z:35},{x:-25,z:35},{x:25,z:-35},{x:-25,z:-35}].forEach((d, i) => {
-    box('diag_pil_' + i, 3, 3, 3, d.x, d.z, MC);
-    strip('diag_pilg_' + i, 3, 0.08, 3, d.x, 3.08, d.z);
-  });
+  const ctrTop=B.MeshBuilder.CreateCylinder('ctr_top',{height:0.3,diameter:6,tessellation:6},_scene);
+  ctrTop.position.y=8.15;ctrTop.material=MHex;
 
-  // Outer ring pillars with lights
-  [{x:80,z:0},{x:-80,z:0},{x:0,z:80},{x:0,z:-80},
-   {x:75,z:75},{x:-75,z:75},{x:75,z:-75},{x:-75,z:-75}].forEach((p, i) => {
-    box('outer_pil_' + i, 2, 6, 2, p.x, p.z, MD);
-    strip('outer_pilg_' + i, 2, 0.08, 2, p.x, 6.08, p.z);
-    const opl = new B.PointLight('opl_' + i, new B.Vector3(p.x, 6.5, p.z), _scene);
-    opl.diffuse = new B.Color3(0.0, 0.7, 0.3); opl.intensity = 0.6; opl.range = 12;
-  });
+  const ctrGlow=B.MeshBuilder.CreateTorus('ctr_glow',{diameter:22,thickness:0.15,tessellation:6},_scene);
+  ctrGlow.position.y=1.25;ctrGlow.material=MG;
 
-  const W=120,FH=3.5,FP=8,FW=W*2;
-  const fenceMat=new B.StandardMaterial('fence_mat',_scene);
-  fenceMat.diffuseColor=new B.Color3(0.08,0.10,0.08);fenceMat.emissiveColor=new B.Color3(0.0,0.18,0.06);
-  fenceMat.specularColor=new B.Color3(0.1,0.3,0.1);fenceMat.alpha=0.85;
-  const fenceGlowMat=new B.StandardMaterial('fence_glow_mat',_scene);
-  fenceGlowMat.emissiveColor=new B.Color3(0.0,0.7,0.25);fenceGlowMat.disableLighting=true;
-  [{x:0,z:W,rotY:0},{x:0,z:-W,rotY:0},{x:W,z:0,rotY:Math.PI/2},{x:-W,z:0,rotY:Math.PI/2}].forEach((fd,fi)=>{
-    const fence=B.MeshBuilder.CreateBox('fence_'+fi,{width:FW,height:FH,depth:0.3},_scene);
-    fence.position.set(fd.x,FH/2,fd.z);fence.rotation.y=fd.rotY;fence.material=fenceMat;
-    _addCol(fd.x,fd.z,fd.rotY===0?FW:0.3,fd.rotY===0?0.3:FW,FH);
-    const topS=B.MeshBuilder.CreateBox('fence_top_'+fi,{width:FW,height:0.08,depth:0.35},_scene);
-    topS.position.set(fd.x,FH+0.04,fd.z);topS.rotation.y=fd.rotY;topS.material=fenceGlowMat;
-    const botS=B.MeshBuilder.CreateBox('fence_bot_'+fi,{width:FW,height:0.06,depth:0.35},_scene);
-    botS.position.set(fd.x,0.3,fd.z);botS.rotation.y=fd.rotY;botS.material=fenceGlowMat;
-    const postCount=Math.floor(FW/FP);
+  const ctrLight=new B.PointLight('ctr_light',new B.Vector3(0,9,0),_scene);
+  ctrLight.diffuse=new B.Color3(0.1,1,0.5);ctrLight.intensity=2;ctrLight.range=25;
+
+  // ── 6 ZONE STRUCTURES ──
+  const HEX_R=90;
+  for(let i=0;i<6;i++){
+    const angle=Math.PI/3*i+Math.PI/6;
+    const cx=Math.cos(angle)*HEX_R*0.55;
+    const cz=Math.sin(angle)*HEX_R*0.55;
+
+    if(i===0){
+      box('zt0_tL',4,9,4,cx-8,cz,MD);box('zt0_tR',4,9,4,cx+8,cz,MD);
+      box('zt0_bridge',18,0.5,4,cx,cz,MC);strip('zt0_bg',18,0.1,4,cx,9.3,cz);
+      box('zt0_base',20,0.6,8,cx,cz,MD);
+      strip('zt0_glow',20,0.12,8,cx,0.66,cz);
+    }else if(i===1){
+      box('zt1_b1',16,1.5,16,cx,cz,MD);box('zt1_b2',10,3,10,cx,cz,MC);
+      box('zt1_b3',5,5,5,cx,cz,MD);
+      strip('zt1_g1',16,0.1,16,cx,1.56,cz);strip('zt1_g2',10,0.1,10,cx,3.06,cz);
+      const pyLight=new B.PointLight('py_light',new B.Vector3(cx,6,cz),_scene);
+      pyLight.diffuse=new B.Color3(0.2,0.8,1);pyLight.intensity=1.2;pyLight.range=16;
+    }else if(i===2){
+      box('zt2_w1',1,2.5,14,cx-5,cz,MC);box('zt2_w2',1,2.5,14,cx+5,cz,MC);
+      box('zt2_cross1',10,2.5,1,cx,cz-4,MC);box('zt2_cross2',10,2.5,1,cx,cz+4,MC);
+      box('zt2_perch',3,5,3,cx,cz,MD);
+      strip('zt2_pg',3,0.08,3,cx,5.06,cz);
+      const trLight=new B.PointLight('tr_light',new B.Vector3(cx,2,cz),_scene);
+      trLight.diffuse=new B.Color3(1,0.3,0.1);trLight.intensity=0.9;trLight.range=14;
+    }else if(i===3){
+      box('zt3_base',14,2.5,14,cx,cz,MD);box('zt3_upper',8,5,8,cx,cz,MC);
+      box('zt3_tower',3,8,3,cx,cz,MD);
+      strip('zt3_g1',14,0.12,14,cx,2.56,cz);strip('zt3_g2',8,0.1,8,cx,5.06,cz);
+      const rDir=Math.atan2(cz,cx);
+      for(let s=1;s<=3;s++){
+        const rx=cx-Math.cos(rDir)*(7+s*3),rz=cz-Math.sin(rDir)*(7+s*3);
+        box('zt3_ramp_'+s,4,s*0.7,3,rx,rz,MC);
+      }
+      const ftLight=new B.PointLight('ft_light',new B.Vector3(cx,9,cz),_scene);
+      ftLight.diffuse=new B.Color3(0.2,0.6,1);ftLight.intensity=1.5;ftLight.range=20;
+    }else if(i===4){
+      for(let p=0;p<5;p++){
+        const px=cx+(_rand(-12,12)),pz=cz+(_rand(-12,12));
+        const ph=3+Math.random()*4;
+        box('zt4_pil_'+p,2.5,ph,2.5,px,pz,MD);
+        strip('zt4_pilg_'+p,2.5,0.08,2.5,px,ph+0.04,pz);
+      }
+      const pilLight=new B.PointLight('pil_light',new B.Vector3(cx,4,cz),_scene);
+      pilLight.diffuse=new B.Color3(0.6,0.1,0.9);pilLight.intensity=1;pilLight.range=18;
+    }else{
+      box('zt5_n',16,1.5,1,cx,cz+8,MD);box('zt5_s',16,1.5,1,cx,cz-8,MD);
+      box('zt5_e',1,1.5,16,cx+8,cz,MD);box('zt5_w',1,1.5,16,cx-8,cz,MD);
+      [{dx:-5,dz:5,h:4},{dx:5,dz:-5,h:4},{dx:-5,dz:-5,h:3},{dx:5,dz:5,h:3}].forEach((pp,pi)=>{
+        box('zt5_col_'+pi,2,pp.h,2,cx+pp.dx,cz+pp.dz,MC);
+        strip('zt5_colg_'+pi,2,0.08,2,cx+pp.dx,pp.h+0.04,cz+pp.dz);
+      });
+      const pitLight=new B.PointLight('pit_light',new B.Vector3(cx,1,cz),_scene);
+      pitLight.diffuse=new B.Color3(0.1,0.8,0.4);pitLight.intensity=1.2;pitLight.range=18;
+    }
+  }
+
+  // ── MID-RING COVER ──
+  for(let i=0;i<6;i++){
+    const angle=Math.PI/3*i;
+    const mx=Math.cos(angle)*40,mz=Math.sin(angle)*40;
+    box('mid_'+i,5,2.5,5,mx,mz,MHex);
+    strip('mid_g_'+i,5,0.08,5,mx,2.56,mz);
+  }
+
+  // ── SPAWN PADS ──
+  for(let i=0;i<6;i++){
+    const angle=Math.PI/3*i;
+    const sx=Math.cos(angle)*30,sz=Math.sin(angle)*30;
+    const pad=B.MeshBuilder.CreateDisc('spawn_'+i,{radius:2.5,tessellation:6},_scene);
+    pad.rotation.x=Math.PI/2;pad.position.set(sx,0.03,sz);pad.material=MGD;
+  }
+
+  // ── HEX BOUNDARY WALLS ──
+  const WALL_R=110,WALL_H=4;
+  const wallMat=new B.StandardMaterial('wall_mat',_scene);
+  wallMat.diffuseColor=new B.Color3(0.08,0.10,0.08);wallMat.emissiveColor=new B.Color3(0.0,0.18,0.06);
+  wallMat.specularColor=new B.Color3(0.1,0.3,0.1);wallMat.alpha=0.85;
+  const wallGlowMat=new B.StandardMaterial('wall_glow_mat',_scene);
+  wallGlowMat.emissiveColor=new B.Color3(0.0,0.7,0.25);wallGlowMat.disableLighting=true;
+
+  for(let i=0;i<6;i++){
+    const a1=Math.PI/3*i+Math.PI/6,a2=Math.PI/3*(i+1)+Math.PI/6;
+    const x1=Math.cos(a1)*WALL_R,z1=Math.sin(a1)*WALL_R;
+    const x2=Math.cos(a2)*WALL_R,z2=Math.sin(a2)*WALL_R;
+    const mx=(x1+x2)/2,mz=(z1+z2)/2;
+    const dx=x2-x1,dz=z2-z1;
+    const segLen=Math.sqrt(dx*dx+dz*dz);
+    const wallAngle=Math.atan2(dx,dz);
+
+    const wall=B.MeshBuilder.CreateBox('hex_wall_'+i,{width:segLen,height:WALL_H,depth:0.5},_scene);
+    wall.position.set(mx,WALL_H/2,mz);wall.rotation.y=wallAngle;wall.material=wallMat;
+
+    const hw=segLen/2,colCos=Math.abs(Math.cos(wallAngle)),colSin=Math.abs(Math.sin(wallAngle));
+    _addCol(mx,mz,hw*colSin*2+0.5,hw*colCos*2+0.5,WALL_H);
+
+    const topGlow=B.MeshBuilder.CreateBox('hex_wall_top_'+i,{width:segLen,height:0.08,depth:0.55},_scene);
+    topGlow.position.set(mx,WALL_H+0.04,mz);topGlow.rotation.y=wallAngle;topGlow.material=wallGlowMat;
+    const botGlow=B.MeshBuilder.CreateBox('hex_wall_bot_'+i,{width:segLen,height:0.06,depth:0.55},_scene);
+    botGlow.position.set(mx,0.3,mz);botGlow.rotation.y=wallAngle;botGlow.material=wallGlowMat;
+
+    const postCount=Math.floor(segLen/10);
     for(let p=0;p<=postCount;p++){
-      const offset=-FW/2+p*FP;
-      const post=B.MeshBuilder.CreateBox('fence_post_'+fi+'_'+p,{width:0.25,height:FH+0.5,depth:0.4},_scene);
-      if(fd.rotY===0)post.position.set(fd.x+offset,(FH+0.5)/2,fd.z);
-      else post.position.set(fd.x,(FH+0.5)/2,fd.z+offset);
-      post.rotation.y=fd.rotY;post.material=fenceMat;
-      const pip=B.MeshBuilder.CreateSphere('pip_'+fi+'_'+p,{diameter:0.22,segments:4},_scene);
-      pip.position.copyFrom(post.position);pip.position.y=FH+0.5;pip.material=fenceGlowMat;
+      const t=p/postCount;
+      const px=x1+(x2-x1)*t,pz=z1+(z2-z1)*t;
+      const post=B.MeshBuilder.CreateBox('wall_post_'+i+'_'+p,{width:0.25,height:WALL_H+0.5,depth:0.4},_scene);
+      post.position.set(px,(WALL_H+0.5)/2,pz);post.rotation.y=wallAngle;post.material=wallMat;
+      const pip=B.MeshBuilder.CreateSphere('wall_pip_'+i+'_'+p,{diameter:0.22,segments:4},_scene);
+      pip.position.set(px,WALL_H+0.5,pz);pip.material=wallGlowMat;
     }
-    for(let pl=0;pl<Math.floor(FW/24);pl++){
-      const offset=-FW/2+pl*24+12;
-      const ptPos=fd.rotY===0?new B.Vector3(fd.x+offset,2,fd.z):new B.Vector3(fd.x,2,fd.z+offset);
-      const fpt=new B.PointLight('fence_pt_'+fi+'_'+pl,ptPos,_scene);
-      fpt.diffuse=new B.Color3(0.0,0.8,0.3);fpt.intensity=0.5;fpt.range=10;
-    }
-  });
-  const spot=new B.SpotLight('spot',new B.Vector3(0,30,0),new B.Vector3(0,-1,0),Math.PI/5,10,_scene);spot.intensity=0.55;spot.diffuse=new B.Color3(0.85,0.95,1.0);
+
+    const wLight=new B.PointLight('wall_light_'+i,new B.Vector3(mx,2.5,mz),_scene);
+    wLight.diffuse=new B.Color3(0,0.8,0.3);wLight.intensity=0.6;wLight.range=15;
+  }
+
+  // ── VERTEX PILLARS ──
+  for(let i=0;i<6;i++){
+    const a=Math.PI/3*i+Math.PI/6;
+    const vx=Math.cos(a)*WALL_R,vz=Math.sin(a)*WALL_R;
+    const pil=B.MeshBuilder.CreateCylinder('hex_vpil_'+i,{height:8,diameter:2.5,tessellation:6},_scene);
+    pil.position.set(vx,4,vz);pil.material=MD;
+    const vLight=new B.PointLight('vpil_light_'+i,new B.Vector3(vx,8.5,vz),_scene);
+    vLight.diffuse=new B.Color3(0.1,1,0.5);vLight.intensity=0.8;vLight.range=12;
+  }
+
+  // ── SPOTLIGHT ──
+  const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
+  spot.intensity=0.6;spot.diffuse=new B.Color3(0.85,0.95,1.0);
 }
 
 function _buildArena(){
@@ -1577,12 +1552,12 @@ function _buildColorNodes(){
     {r:0.0,g:1.0,b:1.0,name:'cyan'},{r:0.1,g:0.3,b:1.0,name:'blue'},
     {r:0.7,g:0.1,b:1.0,name:'purple'},{r:1.0,g:1.0,b:1.0,name:'white'},
   ];
-  const nodePositions = [
-    { x: 8, z: -50 }, { x: 8, z: 50 },
-    { x: 55, z: 55 }, { x: -55, z: 55 },
-    { x: 55, z: -55 }, { x: -55, z: -55 },
-    { x: 80, z: 0 }, { x: -80, z: 0 },
-  ];
+  const nodePositions = [];
+  for(let i=0;i<6;i++){
+    const angle=Math.PI/3*i+Math.PI/6;
+    nodePositions.push({ x: Math.round(Math.cos(angle)*55), z: Math.round(Math.sin(angle)*55) });
+  }
+  nodePositions.push({ x: 15, z: 0 }, { x: -15, z: 0 });
   nodePositions.forEach((np, npi) => {
     COLORS.forEach((col, ci) => {
       const x = np.x + ci * 2.2, z = np.z;
@@ -1610,7 +1585,7 @@ export function initGame(canvas){
   const hemi=new B.HemisphericLight('hemi',new B.Vector3(0,1,0),_scene);hemi.intensity=0.30;hemi.diffuse=new B.Color3(0.55,0.60,0.85);hemi.groundColor=new B.Color3(0.04,0.04,0.07);
   const dir=new B.DirectionalLight('dir',new B.Vector3(-0.5,-1,-0.3),_scene);dir.intensity=0.65;dir.diffuse=new B.Color3(0.85,0.82,0.75);dir.position=new B.Vector3(30,50,30);
   _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=isLowEnd?0.003:0.004;
-  _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-48),_scene);_camera.setTarget(B.Vector3.Zero());
+  _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-30),_scene);_camera.setTarget(B.Vector3.Zero());
   _camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
   _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;
   window._nbSetSpawn=(x,z)=>{if(_camera){_camera.position.x=x;_camera.position.z=z;_camera.position.y=GROUND_Y;_velX=0;_velZ=0;_velY=0;}};
