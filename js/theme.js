@@ -21,20 +21,20 @@ const PALETTES = {
 // ══════════════════════════════════════════════════════════════
 
 export const LOGO_PALETTE = [
-  { hex: '#2D7FF9', name: 'Volt Blue' },       //  1
-  { hex: '#18BFBF', name: 'Reactor Teal' },    //  2
-  { hex: '#45D26A', name: 'Blast Green' },      //  3
-  { hex: '#F5C842', name: 'Arc Yellow' },       //  4
-  { hex: '#F26B1C', name: 'Lambo Orange' },     //  5
-  { hex: '#E8453C', name: 'Rich Red' },         //  6
-  { hex: '#F24E8A', name: 'Hot Pink' },         //  7
-  { hex: '#A855F7', name: 'Plasma Purple' },    //  8
-  { hex: '#9AA5B4', name: 'Cool Gray' },        //  9
-  { hex: '#ffffff', name: 'White' },            // 10
+  { hex: '#2979FF', name: 'Volt Blue' },        //  1
+  { hex: '#0ED2C8', name: 'Reactor Teal' },     //  2
+  { hex: '#2DD881', name: 'Blast Green' },       //  3
+  { hex: '#FBBD23', name: 'Arc Yellow' },        //  4
+  { hex: '#F97316', name: 'Lambo Orange' },      //  5
+  { hex: '#F0114C', name: 'Rich Red' },          //  6
+  { hex: '#EE46B3', name: 'Hot Pink' },          //  7
+  { hex: '#B04CF8', name: 'Plasma Purple' },     //  8
+  { hex: '#94A3B8', name: 'Cool Gray' },         //  9
+  { hex: '#ffffff', name: 'White' },             // 10
 ];
 
-export const DEFAULT_LOGO_TOP = '#45D26A';   // Blast Green
-export const DEFAULT_LOGO_BOT = '#2D7FF9';   // Volt Blue
+export const DEFAULT_LOGO_TOP = '#2DD881';   // Blast Green
+export const DEFAULT_LOGO_BOT = '#2979FF';   // Volt Blue
 
 let _transTimer = null;
 let _currentAccent = null;
