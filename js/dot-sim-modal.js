@@ -7,7 +7,7 @@ import {
   dotSimInit, dotSimDestroy, dotSimSetConfig,
   dotSimHatch, dotSimGetStats, dotSimPause, dotSimResume,
   dotSimSetMode, dotSimSetActivePower, dotSimGetActivePower,
-  dotSimCanvasClick, dotSimGetPowerCooldowns,
+  dotSimCanvasClick, dotSimGetPowerCooldowns, dotSimAgentAt,
 } from './dot-sim.js';
 
 let _open = false;
@@ -16,6 +16,7 @@ let _statsInterval = null;
 let _resizeObs = null;
 let _escHandler = null;
 let _selectedMode = 'competitive';
+let _inspectedId = null;
 
 const TRIBES = [
   { name: 'Alpha', color: '#00ffaa', index: 0, traits: 'Aggressive · Social' },

@@ -776,5 +776,24 @@ export function dotSimCanvasClick(cx, cy) {
   return true;
 }
 
+export function dotSimAgentAt(x, y) {
+  let closest = null, closestDist = 20;
+  for (const a of _agents) {
+    if (a.dying > 0) continue;
+    const d = _dist(a, { x, y });
+    if (d < closestDist) { closestDist = d; closest = a; }
+  }
+  if (!closest) return null;
+  return {
+    id: closest.id, tribe: closest.tribe,
+    tribeName: TRIBES[closest.tribe].name,
+    tribeColor: TRIBES[closest.tribe].color,
+    energy: Math.round(closest.energy),
+    age: closest.age, state: closest.state,
+    traits: { ...closest.traits },
+    x: closest.x, y: closest.y,
+  };
+}
+
 export function dotSimPause() { _paused = true; }
 export function dotSimResume() { _paused = false; }

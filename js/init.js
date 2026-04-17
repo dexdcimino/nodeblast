@@ -2808,6 +2808,8 @@ function initLogoPicker() {
   if (!picker || !logoEl) return;
 
   picker.innerHTML = '';
+  // MD#6: read saved mode early so the toggle preview is correct on first render
+  _logoMode = localStorage.getItem(LOGO_MODE_KEY) || 'dual';
   const colsWrap = document.createElement('div');
   colsWrap.className = 'logo-picker-cols';
   colsWrap.appendChild(buildPickerColumn('top'));

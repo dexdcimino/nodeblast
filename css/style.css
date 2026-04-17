@@ -1840,6 +1840,16 @@ body.cat-modal-open{overflow:hidden;}
 .ds-power-btn.on-cd{opacity:0.35;cursor:not-allowed;border-color:rgba(255,255,255,0.1);}
 .ds-power-cd{position:absolute;bottom:-4px;right:-4px;font-size:11px;font-weight:700;color:#ff6b35;background:#0e0f14;border-radius:8px;padding:1px 5px;display:none;font-family:var(--fn);}
 .ds-power-btn.on-cd .ds-power-cd{display:block;}
+.ds-inspect{position:absolute;pointer-events:none;background:rgba(14,15,20,0.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 16px;min-width:180px;z-index:10;font-family:var(--fn);font-size:13px;color:#ccc;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
+.ds-inspect-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.ds-inspect-tribe{font-weight:700;font-size:14px;}
+.ds-inspect-state{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#888;background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:6px;}
+.ds-inspect-bars{display:flex;flex-direction:column;gap:4px;}
+.ds-inspect-bar-row{display:flex;align-items:center;gap:8px;}
+.ds-inspect-bar-label{font-size:11px;color:#888;min-width:70px;}
+.ds-inspect-bar-track{flex:1;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;}
+.ds-inspect-bar-fill{height:100%;border-radius:3px;}
+.ds-inspect-footer{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:#666;}
 
 /* DS-03: game picker cards in edit catalyst modal */
 .cat-game-cards{display:flex;flex-direction:column;gap:8px;}
