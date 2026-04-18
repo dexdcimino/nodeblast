@@ -1675,12 +1675,16 @@ function _buildArenaProc(){
 
     // Collision — segmented along wall for accurate hit detection
     const SEGS=12;
+    const segStep=segLen/SEGS;
     for(let s=0;s<SEGS;s++){
       const t=(s+0.5)/SEGS;
       const sx=x1+(x2-x1)*t,sz=z1+(z2-z1)*t;
-      const perpX=Math.abs(dz/segLen)*segLen/SEGS/2+1.5;
-      const perpZ=Math.abs(dx/segLen)*segLen/SEGS/2+1.5;
-      _addCol(sx,sz,perpX*2,perpZ*2,WALL_H);
+      const wallDirX=dx/segLen,wallDirZ=dz/segLen;
+      const halfLen=segStep/2+0.5;
+      const thickness=1.5;
+      const boxW=Math.abs(wallDirX)*halfLen+Math.abs(wallDirZ)*thickness+0.5;
+      const boxD=Math.abs(wallDirZ)*halfLen+Math.abs(wallDirX)*thickness+0.5;
+      _addCol(sx,sz,boxW*2,boxD*2,WALL_H);
     }
 
     const topGlow=B.MeshBuilder.CreateBox('hex_wall_top_'+i,{width:segLen,height:0.08,depth:0.55},_scene);
@@ -1902,6 +1906,7 @@ export function initGame(canvas){
   _mouseUpHandler=e=>{if(e.button===0)_mouseHeld=false;};
   document.addEventListener('mouseup',_mouseUpHandler);
   _buildArena();
+  _buildArenaCollision();
   _buildGun();
   window._nbRebuildGun=_buildGun;
   initAudio();

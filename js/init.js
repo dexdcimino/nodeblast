@@ -1834,10 +1834,8 @@ function _buildCommunityCard(group) {
   const isOwnCardForReorder = State.user && group.uid === State.user.uid;
   const MAX_VISIBLE_TILES = 12;
   const sortedTiles = _sortCardTiles(group.catalysts);
-  const cardMaxW = window.innerWidth > 900
-    ? Math.floor(window.innerWidth * 0.5 - 80)
-    : Math.floor(window.innerWidth - 80);
-  const tilesAvailW = cardMaxW - 100;
+  const colW = Math.floor(window.innerWidth * 0.5);
+  const tilesAvailW = colW - 56 - 28;
   const tileSize = getCommunityTileSize(sortedTiles.length, tilesAvailW);
   const tilesToShow = sortedTiles.slice(0, tileSize.showCount);
   tilesToShow.forEach((cat) => {
