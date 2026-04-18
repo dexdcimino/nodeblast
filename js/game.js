@@ -1478,8 +1478,8 @@ function _buildArenaCollision(){
 
   // Center hex platform
   _addCol(0,0,20,20,1.2);
-  _addCol(0,0,2.8,2.8,7.8);
-  _addCol(0,0,6,6,8.0,7.6);
+  _addCol(0,0,2.5,2.5,7.5);
+  _addCol(0,0,7,7,8.0,7.9);
 
   // 6 zone structures (same positions as _buildArenaProc)
   const HEX_R=90;
