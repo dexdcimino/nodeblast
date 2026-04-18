@@ -802,7 +802,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-follow.icon-only svg{flex-shrink:0;}
 .community-card.collapsed .community-card-hdr{flex-wrap:nowrap;overflow:hidden;}
 
-.community-tiles{position:relative;display:flex;flex-wrap:nowrap;gap:12px;justify-content:flex-start;align-items:center;height:228px;padding:0 50px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;-webkit-overflow-scrolling:touch;}
+.community-tiles{position:relative;display:flex;flex-wrap:nowrap;gap:12px;justify-content:center;align-items:center;height:228px;padding:0 14px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;-webkit-overflow-scrolling:touch;}
 .community-tiles::-webkit-scrollbar{height:4px;}
 .community-tiles::-webkit-scrollbar-track{background:transparent;}
 .community-tiles::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px;}
