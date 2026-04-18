@@ -795,10 +795,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    the share button in the card header. Pill-shaped so it reads as
    an action, not a chip. The `.following` state flips to a filled
    green pill (the accent color) so the on/off state is obvious. */
-.community-card-follow{flex-shrink:0;background:none;border:2.5px solid var(--clr-adj);border-radius:20px;color:var(--clr-adj);font-family:var(--fn);font-size:14px;font-weight:700;cursor:pointer;padding:6px 14px;transition:background var(--ease),color var(--ease),border-color var(--ease);display:inline-flex;align-items:center;gap:4px;}
-.community-card-follow:hover{background:color-mix(in srgb,var(--clr-adj) 15%,transparent);}
-.community-card-follow.following{background:var(--clr-adj);color:var(--clr-adj-on,#000);}
-.community-card-follow.following:hover{background:color-mix(in srgb,var(--clr-adj) 80%,#000);}
+.community-card-follow{flex-shrink:0;background:none;border:2px solid var(--bdr);border-radius:20px;color:var(--tx3);font-family:var(--fn);font-size:14px;font-weight:700;cursor:pointer;padding:6px 14px;transition:background var(--ease),color var(--ease),border-color var(--ease);display:inline-flex;align-items:center;gap:4px;}
+.community-card-follow:hover{border-color:var(--tx3);color:var(--tx2);background:color-mix(in srgb,var(--tx3) 8%,transparent);}
+.community-card-follow.following{background:var(--clr-adj);color:var(--clr-adj-on,#000);border-color:var(--clr-adj);}
+.community-card-follow.following:hover{background:color-mix(in srgb,var(--clr-adj) 80%,#000);border-color:var(--clr-adj);}
 .community-card-follow.icon-only{padding:6px;border-radius:50%;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;font-size:0;}
 .community-card-follow.icon-only svg{flex-shrink:0;}
 .community-card.collapsed .community-card-hdr{flex-wrap:nowrap;overflow:hidden;}
