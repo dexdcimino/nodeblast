@@ -75,6 +75,7 @@ let _eHoldTimer=0;
 const E_HOLD_TIME=30;
 let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandler=null,_plcHandler=null,_canvasClickHandler=null,_rightClickHandler=null;
 let _scoped=false;
+const _ladderZones=[];
 let _mouseHeld=false;
 let _lastShot=0;const SHOT_COOLDOWN=220;const _projectiles=[];const _gooSplats=[];
 const _remotePlayers=new Map();
@@ -1118,7 +1119,22 @@ function _physicsTick() {
   _velZ += ((mz * spd) - _velZ) * accel * ctrl * _delta;
   if (ml === 0 && _onGround) { const fd = Math.pow(FRICTION, _delta); _velX *= fd; _velZ *= fd; }
 
-  _velY -= GRAVITY * (_velY < 0 ? FALL_MULT : 1.0) * _delta;
+  // Ladder auto-climb
+  let _onLadder = false;
+  for (const lz of _ladderZones) {
+    const ldx = _camera.position.x - lz.x;
+    const ldz = _camera.position.z - lz.z;
+    const ldist = Math.sqrt(ldx * ldx + ldz * ldz);
+    const feetY = _camera.position.y - GROUND_Y;
+    if (ldist < lz.radius && feetY < lz.topY) {
+      _onLadder = true;
+      _velY = 0.06;
+      _onGround = false;
+      break;
+    }
+  }
+
+  if (!_onLadder) _velY -= GRAVITY * (_velY < 0 ? FALL_MULT : 1.0) * _delta;
 
   if (jumping && !_jumpHeld && _jumpsLeft > 0) {
     playJump();
@@ -1719,20 +1735,18 @@ function _buildArenaProc(){
     box('tw_door_l_'+ti,0.5,3.5,(TW-3)/2,frontX,(TW-1)/2-(TW-3)/4,MTw);
     box('tw_door_r_'+ti,0.5,3.5,(TW-3)/2,frontX,-(TW-1)/2+(TW-3)/4,MTw);
 
-    // Interior ladder platforms (alternating left/right every 3.5m)
-    for(let h=3;h<TOWER_H-2;h+=3.5){
-      const side=(Math.floor(h/3.5)%2===0)?1:-1;
-      const px=t.x+side*(TW/2-1.2);
-      const plat=B.MeshBuilder.CreateBox('tw_plat_'+ti+'_'+h,{width:2,height:0.25,depth:TW-1.5},_scene);
-      plat.position.set(px,h,0);plat.material=MHex;
-      _addCol(px,0,2,TW-1.5,h+0.12,h-0.12);
-    }
+    // Ladder zone marker (visual strip on back wall)
+    const ladderStrip=B.MeshBuilder.CreateBox('tw_ladder_strip_'+ti,{width:0.08,height:TOWER_H-2,depth:1.2},_scene);
+    ladderStrip.position.set(t.x+t.facing*(TW/2-0.3),TOWER_H/2,0);ladderStrip.material=MG;
 
-    // Ladder rungs (visual only — thin bars on the back wall)
-    for(let r=0.8;r<TOWER_H-1;r+=0.8){
-      const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:0.08,height:0.08,depth:1.5},_scene);
+    // Ladder rungs (visual only)
+    for(let r=1;r<TOWER_H-1;r+=0.9){
+      const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:0.06,height:0.06,depth:1.2},_scene);
       rung.position.set(t.x+t.facing*(TW/2-0.3),r,0);rung.material=MG;
     }
+
+    // Register ladder zone for auto-climb
+    _ladderZones.push({ x: t.x + t.facing * (TW/2 - 0.5), z: 0, radius: 1.2, topY: TOWER_H - 1 });
 
     // Top platform (wider than tower, can stand on)
     const topPlat=B.MeshBuilder.CreateBox('tw_top_'+ti,{width:TW+3,height:0.4,depth:TW+3},_scene);
@@ -1955,6 +1969,7 @@ export function destroyGame(engine){
   if(_canvasClickHandler&&_canvas){try{_canvas.removeEventListener('click',_canvasClickHandler);}catch{}_canvasClickHandler=null;}
   if(_rightClickHandler){document.removeEventListener('mousedown',_rightClickHandler);_rightClickHandler=null;}
   _pointerLocked=false;_scoped=false;
+  _ladderZones.length=0;
   window._nbUnscope=null;
   if(_scene&&_obsHandler){_scene.onBeforeRenderObservable.remove(_obsHandler);_obsHandler=null;}
   if(_resizeHandler){window.removeEventListener('resize',_resizeHandler);_resizeHandler=null;}
