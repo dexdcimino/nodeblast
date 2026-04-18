@@ -312,10 +312,12 @@ function _addTileRoundedPath() {
 }
 
 function addTileHTML() {
+  const hp = _addTileRoundedPath();
   return `
     <div class="add-tile-bg"></div>
     <svg class="add-tile-outline" viewBox="0 0 100 115.47" xmlns="http://www.w3.org/2000/svg">
-      <path d="${_addTileRoundedPath()}" fill="none" stroke="var(--tx3)" stroke-width="1.5"/>
+      <path class="add-tile-fill" d="${hp}" fill="var(--bg2)" stroke="none"/>
+      <path d="${hp}" fill="none" stroke="var(--tx3)" stroke-width="1.5"/>
     </svg>
     <div class="add-tile-plus">
       <span class="plus">+</span>
@@ -898,7 +900,8 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
       const isAdd = showAdd && idx === tiles.length;
       if (isAdd) {
         el.classList.add('add-tile');
-        el.innerHTML = `<div class="add-tile-bg"></div><svg class="add-tile-outline" viewBox="0 0 100 115.47" xmlns="http://www.w3.org/2000/svg"><path d="${_addTileRoundedPath()}" fill="none" stroke="var(--tx3)" stroke-width="1.5"/></svg><div class="add-tile-plus"><span class="plus">+</span></div>`;
+        const _mhp = _addTileRoundedPath();
+        el.innerHTML = `<div class="add-tile-bg"></div><svg class="add-tile-outline" viewBox="0 0 100 115.47" xmlns="http://www.w3.org/2000/svg"><path class="add-tile-fill" d="${_mhp}" fill="var(--bg2)" stroke="none"/><path d="${_mhp}" fill="none" stroke="var(--tx3)" stroke-width="1.5"/></svg><div class="add-tile-plus"><span class="plus">+</span></div>`;
         el.addEventListener('click', () => {
           if (_suppressNextClick) { _suppressNextClick = false; return; }
           onAddClick?.();
