@@ -815,7 +815,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card.collapsed{min-height:0;}
 .community-card.collapsed .community-tiles{justify-content:center;}
 .community-card.collapsed .community-tiles > *:first-child{width:180px !important;height:208px !important;}
-.community-tiles .hex-tile{width:180px !important;height:208px !important;flex-shrink:0;transform-origin:center center;will-change:transform;}
+.community-tiles .hex-tile{width:180px !important;height:208px !important;flex-shrink:0;}
 .community-card.collapsed .community-card-hdr{overflow:visible;text-overflow:unset;white-space:normal;}
 .community-card.collapsed .community-card-name{white-space:normal;overflow:visible;text-overflow:unset;}
 
