@@ -1955,6 +1955,15 @@ function _buildCommunityCard(group) {
   }
 
   card.appendChild(body);
+
+  // Single-catalyst cards — always collapsed, no toggle
+  if (group.catalysts.length <= 1) {
+    card.classList.add('collapsed');
+    card.dataset.count = '1';
+    const _singleBtn = card.querySelector('.community-card-collapse');
+    if (_singleBtn) _singleBtn.style.display = 'none';
+  }
+
   return card;
 }
 
