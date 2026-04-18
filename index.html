@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="css/style.css?v=83" />
+  <link rel="stylesheet" href="css/style.css?v=84" />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -216,9 +216,8 @@
       </div>
       <!-- Embedded catalyst grid — own profile only (MD#14) -->
       <div id="profile-bar-catalysts" style="display:none"></div>
+      <div id="profile-bio"></div>
     </div>
-    <!-- Profile bio — populated + toggled by init.js.showProfileBar() -->
-    <div id="profile-bio"></div>
     <!-- Community hub — per-creator cards, populated by renderCommunityHub().
          Shown on the feed route; hidden elsewhere. -->
     <div id="community-list"></div>
@@ -1250,7 +1249,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=83"></script>
+  <script type="module" src="js/init.js?v=84"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
