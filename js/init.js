@@ -138,6 +138,8 @@ let _viewedUserTracked = null;
 let _currentProfileView = null; // { user, catalysts, isOwn } — last rendered profile
 let _profileCache = new Map(); // "name#hex" or "name" -> { user, catalysts }
 let _viewingOther = null;       // { uid, displayName, hexCode } for the profile currently shown
+let _savedScrollY = 0;
+let _savedRoute = null;
 
 // MD14: mini catalyst grid in the profile dropdown. Persistent
 // subscription to the current user's catalysts so the dropdown is
@@ -2157,10 +2159,22 @@ async function renderFeedRoute() {
   // over to the community list.
   renderSkeleton();
   _currentFeedSnapshot = [];
+  let _feedFirstPaint = true;
   const unsub = subscribePublicFeed(_currentCategory, (catalysts) => {
     console.log('[feed] subscription fired', { count: catalysts?.length ?? 0 });
     _currentFeedSnapshot = catalysts || [];
     _repaintFeed();
+    // MD#46: restore scroll on first paint when returning from a profile
+    if (_feedFirstPaint && _savedScrollY > 0) {
+      _feedFirstPaint = false;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.getElementById('grid')?.scrollTo(0, _savedScrollY);
+          _savedScrollY = 0;
+          _savedRoute = null;
+        });
+      });
+    } else { _feedFirstPaint = false; }
   });
   trackSub(unsub);
 }
@@ -2366,6 +2380,13 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
 async function renderRoute({ force = false } = {}) {
   const route = getRoute();
   console.log('[route] renderRoute', { from: _currentRoute?.page, to: route.page, force });
+
+  // MD#46: save scroll when leaving feed/hub for a profile view
+  const _fromPage = _currentRoute?.page;
+  if ((_fromPage === 'feed') && (route.page === 'profile' || route.page === 'catalyst')) {
+    _savedScrollY = document.getElementById('grid')?.scrollTop || 0;
+    _savedRoute = { ..._currentRoute };
+  }
 
   // MD8 idempotency: if we're already on the feed route and a new
   // renderRoute call comes in (commonly from auth resolution firing
@@ -3329,6 +3350,18 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       focusSearch();
       return;
+    }
+
+    // MD#46: Escape returns from profile view to previous feed position
+    if (e.key === 'Escape' && !isTyping) {
+      if (document.getElementById('social-modal')?.classList.contains('open')) return;
+      if (document.getElementById('acct-menu')?.classList.contains('open')) return;
+      if (document.querySelector('[id$="-modal"].open')) return;
+      if (_currentRoute?.page === 'profile' && _viewingOther) {
+        e.preventDefault();
+        history.back();
+        return;
+      }
     }
 
     // MD#16: Ctrl/Cmd+Z undo / Ctrl/Cmd+Shift+Z redo for card collapse.
