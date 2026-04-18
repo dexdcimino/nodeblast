@@ -127,6 +127,15 @@ export function playShoot(gunId) {
     case 'nodeblaster':
       _burst(400, 'sine', 0.15, VOL_SHOOT * 0.7, 100);
       break;
+    case 'rocket':
+      _noise(0.25, VOL_SHOOT, 400);
+      _burst(100, 'sine', 0.2, VOL_SHOOT * 0.9, 40);
+      break;
+    case 'sniper':
+      _noise(0.15, VOL_SHOOT * 1.2, 1200);
+      _burst(150, 'square', 0.06, VOL_SHOOT, 50);
+      _burst(80, 'sine', 0.12, VOL_SHOOT * 0.6, 30);
+      break;
   }
 }
 

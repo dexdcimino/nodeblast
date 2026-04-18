@@ -558,6 +558,7 @@ export async function createCatalyst(data, file) {
     thumbURL,
     logoURL: '',
     accentColor: data.accentColor || '#5AAA72',
+    logoColor: data.logoColor || '',
     fireCount: 0,
     frostCount: 0,
     viewCount: 0,
@@ -601,6 +602,7 @@ export async function updateCatalyst(id, data, file) {
     gameId: typeof data.gameId === 'string' ? data.gameId : '',
     sourceUrl: typeof data.sourceUrl === 'string' ? data.sourceUrl : '',
     accentColor: data.accentColor || '#5AAA72',
+    logoColor: data.logoColor || '',
     // Refresh the owner-denormalized fields in case the editor changed
     // their profile between catalyst creation and this edit.
     ownerName: State.profile?.displayName || 'anon',
@@ -735,6 +737,7 @@ export async function getMyVote(catalystId) {
 let _editingId = null;
 let _pendingFile = null;
 let _accentColor = '#5AAA72';
+let _logoColor = '';
 let _status = DEFAULT_STATUS;
 let _type = DEFAULT_TYPE;
 // Working set of collaborators while the edit modal is open. Each
@@ -1097,6 +1100,7 @@ export function openCatalystModal(existing = null) {
   _editingId = existing?.id || null;
   _pendingFile = null;
   _accentColor = existing?.accentColor || '#' + (State.profile?.hexCode || '5AAA72');
+  _logoColor = existing?.logoColor || '';
 
   document.getElementById('cat-modal-title').textContent = existing ? 'Edit Catalyst' : 'New Catalyst';
   _applyStatus(existing?.status || DEFAULT_STATUS);
@@ -1319,6 +1323,35 @@ export function initCatalystModal(onSaved) {
     });
   });
 
+  // Logo color picker — dynamically created beside accent button
+  const _accentRow = document.getElementById('cat-accent-btn')?.parentElement;
+  if (_accentRow) {
+    const logoBtn = document.createElement('button');
+    logoBtn.type = 'button';
+    logoBtn.id = 'cat-logo-color-btn';
+    logoBtn.className = 'cat-accent-btn';
+    logoBtn.setAttribute('data-tip', 'Logo color (auto if empty)');
+    const _updateLogoBtn = () => {
+      logoBtn.style.background = _logoColor || 'transparent';
+      logoBtn.style.border = _logoColor ? '' : '2px dashed var(--bdr)';
+      logoBtn.innerHTML = _logoColor ? '' : '<span style="font-size:10px;color:var(--tx3)">Auto</span>';
+    };
+    _updateLogoBtn();
+    _accentRow.appendChild(logoBtn);
+    logoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openColorPopup(e.currentTarget, _logoColor || _accentColor, (hex) => {
+        _logoColor = hex;
+        _updateLogoBtn();
+      });
+    });
+    logoBtn.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      _logoColor = '';
+      _updateLogoBtn();
+    });
+  }
+
   const urlInput = document.getElementById('cat-url');
   const urlErr = document.getElementById('cat-url-error');
   function _clearUrlError() {
@@ -1452,6 +1485,7 @@ export function initCatalystModal(onSaved) {
       gameId: _type === 'internal' && _internalSubtype === 'game' ? _gameId : '',
       sourceUrl: _type === 'internal' && _internalSubtype === 'game' ? _sourceUrl : '',
       accentColor: _accentColor,
+      logoColor: _logoColor || null,
       collaborators: _editingCollabs.slice(),
       isLocked,
       lockPassword,

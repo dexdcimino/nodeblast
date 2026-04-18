@@ -147,6 +147,23 @@ function _accentBrightnessClass(hex) {
   return luma > 128 ? 'accent-light' : 'accent-dark';
 }
 
+function _getLogoColor(accentHex) {
+  if (!accentHex) return 'rgba(255,255,255,0.35)';
+  const h = accentHex.replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(h)) return 'rgba(255,255,255,0.35)';
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const luma = (r * 299 + g * 587 + b * 114) / 1000;
+  if (luma > 128) {
+    const mix = 0.25;
+    return '#' + [r,g,b].map(c => Math.round(c * (1 - mix)).toString(16).padStart(2,'0')).join('');
+  } else {
+    const mix = 0.2;
+    return '#' + [r,g,b].map(c => Math.round(c + (255 - c) * mix).toString(16).padStart(2,'0')).join('');
+  }
+}
+
 // Small people icon for the collaborator-count badge. Currently hidden
 // (collaborator data model doesn't exist yet), but the markup renders
 // conditionally so flipping on a future write pushes it live without
@@ -370,8 +387,8 @@ function _renderNow(state) {
       tileEls[i] = el;
       const accent = tile.accentColor || '#5AAA72';
       el.style.setProperty('--accent', accent);
-      // MD26: brightness-based class drives placeholder tint.
       el.classList.add(_accentBrightnessClass(accent));
+      el.style.setProperty('--logo-clr', tile.logoColor || _getLogoColor(accent));
       if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
       else el.classList.add('no-thumb');
       if (tile.status === 'placeholder') el.classList.add('wip');
@@ -705,6 +722,7 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
   const accent = cat.accentColor || '#5AAA72';
   el.style.setProperty('--accent', accent);
   el.classList.add(_accentBrightnessClass(accent));
+  el.style.setProperty('--logo-clr', cat.logoColor || _getLogoColor(accent));
   if (cat.thumbURL) el.style.setProperty('--thumb', `url("${cat.thumbURL}")`);
   else el.classList.add('no-thumb');
   if (cat.status === 'placeholder') el.classList.add('wip');
@@ -856,6 +874,7 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
         const accent = tile.accentColor || '#5AAA72';
         el.style.setProperty('--accent', accent);
         el.classList.add(_accentBrightnessClass(accent));
+        el.style.setProperty('--logo-clr', tile.logoColor || _getLogoColor(accent));
         if (tile.thumbURL) {
           el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
         } else {
