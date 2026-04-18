@@ -231,7 +231,7 @@ export function subscribeUserCatalysts(uid, callback) {
 // after the MD3 query change). Without this guard, a transient error
 // after a successful snapshot wipes the rendered tiles and leaves the
 // user staring at an empty state — the "flash then disappear" bug.
-export function subscribePublicFeed(category, callback, max = 60) {
+export function subscribePublicFeed(category, callback, max = 200) {
   const constraints = [
     orderBy('createdAt', 'desc'),
     limit(max),
