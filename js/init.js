@@ -47,7 +47,7 @@ import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './r
 import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js';
 import { initNotifications, initHelpPanel } from './notifications.js';
 import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest, applyInviteButtonStates, openDM } from './friends.js';
-import { renderSocialIconsHTML } from './social.js';
+import { renderSocialIconsHTML, initSocialModal, openSocialModal } from './social.js';
 import { renderPlayRoute, destroyPlayRoute } from './play-mode.js';
 import { getGame, SYSTEM_PROFILE, getGamesAsCatalysts, GAME_REGISTRY } from './game-registry.js';
 import { openDotSim } from './dot-sim-modal.js';
@@ -3101,6 +3101,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSearch();
   console.log('[BOOT] 15 - initNotifications');
   initNotifications();
+  initSocialModal();
   console.log('[BOOT] 16 - initHelpPanel');
   initHelpPanel();
   console.log('[BOOT] 17 - initFriends');

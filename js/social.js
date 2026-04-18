@@ -196,3 +196,192 @@ export function sanitizeSocialLinks(arr) {
 }
 
 export const MAX_SOCIAL_LINKS = 8;
+
+// ══════════════════════════════════════════════════════════════
+//  Social Links Modal
+// ══════════════════════════════════════════════════════════════
+
+const MODAL_MAX = 5;
+let _smIsOpen = false;
+let _smOnSave = null;
+const GLOBE_SVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+
+function _smDomain(url) {
+  if (!url) return '';
+  try { return new URL(url.startsWith('http') ? url : 'https://' + url).host.replace(/^www\./, ''); }
+  catch { return ''; }
+}
+function _smFavicon(domain) { return domain ? `https://www.google.com/s2/favicons?sz=32&domain=${domain}` : ''; }
+
+function _smUpdateAddBtn() {
+  const c = document.getElementById('social-modal-urls');
+  const b = document.getElementById('social-modal-add');
+  if (c && b) b.style.display = c.querySelectorAll('.social-url-row').length >= MODAL_MAX ? 'none' : 'flex';
+}
+
+function _smBuildRow(url = '', isActive = true) {
+  const container = document.getElementById('social-modal-urls');
+  if (!container || container.querySelectorAll('.social-url-row').length >= MODAL_MAX) return null;
+
+  const row = document.createElement('div');
+  row.className = 'social-url-row';
+
+  const left = document.createElement('div');
+  left.className = 'social-url-left';
+  const bar = document.createElement('span');
+  bar.className = 'social-url-bar' + (isActive ? ' active' : '');
+  left.appendChild(bar);
+  const favWrap = document.createElement('span');
+  favWrap.className = 'social-url-favicon';
+  const domain = _smDomain(url);
+  if (domain) {
+    const img = document.createElement('img');
+    img.width = 17; img.height = 17;
+    img.src = _smFavicon(domain);
+    img.onerror = () => { favWrap.innerHTML = GLOBE_SVG; };
+    favWrap.appendChild(img);
+  } else { favWrap.innerHTML = GLOBE_SVG; }
+  left.appendChild(favWrap);
+  left.addEventListener('click', (e) => { e.stopPropagation(); bar.classList.toggle('active'); });
+  row.appendChild(left);
+
+  const inputWrap = document.createElement('div');
+  inputWrap.className = 'social-url-input-wrap';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'social-url-input';
+  input.placeholder = 'https://...';
+  input.value = url;
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  input.addEventListener('change', () => {
+    const d = _smDomain(input.value.trim());
+    if (d) {
+      const img = document.createElement('img');
+      img.width = 17; img.height = 17;
+      img.src = _smFavicon(d);
+      img.onerror = () => { favWrap.innerHTML = GLOBE_SVG; };
+      favWrap.innerHTML = '';
+      favWrap.appendChild(img);
+    } else { favWrap.innerHTML = GLOBE_SVG; }
+    if (input.value.trim()) bar.classList.add('active');
+  });
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'social-url-copy';
+  copyBtn.setAttribute('data-tip', 'Copy');
+  copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+  copyBtn.addEventListener('click', (e) => { e.stopPropagation(); if (input.value.trim()) navigator.clipboard.writeText(input.value.trim()).catch(() => {}); });
+  inputWrap.appendChild(input);
+  inputWrap.appendChild(copyBtn);
+  row.appendChild(inputWrap);
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'social-url-remove';
+  removeBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  removeBtn.addEventListener('click', (e) => { e.stopPropagation(); row.remove(); _smUpdateAddBtn(); });
+  row.appendChild(removeBtn);
+
+  // Drag to reorder
+  left.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startY = e.clientY;
+    let isDragging = false, clone = null, placeholder = null;
+    const rowRect = row.getBoundingClientRect();
+    const onMove = (e2) => {
+      if (!isDragging && Math.abs(e2.clientY - startY) > 5) {
+        isDragging = true;
+        clone = row.cloneNode(true);
+        clone.style.cssText = `position:fixed;width:${rowRect.width}px;opacity:0.85;z-index:10001;pointer-events:none;background:var(--bg2);border:1.5px solid var(--clr-adj);border-radius:7px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,.3);`;
+        document.body.appendChild(clone);
+        placeholder = document.createElement('div');
+        placeholder.style.cssText = `height:${rowRect.height}px;border:1.5px dashed var(--clr-adj);border-radius:7px;margin:2px 0;`;
+        row.style.display = 'none';
+        container.insertBefore(placeholder, row);
+      }
+      if (!isDragging) return;
+      clone.style.left = rowRect.left + 'px';
+      clone.style.top = (e2.clientY - 20) + 'px';
+      const rows = [...container.querySelectorAll('.social-url-row')].filter(r => r !== row && r.style.display !== 'none');
+      let insertBefore = null;
+      for (const r of rows) {
+        const rr = r.getBoundingClientRect();
+        if (e2.clientY < rr.top + rr.height / 2) { insertBefore = r; break; }
+      }
+      if (insertBefore) container.insertBefore(placeholder, insertBefore);
+      else container.appendChild(placeholder);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if (isDragging) { clone?.remove(); if (placeholder) container.insertBefore(row, placeholder); placeholder?.remove(); row.style.display = ''; }
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  container.appendChild(row);
+  _smUpdateAddBtn();
+  return input;
+}
+
+function _smGetLinks() {
+  const c = document.getElementById('social-modal-urls');
+  if (!c) return [];
+  const links = [];
+  c.querySelectorAll('.social-url-row').forEach((row) => {
+    const url = row.querySelector('.social-url-input')?.value?.trim();
+    const active = row.querySelector('.social-url-bar')?.classList.contains('active');
+    if (url) links.push({ url, active: !!active });
+  });
+  return links;
+}
+
+export function openSocialModal(existingLinks = [], onSaveCb) {
+  const modal = document.getElementById('social-modal');
+  const backdrop = document.getElementById('social-modal-backdrop');
+  const container = document.getElementById('social-modal-urls');
+  if (!modal || !backdrop || !container) return;
+  _smOnSave = onSaveCb;
+  container.innerHTML = '';
+  if (existingLinks.length > 0) {
+    existingLinks.forEach((link) => {
+      const url = typeof link === 'string' ? link : link.url;
+      const active = typeof link === 'string' ? true : link.active !== false;
+      _smBuildRow(url, active);
+    });
+  } else { _smBuildRow('', true); }
+  _smUpdateAddBtn();
+  modal.classList.add('open');
+  backdrop.classList.add('open');
+  _smIsOpen = true;
+  const firstInput = container.querySelector('.social-url-input');
+  if (firstInput) setTimeout(() => firstInput.focus(), 100);
+}
+
+export function closeSocialModal() {
+  document.getElementById('social-modal')?.classList.remove('open');
+  document.getElementById('social-modal-backdrop')?.classList.remove('open');
+  _smIsOpen = false;
+  _smOnSave = null;
+}
+
+export function initSocialModal() {
+  document.getElementById('social-modal-close')?.addEventListener('click', closeSocialModal);
+  document.getElementById('social-modal-cancel')?.addEventListener('click', closeSocialModal);
+  document.getElementById('social-modal-backdrop')?.addEventListener('click', closeSocialModal);
+  document.getElementById('social-modal-add')?.addEventListener('click', () => {
+    const input = _smBuildRow('', true);
+    if (input) setTimeout(() => input.focus(), 50);
+  });
+  document.getElementById('social-modal-save')?.addEventListener('click', () => {
+    const links = _smGetLinks();
+    if (_smOnSave) _smOnSave(links);
+    closeSocialModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && _smIsOpen) closeSocialModal();
+  });
+}
