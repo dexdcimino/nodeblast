@@ -143,12 +143,11 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .logo-swatch{position:relative;overflow:visible;}
 .swatch-splat{display:none;position:absolute;inset:-4px;opacity:0;transform:scale(0);pointer-events:none;z-index:2;}
 [data-theme="dark"] .logo-swatch.selected{transform:scale(1.2) !important;overflow:visible;background:transparent !important;box-shadow:none !important;}
-[data-theme="dark"] .logo-swatch.selected::after{content:'';position:absolute;inset:0;border-radius:50%;background:var(--swatch-color);animation:swatch-circle-shrink 0.08s ease forwards;z-index:1;}
-[data-theme="dark"] .logo-swatch.selected .swatch-splat{display:block;animation:swatch-splat-grow 0.06s 0.06s ease forwards;}
+[data-theme="dark"] .logo-swatch.selected::after{content:'';position:absolute;inset:0;border-radius:50%;background:var(--swatch-color);animation:swatch-circle-fade 0.1s ease forwards;z-index:3;}
+[data-theme="dark"] .logo-swatch.selected .swatch-splat{display:block;opacity:1;transform:scale(1);z-index:2;}
 [data-theme="dark"] .logo-swatch.selected.instant .swatch-splat{animation:none;opacity:1;transform:scale(1);}
 [data-theme="dark"] .logo-swatch.selected.instant::after{animation:none;opacity:0;transform:scale(0);}
-@keyframes swatch-circle-shrink{0%{transform:scale(1);opacity:1;}60%{transform:scale(0.3);opacity:0.5;}100%{transform:scale(0);opacity:0;}}
-@keyframes swatch-splat-grow{0%{transform:scale(0.7);opacity:0.6;}100%{transform:scale(1);opacity:1;}}
+@keyframes swatch-circle-fade{0%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(0.85);}}
 
 /* Optical vertical alignment: Outfit at line-height:1 has ~6px of empty
    space below the baseline for descenders. "nodeblast" has none, so the
