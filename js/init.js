@@ -560,20 +560,31 @@ function showProfileBar(user, catalystCount, isOwn) {
   if (addLinksBtn) {
     if (isOwn) {
       addLinksBtn.style.display = 'inline-flex';
-      addLinksBtn.onclick = (e) => {
+      addLinksBtn.onclick = async (e) => {
         e.stopPropagation();
-        const existingLinks = (State.profile?.socialLinks || []).map(l =>
-          typeof l === 'string' ? { url: l, active: true } : { url: l.url || '', active: l.active !== false }
-        );
+        let existingLinks = [];
+        try {
+          const { doc, getDoc, getFirestore } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+          const _ldb = getFirestore();
+          const _lSnap = await getDoc(doc(_ldb, 'users', State.user.uid));
+          if (_lSnap.exists()) {
+            const raw = _lSnap.data().socialLinks || [];
+            existingLinks = raw.map(l => ({ url: typeof l === 'string' ? l : (l.url || ''), active: typeof l === 'string' ? true : (l.active !== false) }));
+          }
+        } catch (err) {
+          console.warn('[social] failed to load links:', err);
+          existingLinks = (State.profile?.socialLinks || []).map(l => ({ url: l.url || '', active: l.active !== false }));
+        }
         openSocialModal(existingLinks, async (links) => {
           try {
             const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
             const db = getFirestore();
+            const filtered = links.filter(l => l.url);
             await setDoc(doc(db, 'users', State.user.uid), {
-              socialLinks: links.map(l => ({ url: l.url, active: l.active })),
+              socialLinks: filtered.map(l => ({ url: l.url, active: l.active })),
               updatedAt: serverTimestamp(),
             }, { merge: true });
-            State.profile.socialLinks = links.map(l => ({ url: l.url, active: l.active }));
+            State.profile.socialLinks = filtered.map(l => ({ url: l.url, active: l.active }));
             const iconsEl = document.getElementById('profile-bar-socials');
             if (iconsEl) {
               const html = renderSocialIconsHTML(State.profile.socialLinks);

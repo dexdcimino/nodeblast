@@ -714,7 +714,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 
 /* Profile bio — sits below the profile bar, matches its horizontal
    edges, and only renders when init.js adds .visible. */
-#profile-bio{margin:0 auto;padding:8px 16px;font-size:15px;line-height:1.5;color:var(--tx2);max-width:500px;min-width:200px;min-height:38px;white-space:pre-wrap;text-align:center;background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;box-sizing:border-box;display:block;transition:border-color var(--ease);}
+#profile-bio{margin:10px auto 4px;padding:8px 16px;font-size:15px;line-height:1.5;color:var(--tx2);max-width:500px;min-width:200px;min-height:38px;white-space:pre-wrap;text-align:center;background:var(--bg3);border:1px solid var(--bdr);border-radius:14px;box-sizing:border-box;display:block;transition:border-color var(--ease);}
 #profile-bio.editable{cursor:text;}
 #profile-bio.editable:hover{border-color:var(--tx3);}
 #profile-bio.editable:focus{outline:none;border-color:var(--clr-adj);color:var(--tx);}
