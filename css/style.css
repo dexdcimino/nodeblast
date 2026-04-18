@@ -690,8 +690,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #profile-bar.has-grid{border-radius:32px;padding:14px 24px;}
 #profile-bar.collapsed{border-radius:9999px;padding:14px 24px;}
 #profile-bar.collapsed #profile-bar-catalysts{display:none !important;}
-#profile-bar.collapsed #profile-bio{display:none;}
-#profile-bar.collapsed #profile-bio{display:none;}
+#profile-bar.collapsed #profile-bio{display:none !important;}
 #profile-bar .profile-bar-collapse-icon{margin-left:8px;flex-shrink:0;cursor:pointer;color:var(--tx3);transition:color var(--ease),transform var(--ease);display:inline-flex;}
 #profile-bar .profile-bar-collapse-icon:hover{color:var(--tx);}
 #profile-bar.collapsed .profile-bar-collapse-icon{transform:rotate(90deg);}
@@ -716,8 +715,12 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 
 /* Profile bio — sits below the profile bar, matches its horizontal
    edges, and only renders when init.js adds .visible. */
-#profile-bio{display:none;margin:10px auto 4px;padding:0 20px;font-size:13px;line-height:1.5;color:var(--tx2);max-width:720px;white-space:pre-wrap;text-align:center;width:100%;box-sizing:border-box;}
+#profile-bio{display:none;padding:6px 16px;font-size:15px;line-height:1.5;color:var(--tx2);max-width:400px;white-space:pre-wrap;background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;cursor:default;text-align:center;min-height:32px;transition:border-color var(--ease);}
 #profile-bio.visible{display:block;}
+#profile-bio.editable{cursor:text;}
+#profile-bio.editable:hover{border-color:var(--tx3);}
+#profile-bio.editable:focus{outline:none;border-color:var(--clr-adj);color:var(--tx);}
+#profile-bio:empty::before{content:'Bio...';color:var(--tx3);font-style:italic;}
 
 /* ══════════════════════════════════════
    MD18: PROFILE TRACKED FOOTER

@@ -452,13 +452,31 @@ function showProfileBar(user, catalystCount, isOwn) {
   // so the grid sits flush under the profile bar.
   const bioEl = document.getElementById('profile-bio');
   if (bioEl) {
-    const bio = (user.bio || '').toString().trim();
-    if (bio) {
-      bioEl.textContent = bio;
-      bioEl.classList.add('visible');
+    bioEl.textContent = user.bio || '';
+    if (isOwn || user.bio) bioEl.classList.add('visible');
+    else bioEl.classList.remove('visible');
+    if (isOwn) {
+      bioEl.contentEditable = 'true';
+      bioEl.classList.add('editable');
+      bioEl.spellcheck = false;
+      if (!bioEl._wired) {
+        bioEl._wired = true;
+        bioEl.addEventListener('blur', async () => {
+          const newBio = bioEl.textContent.trim().slice(0, 500);
+          if (newBio !== (State.profile?.bio || '')) {
+            try {
+              const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+              const db = getFirestore();
+              await setDoc(doc(db, 'users', State.user.uid), { bio: newBio, updatedAt: serverTimestamp() }, { merge: true });
+              State.profile.bio = newBio;
+            } catch (err) { console.warn('[bio] save failed:', err); }
+          }
+        });
+        bioEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); bioEl.blur(); } });
+      }
     } else {
-      bioEl.textContent = '';
-      bioEl.classList.remove('visible');
+      bioEl.contentEditable = 'false';
+      bioEl.classList.remove('editable');
     }
   }
 

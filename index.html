@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="css/style.css?v=90" />
+  <link rel="stylesheet" href="css/style.css?v=91" />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -194,6 +194,7 @@
           </svg>
         </div>
       </div>
+      <div id="profile-bio"></div>
       <div id="profile-bar-right">
         <button id="profile-bar-add-links" class="icon-btn" style="display:none" data-tip="Add links">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -216,7 +217,6 @@
       </div>
       <!-- Embedded catalyst grid — own profile only (MD#14) -->
       <div id="profile-bar-catalysts" style="display:none"></div>
-      <div id="profile-bio"></div>
     </div>
     <!-- Community hub — per-creator cards, populated by renderCommunityHub().
          Shown on the feed route; hidden elsewhere. -->
@@ -1249,7 +1249,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=90"></script>
+  <script type="module" src="js/init.js?v=91"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
