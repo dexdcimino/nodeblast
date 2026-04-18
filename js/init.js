@@ -177,6 +177,11 @@ function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
 function setAvatarEl(el, profile, user) {
   if (!el) return;
   el.innerHTML = '';
+  // NodeBlast official account — inline logo SVG
+  if (user?.uid === '3RlnflogEiYQ6mfuSOr4ZyIlCAj1' || profile?.uid === '3RlnflogEiYQ6mfuSOr4ZyIlCAj1') {
+    el.innerHTML = '<svg viewBox="0 0 256 234.6" style="width:100%;height:100%;display:block;margin:auto"><path fill="var(--clr-adj)" d="M0,117.3s.7,28.6,19,46c18.3,17.4,45.1,18.1,45.1,18.1,35.3,0,64-28.7,64-64s28.6-64,64-64h.6c15.1,0,24.6-16.1,17.1-29.2C201.1,9.2,185.2,0,167.9,0h-79.7c-17.3,0-33.3,9.2-41.9,24.2,0,0-22.5,38.9-27.8,48.1C13.2,81.5,0,99.7,0,117.3Z"/><path fill="var(--clr-adj)" opacity="0.5" d="M46.2,210.4c8.7,15,24.6,24.2,41.9,24.2h79.7c17.3,0,33.3-9.2,41.9-24.2,0,0,22.5-38.9,27.8-48.1,5.3-9.2,18.5-27.4,18.5-45,0,0,.2-28.5-19.8-46.7-20-18.2-44.3-17.4-44.3-17.4-35.3,0-64,28.7-64,64s-28.6,64-64,64h-.6c-15.1,0-24.6,16.1-17.1,29.2h0Z"/></svg>';
+    return;
+  }
   const src = profile?.photoURL || user?.photoURL || '';
   if (src) {
     const img = document.createElement('img');
