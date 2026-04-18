@@ -148,20 +148,35 @@ function _accentBrightnessClass(hex) {
 }
 
 function _getLogoColor(accentHex) {
-  if (!accentHex) return 'rgba(255,255,255,0.35)';
+  if (!accentHex) return '#8888aa';
   const h = accentHex.replace('#', '');
-  if (!/^[0-9a-f]{6}$/i.test(h)) return 'rgba(255,255,255,0.35)';
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  const luma = (r * 299 + g * 587 + b * 114) / 1000;
-  if (luma > 128) {
-    const mix = 0.25;
-    return '#' + [r,g,b].map(c => Math.round(c * (1 - mix)).toString(16).padStart(2,'0')).join('');
-  } else {
-    const mix = 0.2;
-    return '#' + [r,g,b].map(c => Math.round(c + (255 - c) * mix).toString(16).padStart(2,'0')).join('');
+  if (!/^[0-9a-f]{6}$/i.test(h)) return '#8888aa';
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let hue = 0, sat = max === 0 ? 0 : d / max, val = max;
+  if (d !== 0) {
+    if (max === r) hue = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) hue = ((b - r) / d + 2) / 6;
+    else hue = ((r - g) / d + 4) / 6;
   }
+  const nH = (hue + 75 / 360) % 1;
+  const nS = Math.min(sat, 0.7);
+  const nV = val * 0.85;
+  const hi = Math.floor(nH * 6) % 6;
+  const f = nH * 6 - Math.floor(nH * 6);
+  const p = nV * (1 - nS), q = nV * (1 - f * nS), t = nV * (1 - (1 - f) * nS);
+  let nr, ng, nb;
+  switch (hi) {
+    case 0: nr = nV; ng = t; nb = p; break;
+    case 1: nr = q; ng = nV; nb = p; break;
+    case 2: nr = p; ng = nV; nb = t; break;
+    case 3: nr = p; ng = q; nb = nV; break;
+    case 4: nr = t; ng = p; nb = nV; break;
+    default: nr = nV; ng = p; nb = q; break;
+  }
+  return '#' + [nr, ng, nb].map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
 }
 
 // Small people icon for the collaborator-count badge. Currently hidden
