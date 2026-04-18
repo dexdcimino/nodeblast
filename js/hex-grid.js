@@ -883,7 +883,7 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
       const isAdd = showAdd && idx === tiles.length;
       if (isAdd) {
         el.classList.add('add-tile');
-        el.innerHTML = '<div class="add-tile-bg"></div><svg class="add-tile-outline" viewBox="0 0 100 115.47" xmlns="http://www.w3.org/2000/svg"><polygon points="50,3 96,28 96,87.47 50,112.47 4,87.47 4,28" fill="none" stroke="var(--tx3)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg><div class="add-tile-plus"><span class="plus">+</span></div>';
+        el.innerHTML = `<div class="add-tile-bg"></div><svg class="add-tile-outline" viewBox="0 0 100 115.47" xmlns="http://www.w3.org/2000/svg"><path d="${_addTileRoundedPath()}" fill="none" stroke="var(--tx3)" stroke-width="1.5"/></svg><div class="add-tile-plus"><span class="plus">+</span></div>`;
         el.addEventListener('click', () => {
           if (_suppressNextClick) { _suppressNextClick = false; return; }
           onAddClick?.();
