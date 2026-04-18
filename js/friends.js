@@ -192,11 +192,12 @@ function _renderFriendsList() {
   const countEl = document.getElementById('acct-friends-count');
   if (countEl) {
     const n = _friends.length;
-    countEl.textContent = n === 1 ? '1 person' : n + ' people';
+    const _onCount = list ? list.querySelectorAll('.friend-status.online').length : 0;
+    countEl.textContent = _onCount > 0 ? _onCount + ' on' : '0 on';
   }
   if (!list) return;
   if (_friends.length === 0) {
-    list.innerHTML = '<div class="friend-empty">No friends yet. Add one with username#hexcode.</div>';
+    list.innerHTML = '<div class="friend-empty" style="text-align:center">No connections yet</div>';
     return;
   }
   // Favorites first, then alphabetic by username.
