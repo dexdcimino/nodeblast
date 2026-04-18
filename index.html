@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="css/style.css?v=98" />
+  <link rel="stylesheet" href="css/style.css?v=99" />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -183,9 +183,6 @@
             <div id="profile-bar-hex-dot"></div>
             <span id="profile-bar-hex-label"></span>
           </div>
-          <!-- Social links — rendered by init.js showProfileBar. Hidden
-               entirely when the user has no links. -->
-          <div id="profile-bar-socials"></div>
         </div>
         <div id="profile-bar-count-hex" data-tip="Catalysts">
           <svg viewBox="0 0 100 115" width="40" height="46">
@@ -193,6 +190,7 @@
             <text x="50" y="57.5" text-anchor="middle" dominant-baseline="central" fill="var(--clr-adj)" font-family="var(--fn)" font-size="42" font-weight="800" id="profile-bar-count-num">0</text>
           </svg>
         </div>
+        <div id="profile-bar-socials"></div>
       </div>
       <div id="profile-bio"></div>
       <div id="profile-bar-right">
@@ -1249,7 +1247,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=98"></script>
+  <script type="module" src="js/init.js?v=99"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

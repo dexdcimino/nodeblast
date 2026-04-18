@@ -318,7 +318,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 
 /* Profile bar social row — lives under the hex label, hidden when
    the user has no links (init.js toggles .visible). */
-#profile-bar-socials{display:none;margin-top:4px;}
+#profile-bar-socials{display:none;align-items:center;}
 #profile-bar-socials.visible{display:flex;}
 
 /* Status buttons */

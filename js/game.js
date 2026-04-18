@@ -73,7 +73,7 @@ let _nearPickup=null;
 let _eHeld=false;
 let _eHoldTimer=0;
 const E_HOLD_TIME=30;
-let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandler=null,_plcHandler=null,_canvasClickHandler=null,_rightClickHandler=null;
+let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandler=null,_plcHandler=null,_canvasClickHandler=null,_rightClickHandler=null,_mouseMoveHandler=null;
 let _scoped=false;
 const _ladderZones=[];
 let _mouseHeld=false;
@@ -1393,11 +1393,6 @@ function _physicsTick() {
   const dropTip = document.getElementById('play-drop-tip');
   if (dropTip) dropTip.style.opacity = '0';
 
-  // Clamp camera pitch to prevent upside-down flips
-  if (_camera) {
-    if (_camera.rotation.x > 1.5) _camera.rotation.x = 1.5;
-    if (_camera.rotation.x < -1.5) _camera.rotation.x = -1.5;
-  }
 
   // FOV kick: sprint widens FOV slightly for speed feel (skip if scoped)
   if (_camera && !_scoped) {
@@ -1841,20 +1836,24 @@ export function initGame(canvas){
   _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=isLowEnd?0.003:0.004;
   _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-55),_scene);_camera.setTarget(B.Vector3.Zero());
   _camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
-  _camera.angularSensibility=650;_camera.inertia=0.04;_camera.minZ=0.05;_camera.fov=1.22;
+  _camera.angularSensibility=99999;_camera.inertia=0;_camera.minZ=0.05;_camera.fov=1.22;
   window._nbSetSpawn=(x,z)=>{if(_camera){_camera.position.x=x;_camera.position.z=z;_camera.position.y=GROUND_Y;_velX=0;_velZ=0;_velY=0;}};
   _pointerLocked=false;
   _canvasClickHandler=()=>{if(!_pointerLocked)canvas.requestPointerLock().catch(()=>{});};
   canvas.addEventListener('click',_canvasClickHandler);
+  _mouseMoveHandler=(e)=>{
+    if(!_pointerLocked||!_camera||_isDead)return;
+    const sensitivity=0.002;
+    _camera.rotation.y+=e.movementX*sensitivity;
+    _camera.rotation.x+=e.movementY*sensitivity;
+    if(_camera.rotation.x>1.4)_camera.rotation.x=1.4;
+    if(_camera.rotation.x<-1.4)_camera.rotation.x=-1.4;
+  };
+  document.addEventListener('mousemove',_mouseMoveHandler);
   _plcHandler=()=>{
     const wasLocked=_pointerLocked;
     _pointerLocked=document.pointerLockElement===canvas;
     const ch=document.getElementById('play-crosshair');if(ch)ch.style.opacity=_pointerLocked?'1':'0.35';
-    // Detach/reattach camera to prevent stale mouse deltas from causing rotation snaps
-    if(_camera&&_canvas){
-      if(_pointerLocked&&!wasLocked){ _camera.attachControl(_canvas,true); }
-      else if(!_pointerLocked&&wasLocked){ _camera.detachControl(); }
-    }
     // Clear held keys — browser doesn't fire keyup when pointer lock drops
     if(!_pointerLocked){
       Object.keys(_keys).forEach(k=>delete _keys[k]);
@@ -1949,13 +1948,9 @@ export function initGame(canvas){
 }
 
 export function attachCameraInput() {
-  if (_camera && _canvas) {
+  if (_camera) {
     _camera.rotation.x = 0;
     _camera.rotation.y = 0;
-    // Only attach if not already attached — plcHandler also manages this
-    if (!_pointerLocked) {
-      _camera.attachControl(_canvas, true);
-    }
   }
 }
 
