@@ -438,7 +438,10 @@ function showProfileBar(user, catalystCount, isOwn) {
 
   const avatar = document.getElementById('profile-bar-avatar');
   avatar.innerHTML = '';
-  if (user.photoURL) {
+  if (user.uid === '3RlnflogEiYQ6mfuSOr4ZyIlCAj1' && !user.photoURL) {
+    avatar.innerHTML = '<svg width="28" height="26" viewBox="0 0 256 234.6" style="margin:auto"><path fill="var(--clr-adj)" d="M0,117.3s.7,28.6,19,46c18.3,17.4,45.1,18.1,45.1,18.1,35.3,0,64-28.7,64-64s28.6-64,64-64h.6c15.1,0,24.6-16.1,17.1-29.2C201.1,9.2,185.2,0,167.9,0h-79.7c-17.3,0-33.3,9.2-41.9,24.2,0,0-22.5,38.9-27.8,48.1C13.2,81.5,0,99.7,0,117.3Z"/><path fill="var(--clr-adj)" opacity="0.5" d="M46.2,210.4c8.7,15,24.6,24.2,41.9,24.2h79.7c17.3,0,33.3-9.2,41.9-24.2,0,0,22.5-38.9,27.8-48.1,5.3-9.2,18.5-27.4,18.5-45,0,0,.2-28.5-19.8-46.7-20-18.2-44.3-17.4-44.3-17.4-35.3,0-64,28.7-64,64s-28.6,64-64,64h-.6c-15.1,0-24.6,16.1-17.1,29.2h0Z"/></svg>';
+    avatar.style.borderColor = 'var(--clr-adj)';
+  } else if (user.photoURL) {
     const img = document.createElement('img');
     img.src = user.photoURL;
     img.alt = '';
@@ -2292,6 +2295,11 @@ function _routeInternalIfNeeded(user, cat) {
 }
 
 async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
+  // MD#59: redirect nodeblast profile URL to /featured
+  if ((username === 'nodeblast' || username === 'nodeblast.dev') && hex === '000000') {
+    navigate('/featured', { replace: true });
+    return;
+  }
   // MD#54: scroll to top on profile navigation
   document.getElementById('grid')?.scrollTo(0, 0);
   // Reset suppress flag if we're landing on a plain profile (no slug to open)
@@ -3232,6 +3240,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('view-toggle-profile')?.addEventListener('click', () => {
     if (!State.user) { toast('Sign in to view your profile'); return; }
+    if (State.user.uid === '3RlnflogEiYQ6mfuSOr4ZyIlCAj1') { navigate('/featured'); return; }
     const name = (State.profile?.displayName || '').toLowerCase();
     const hex = State.profile?.hexCode || '';
     if (name) navigate('/' + buildUserSlug(name, hex));

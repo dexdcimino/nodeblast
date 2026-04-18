@@ -1523,14 +1523,11 @@ function _buildArenaCollision(){
 
   // Hex boundary walls are added in _buildArenaProc via _addCol
 
-  // Twin tower collision
-  const TX=75,TW=6,TOWER_H=30;
-  [{x:TX,z:0,facing:-1},{x:-TX,z:0,facing:1}].forEach((t,ti)=>{
-    _addCol(t.x,TW/2,TW,0.5,TOWER_H);
-    _addCol(t.x,-TW/2,TW,0.5,TOWER_H);
-    _addCol(t.x+t.facing*TW/2,0,0.5,TW-1,TOWER_H);
-    _addCol(t.x-t.facing*TW/2,0,0.5,TW-1,TOWER_H,3.5);
-    _addCol(t.x,0,TW+3,TW+3,TOWER_H+0.2,TOWER_H-0.2);
+  // Twin tower collision (solid blocks)
+  const TX=75,TW=7,TOWER_H=28;
+  [{x:TX,z:0},{x:-TX,z:0}].forEach((t)=>{
+    _addCol(t.x,0,TW,TW,TOWER_H);
+    _addCol(t.x,0,TW+4,TW+4,TOWER_H+0.4,TOWER_H-0.1);
   });
 
   // Sky bridge collision
@@ -1719,54 +1716,42 @@ function _buildArenaProc(){
     vLight.diffuse=new B.Color3(0.1,1,0.5);vLight.intensity=0.8;vLight.range=12;
   }
 
-  // ── TWIN TOWERS (East + West) ──
-  const TOWER_H=30,TW=6,TX=75;
+  // ── TWIN TOWERS (solid blocks + external ladders) ──
+  const TOWER_H=28,TW=7,TX=75;
   const MTw=mkMat('mtower',0.12,0.13,0.17,0,0.05,0.02);
 
-  [{x:TX,z:0,facing:-1},{x:-TX,z:0,facing:1}].forEach((t,ti)=>{
-    // 3 solid walls
-    box('tw_n_'+ti,TW,TOWER_H,0.5,t.x,TW/2,MTw);
-    box('tw_s_'+ti,TW,TOWER_H,0.5,t.x,-TW/2,MTw);
-    box('tw_back_'+ti,0.5,TOWER_H,TW-1,t.x+t.facing*TW/2,0,MTw);
+  [{x:TX,z:0},{x:-TX,z:0}].forEach((t,ti)=>{
+    // Solid block (one big box — NOT hollow)
+    box('tw_block_'+ti,TW,TOWER_H,TW,t.x,0,MTw);
 
-    // Front wall with doorway — upper wall only (door gap is 3m wide, 3.5m tall)
-    const frontX=t.x-t.facing*TW/2;
-    const upperH=TOWER_H-3.5;
-    const upper=B.MeshBuilder.CreateBox('tw_front_upper_'+ti,{width:0.5,height:upperH,depth:TW-1},_scene);
-    upper.position.set(frontX,3.5+upperH/2,0);upper.material=MTw;
-    _addCol(frontX,0,0.5,TW-1,TOWER_H,3.5);
-    // Door frame sides
-    box('tw_door_l_'+ti,0.5,3.5,(TW-3)/2,frontX,(TW-1)/2-(TW-3)/4,MTw);
-    box('tw_door_r_'+ti,0.5,3.5,(TW-3)/2,frontX,-(TW-1)/2+(TW-3)/4,MTw);
-
-    // Ladder — two side rails + rungs
-    const ladderX = t.x + t.facing * (TW/2 - 0.35);
-    const ladderW = 1.0;
-    const railMat = mkMat('ladder_rail_'+ti, 0.12, 0.14, 0.12, 0, 0.15, 0.06);
-
-    const railL = B.MeshBuilder.CreateBox('tw_railL_'+ti, {width:0.06, height:TOWER_H-1, depth:0.06}, _scene);
-    railL.position.set(ladderX, TOWER_H/2, -ladderW/2);
-    railL.material = railMat;
-    const railR = B.MeshBuilder.CreateBox('tw_railR_'+ti, {width:0.06, height:TOWER_H-1, depth:0.06}, _scene);
-    railR.position.set(ladderX, TOWER_H/2, ladderW/2);
-    railR.material = railMat;
-    for (let r = 0.6; r < TOWER_H - 1; r += 0.7) {
-      const rung = B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10), {width:0.05, height:0.05, depth:ladderW}, _scene);
-      rung.position.set(ladderX, r, 0);
-      rung.material = MG;
-    }
-
-    // Register ladder zone for auto-climb
-    _ladderZones.push({ x: t.x + t.facing * (TW/2 - 0.5), z: 0, radius: 1.2, topY: TOWER_H - 1 });
-
-    // Top platform (wider than tower, can stand on)
-    const topPlat=B.MeshBuilder.CreateBox('tw_top_'+ti,{width:TW+3,height:0.4,depth:TW+3},_scene);
-    topPlat.position.set(t.x,TOWER_H,0);topPlat.material=MC;
-    _addCol(t.x,0,TW+3,TW+3,TOWER_H+0.2,TOWER_H-0.2);
+    // Top platform (wider, landable)
+    const topPlat=B.MeshBuilder.CreateBox('tw_top_'+ti,{width:TW+4,height:0.4,depth:TW+4},_scene);
+    topPlat.position.set(t.x,TOWER_H+0.2,0);topPlat.material=MC;
+    _addCol(t.x,0,TW+4,TW+4,TOWER_H+0.4,TOWER_H-0.1);
 
     // Top glow ring
-    const topRing=B.MeshBuilder.CreateTorus('tw_glow_'+ti,{diameter:TW+3,thickness:0.12,tessellation:6},_scene);
-    topRing.position.set(t.x,TOWER_H+0.3,0);topRing.material=MG;
+    const topRing=B.MeshBuilder.CreateTorus('tw_glow_'+ti,{diameter:TW+4,thickness:0.12,tessellation:6},_scene);
+    topRing.position.set(t.x,TOWER_H+0.5,0);topRing.material=MG;
+
+    // External ladder on the side facing center (X=0)
+    const ladderSide=t.x>0?-1:1;
+    const ladderX=t.x+ladderSide*(TW/2+0.15);
+
+    // Ladder rails
+    const railMat=mkMat('tw_rail_'+ti,0.12,0.14,0.12,0,0.15,0.06);
+    const railL=B.MeshBuilder.CreateBox('tw_railL_'+ti,{width:0.06,height:TOWER_H,depth:0.06},_scene);
+    railL.position.set(ladderX,TOWER_H/2,-0.5);railL.material=railMat;
+    const railR=B.MeshBuilder.CreateBox('tw_railR_'+ti,{width:0.06,height:TOWER_H,depth:0.06},_scene);
+    railR.position.set(ladderX,TOWER_H/2,0.5);railR.material=railMat;
+
+    // Ladder rungs
+    for(let r=0.6;r<TOWER_H;r+=0.7){
+      const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:0.05,height:0.05,depth:1.0},_scene);
+      rung.position.set(ladderX,r,0);rung.material=MG;
+    }
+
+    // Ladder climb zone (external, on the center-facing side)
+    _ladderZones.push({x:ladderX,z:0,radius:1.0,topY:TOWER_H+0.3});
 
     // Tower light
     const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,TOWER_H+2,0),_scene);
