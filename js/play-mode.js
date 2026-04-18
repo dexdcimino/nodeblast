@@ -18,7 +18,7 @@ const PHOTON_CDN = '/photon-realtime-module.js';
 let _engine = null;
 let _modalWired = false;
 let _exitModalOpen = false;
-let _returnPath = '/games';
+let _returnPath = '/featured';
 let _loadTimeout = null;
 
 const MAX_VISIBLE_PLAYERS = 8;
@@ -157,7 +157,7 @@ export async function renderPlayRoute(gameId) {
   } else {
     _returnPath = document.referrer && new URL(document.referrer).pathname !== currentPath
       ? new URL(document.referrer).pathname
-      : '/games';
+      : '/featured';
   }
 
   console.log('[play] loading game:', gameId || 'arena1');
@@ -197,7 +197,7 @@ export async function renderPlayRoute(gameId) {
     console.error('[play] loading timed out — redirecting to /games');
     try { document.exitPointerLock(); } catch {}
     if (loadOverlay) loadOverlay.style.display = 'none';
-    navigate('/games');
+    navigate('/featured');
   }, 15000);
 
   function _setLoadProgress(pct, label) {
@@ -238,7 +238,7 @@ export async function renderPlayRoute(gameId) {
     document.getElementById('play-exit-btn')?.addEventListener('click', () => openExitModal());
     document.getElementById('play-exit-yes')?.addEventListener('click', () => {
       closeExitModal(true);
-      navigate(_returnPath || '/games');
+      navigate(_returnPath || '/featured');
     });
     document.getElementById('play-exit-no')?.addEventListener('click', () => closeExitModal());
     document.getElementById('play-exit-modal')?.addEventListener('click', (e) => {
@@ -374,7 +374,7 @@ export async function renderPlayRoute(gameId) {
     console.error('[play] failed to init:', err);
     try { document.exitPointerLock(); } catch {}
     if (loadOverlay) loadOverlay.style.display = 'none';
-    navigate('/games');
+    navigate('/featured');
   }
 }
 

@@ -226,7 +226,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-hex-label{font-size:17px;color:var(--tx2);font-family:var(--fn);letter-spacing:0;font-weight:400;cursor:pointer;transition:color var(--ease);}
 #acct-hex-label:hover{color:var(--clr-adj);}
 #acct-hex-label span{opacity:0.8;}
-#acct-hex-copy-btn{background:none;border:none;padding:0;display:flex;align-items:center;justify-content:center;color:var(--tx3);cursor:pointer;transition:color var(--ease);flex-shrink:0;width:15px;height:15px;}
+#acct-hex-copy-btn{background:none;border:none;padding:2px;display:flex;align-items:center;justify-content:center;color:var(--tx3);cursor:pointer;transition:color var(--ease);flex-shrink:0;overflow:visible;}
 #acct-hex-copy-btn:hover{color:var(--clr-adj);}
 #acct-hex-copy-btn svg{width:14px;height:14px;}
 
