@@ -916,6 +916,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #profile-col-following .community-card{flex-basis:auto;width:100%;min-width:0;}
 #profile-col-following .community-card.collapsed{width:100%;}
 #profile-col-following .community-card.pill{width:100%;flex-basis:auto;}
+#profile-col-following:has(.community-card:not(.collapsed):not(.pill)){flex:2 1 0;}
+#profile-col-pinned:has(~ #profile-col-following .community-card:not(.collapsed):not(.pill)){flex:1 1 0;}
 #profile-col-pinned .hex-tile{position:relative;width:auto;max-width:none;}
 #profile-col-pinned{flex-direction:column;overflow-y:auto;}
 #profile-col-pinned .profile-col-tiles{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;}
