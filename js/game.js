@@ -1043,6 +1043,7 @@ function _drawMinimap(){
 
 function _physicsTick() {
   if (!_camera || !_scene) return;
+  try {
   const B = window.BABYLON;
 
   // Delta time — keeps physics speed consistent across all frame rates
@@ -1454,6 +1455,9 @@ function _physicsTick() {
 
   // Mini-map
   _drawMinimap();
+  } catch(err) {
+    console.error('[game] physicsTick error:', err);
+  }
 }
 
 function _createSkybox(){
@@ -1961,6 +1965,7 @@ export function destroyGame(engine){
   if(_mouseUpHandler){document.removeEventListener('mouseup',_mouseUpHandler);_mouseUpHandler=null;}
   _mouseHeld=false;
   if(_plcHandler){document.removeEventListener('pointerlockchange',_plcHandler);_plcHandler=null;}
+  if(_mouseMoveHandler){document.removeEventListener('mousemove',_mouseMoveHandler);_mouseMoveHandler=null;}
   if(_canvasClickHandler&&_canvas){try{_canvas.removeEventListener('click',_canvasClickHandler);}catch{}_canvasClickHandler=null;}
   if(_rightClickHandler){document.removeEventListener('mousedown',_rightClickHandler);_rightClickHandler=null;}
   _pointerLocked=false;_scoped=false;
