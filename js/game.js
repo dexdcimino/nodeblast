@@ -1857,11 +1857,15 @@ export function initGame(canvas){
   _pointerLocked=false;
   _canvasClickHandler=()=>{if(!_pointerLocked)canvas.requestPointerLock().catch(()=>{});};
   canvas.addEventListener('click',_canvasClickHandler);
+  let _skipMouseFrames=0;
   _mouseMoveHandler=(e)=>{
     if(!_pointerLocked||!_camera||_isDead)return;
+    if(_skipMouseFrames>0){_skipMouseFrames--;return;}
+    const mx=e.movementX,my=e.movementY;
+    if(Math.abs(mx)>150||Math.abs(my)>150)return;
     const sensitivity=0.002;
-    _camera.rotation.y+=e.movementX*sensitivity;
-    _camera.rotation.x+=e.movementY*sensitivity;
+    _camera.rotation.y+=mx*sensitivity;
+    _camera.rotation.x+=my*sensitivity;
     if(_camera.rotation.x>1.4)_camera.rotation.x=1.4;
     if(_camera.rotation.x<-1.4)_camera.rotation.x=-1.4;
   };
@@ -1869,6 +1873,7 @@ export function initGame(canvas){
   _plcHandler=()=>{
     const wasLocked=_pointerLocked;
     _pointerLocked=document.pointerLockElement===canvas;
+    if(_pointerLocked&&!wasLocked)_skipMouseFrames=3;
     const ch=document.getElementById('play-crosshair');if(ch)ch.style.opacity=_pointerLocked?'1':'0.35';
     // Clear held keys — browser doesn't fire keyup when pointer lock drops
     if(!_pointerLocked){
