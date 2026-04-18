@@ -1382,8 +1382,8 @@ function _physicsTick() {
     if (_camera.rotation.x < -1.5) _camera.rotation.x = -1.5;
   }
 
-  // FOV kick: sprint widens FOV slightly for speed feel
-  if (_camera) {
+  // FOV kick: sprint widens FOV slightly for speed feel (skip if scoped)
+  if (_camera && !_scoped) {
     const targetFov = _sprinting && ml > 0 ? 1.32 : 1.22;
     _camera.fov += (targetFov - _camera.fov) * 0.08;
   }
@@ -1870,9 +1870,9 @@ export function initGame(canvas){
       const gun=getActiveGun();
       if(gun.id==='sniper'){
         _scoped=!_scoped;
-        _camera.fov=_scoped?0.3:1.22;
+        _camera.fov=_scoped?0.15:1.22;
         const scope=document.getElementById('play-scope-overlay');
-        if(scope)scope.style.display=_scoped?'block':'none';
+        if(scope)scope.style.display=_scoped?'flex':'none';
       }
     }
   };

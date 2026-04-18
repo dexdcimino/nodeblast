@@ -1465,10 +1465,10 @@ body.cat-modal-open{overflow:hidden;}
 #play-exit-btn:hover{background:rgba(255,255,255,0.1);}
 #play-minimap{position:absolute;bottom:16px;left:16px;width:160px;height:160px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(5,5,10,0.6);backdrop-filter:blur(4px);pointer-events:none;z-index:10;}
 #play-crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;user-select:none;opacity:0.85;filter:drop-shadow(0 0 4px rgba(100,255,160,0.6));}
-#play-scope-overlay{position:absolute;inset:0;z-index:15;pointer-events:none;display:flex;align-items:center;justify-content:center;}
-.scope-ring{width:min(80vh,80vw);height:min(80vh,80vw);border-radius:50%;border:3px solid rgba(255,255,255,0.3);box-shadow:0 0 0 2000px rgba(0,0,0,0.85);position:relative;}
-.scope-ring::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,0.25);}
-.scope-ring::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.25);}
+#play-scope-overlay{position:fixed;inset:0;z-index:15;pointer-events:none;display:flex;align-items:center;justify-content:center;}
+.scope-ring{width:70vmin;height:70vmin;border-radius:50%;border:2px solid rgba(255,255,255,0.35);box-shadow:0 0 0 9999px rgba(0,0,0,0.88);position:relative;}
+.scope-ring::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,0.3);}
+.scope-ring::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3);}
 /* ── Player List HUD ── */
 #play-player-list{
   position:absolute;

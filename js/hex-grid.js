@@ -275,12 +275,32 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   `;
 }
 
+function _addTileRoundedPath() {
+  const pts = [[50,3],[96,28],[96,87.47],[50,112.47],[4,87.47],[4,28]];
+  const r = 6;
+  let d = '';
+  for (let i = 0; i < pts.length; i++) {
+    const prev = pts[(i - 1 + pts.length) % pts.length];
+    const curr = pts[i];
+    const next = pts[(i + 1) % pts.length];
+    const inDx = curr[0] - prev[0], inDy = curr[1] - prev[1];
+    const inLen = Math.hypot(inDx, inDy);
+    const outDx = next[0] - curr[0], outDy = next[1] - curr[1];
+    const outLen = Math.hypot(outDx, outDy);
+    const ex = curr[0] - (inDx / inLen) * r, ey = curr[1] - (inDy / inLen) * r;
+    const xx = curr[0] + (outDx / outLen) * r, xy = curr[1] + (outDy / outLen) * r;
+    if (i === 0) d += `M ${ex.toFixed(2)} ${ey.toFixed(2)} `;
+    else d += `L ${ex.toFixed(2)} ${ey.toFixed(2)} `;
+    d += `Q ${curr[0].toFixed(2)} ${curr[1].toFixed(2)} ${xx.toFixed(2)} ${xy.toFixed(2)} `;
+  }
+  return d + 'Z';
+}
+
 function addTileHTML() {
   return `
     <div class="add-tile-bg"></div>
     <svg class="add-tile-outline" viewBox="0 0 100 115.47" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="50,3 96,28 96,87.47 50,112.47 4,87.47 4,28"
-        fill="none" stroke="var(--tx3)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="${_addTileRoundedPath()}" fill="none" stroke="var(--tx3)" stroke-width="1.5"/>
     </svg>
     <div class="add-tile-plus">
       <span class="plus">+</span>
