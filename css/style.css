@@ -127,14 +127,14 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #hdr-logo:hover svg{transform:scale(1.1);}
 
 /* Logo color picker — two columns, one for each yin-yang half */
-#logo-picker{display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:150;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:8px;box-shadow:0 14px 36px rgba(0,0,0,.5);flex-direction:column;gap:8px;}
+#logo-picker{display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:150;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:8px;box-shadow:0 14px 36px rgba(0,0,0,.5);flex-direction:column;gap:8px;}
 #logo-picker.open{display:flex;}
 #logo-picker::before{content:'';position:absolute;top:-16px;left:0;right:0;height:16px;}
 .logo-picker-cols{display:flex;flex-direction:row;gap:8px;}
 .logo-picker-col{display:flex;flex-direction:column;gap:6px;}
 .logo-variant-toggle{display:flex;justify-content:center;padding:6px 0 2px;border-top:1px solid var(--bdr);cursor:pointer;}
-.logo-variant-toggle svg{width:28px;height:28px;opacity:.7;transition:opacity .15s ease,transform .15s ease;}
-.logo-variant-toggle:hover svg{opacity:1;transform:scale(1.1);}
+.logo-variant-toggle svg{width:28px;height:28px;opacity:1;transition:transform .15s ease;}
+.logo-variant-toggle:hover svg{transform:scale(1.12);}
 .logo-swatch{width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;transition:transform var(--ease),box-shadow var(--ease);box-shadow:0 0 0 1px rgba(255,255,255,.08);}
 .logo-swatch:hover{transform:scale(1.25);}
 .logo-swatch:active{transform:scale(1.35);}
@@ -143,12 +143,12 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .logo-swatch{position:relative;overflow:visible;}
 .swatch-splat{display:none;position:absolute;inset:-4px;opacity:0;transform:scale(0);pointer-events:none;z-index:2;}
 [data-theme="dark"] .logo-swatch.selected{transform:scale(1.2) !important;overflow:visible;background:transparent !important;box-shadow:none !important;}
-[data-theme="dark"] .logo-swatch.selected::after{content:'';position:absolute;inset:0;border-radius:50%;background:var(--swatch-color);animation:swatch-circle-shrink 0.15s ease forwards;z-index:1;}
-[data-theme="dark"] .logo-swatch.selected .swatch-splat{display:block;animation:swatch-splat-grow 0.15s 0.1s ease forwards;}
+[data-theme="dark"] .logo-swatch.selected::after{content:'';position:absolute;inset:0;border-radius:50%;background:var(--swatch-color);animation:swatch-circle-shrink 0.08s ease forwards;z-index:1;}
+[data-theme="dark"] .logo-swatch.selected .swatch-splat{display:block;animation:swatch-splat-grow 0.06s 0.06s ease forwards;}
 [data-theme="dark"] .logo-swatch.selected.instant .swatch-splat{animation:none;opacity:1;transform:scale(1);}
 [data-theme="dark"] .logo-swatch.selected.instant::after{animation:none;opacity:0;transform:scale(0);}
-@keyframes swatch-circle-shrink{0%{transform:scale(1);opacity:1;}100%{transform:scale(0);opacity:0;}}
-@keyframes swatch-splat-grow{0%{transform:scale(0);opacity:0;}100%{transform:scale(1);opacity:1;}}
+@keyframes swatch-circle-shrink{0%{transform:scale(1);opacity:1;}60%{transform:scale(0.3);opacity:0.5;}100%{transform:scale(0);opacity:0;}}
+@keyframes swatch-splat-grow{0%{transform:scale(0.7);opacity:0.6;}100%{transform:scale(1);opacity:1;}}
 
 /* Optical vertical alignment: Outfit at line-height:1 has ~6px of empty
    space below the baseline for descenders. "nodeblast" has none, so the
