@@ -2021,6 +2021,13 @@ function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
     showAdd: false,
     emptyMessage: emptyMessage || 'No catalysts yet.',
     container: 'honeycomb',
+    getColsFn: (w) => {
+      if (w >= 1400) return 5;
+      if (w >= 1000) return 4;
+      if (w >= 700) return 3;
+      return 2;
+    },
+    gap: 16,
     showCreatorAvatar: true,
     onTileClick: handleTileClick,
     onCreatorClick: handleCreatorClick,
