@@ -975,7 +975,7 @@ function _drawMinimap(){
   const ctx=mc.getContext('2d');
   if(!ctx)return;
   const W=mc.width,H=mc.height,cx=W/2,cy=H/2;
-  const S=0.65;
+  const S=0.8;
   const px=_camera.position.x, pz=_camera.position.z;
 
   ctx.clearRect(0,0,W,H);
@@ -1029,16 +1029,20 @@ function _drawMinimap(){
 
   ctx.restore();
 
-  // Player dot (always dead center)
+  // Player arrow (always center, points UP = forward direction)
+  ctx.save();
+  ctx.translate(cx, cy);
   ctx.fillStyle='#00ff8c';
-  ctx.shadowColor='#00ff8c';ctx.shadowBlur=6;
-  ctx.beginPath();ctx.arc(cx,cy,3.5,0,Math.PI*2);ctx.fill();
+  ctx.shadowColor='#00ff8c';ctx.shadowBlur=8;
+  ctx.beginPath();
+  ctx.moveTo(0, -10);
+  ctx.lineTo(-6, 6);
+  ctx.lineTo(0, 2);
+  ctx.lineTo(6, 6);
+  ctx.closePath();
+  ctx.fill();
   ctx.shadowBlur=0;
-
-  // Direction arrow
-  ctx.strokeStyle='#00ff8c';
-  ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy-10);ctx.stroke();
+  ctx.restore();
 }
 
 function _physicsTick() {

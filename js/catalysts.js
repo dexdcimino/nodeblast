@@ -233,7 +233,6 @@ export function subscribeUserCatalysts(uid, callback) {
 // user staring at an empty state — the "flash then disappear" bug.
 export function subscribePublicFeed(category, callback, max = 60) {
   const constraints = [
-    where('isPublic', '==', true),
     orderBy('createdAt', 'desc'),
     limit(max),
   ];
