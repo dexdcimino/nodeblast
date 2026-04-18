@@ -1601,12 +1601,18 @@ const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_BASE_W * 1.1547);
 function getCommunityTileSize(count, containerWidth) {
   const availW = containerWidth || 600;
   const gap = 12;
-  const maxTilesPerRow = 4;
-  const tilesInRow = Math.min(count, maxTilesPerRow);
-  let w = tilesInRow > 0 ? Math.floor((availW - gap * (tilesInRow - 1)) / tilesInRow) : COMMUNITY_TILE_BASE_W;
+  const maxPerRow = 4;
+  const rows = Math.min(Math.ceil(count / maxPerRow), 3);
+  const tilesInRow = Math.min(count, maxPerRow);
+  const containerH = 228;
+  const rowH = (containerH - gap * (rows - 1)) / rows;
+  const wFromH = Math.floor(rowH / 1.1547);
+  const wFromW = tilesInRow > 0 ? Math.floor((availW - gap * (tilesInRow - 1)) / tilesInRow) : COMMUNITY_TILE_BASE_W;
+  let w = Math.min(wFromH, wFromW);
   w = Math.min(w, 200);
-  w = Math.max(w, 100);
-  return { w, h: Math.round(w * 1.1547), tilesInRow };
+  w = Math.max(w, 80);
+  const showCount = Math.min(count, maxPerRow * 3);
+  return { w, h: Math.round(w * 1.1547), tilesInRow: maxPerRow, rows, showCount };
 }
 
 // NB-MD09: reflect the user's current creator-vote (or lack thereof)
@@ -1833,7 +1839,7 @@ function _buildCommunityCard(group) {
     : Math.floor(window.innerWidth - 80);
   const tilesAvailW = cardMaxW - 100;
   const tileSize = getCommunityTileSize(sortedTiles.length, tilesAvailW);
-  const tilesToShow = sortedTiles.slice(0, Math.min(MAX_VISIBLE_TILES, tileSize.tilesInRow));
+  const tilesToShow = sortedTiles.slice(0, tileSize.showCount);
   tilesToShow.forEach((cat) => {
     const tile = createCatalystTileElement(
       cat,
