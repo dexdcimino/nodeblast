@@ -2050,7 +2050,7 @@ function _repaintFeed() {
 
 // ── /games route — system profile showing all internal games ──
 
-function handleGameTileClick(cat) {
+function handleFeaturedTileClick(cat) {
   if (!cat.gameId) return;
   const gameDef = getGame(cat.gameId);
   if (!gameDef) return;
@@ -2062,9 +2062,9 @@ function handleGameTileClick(cat) {
   }
 }
 
-async function renderGamesRoute() {
+async function renderFeaturedRoute() {
   hideAllViews();
-  setPageTitle(['games']);
+  setPageTitle(['featured']);
   showProfileBar(SYSTEM_PROFILE, GAME_REGISTRY.length, false);
   const gameCatalysts = getGamesAsCatalysts();
 
@@ -2084,7 +2084,7 @@ async function renderGamesRoute() {
     container: 'profile-bar-catalysts',
     getColsFn: getEmbeddedCols,
     gap: 24,
-    onTileClick: handleGameTileClick,
+    onTileClick: handleFeaturedTileClick,
     showCreatorAvatar: false,
   });
 
@@ -2112,7 +2112,7 @@ async function renderGamesRoute() {
         const tile = createCatalystTileElement(
           cat,
           { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, isPinned: true },
-          { onTileClick: handleGameTileClick }
+          { onTileClick: handleFeaturedTileClick }
         );
         tilesWrap.appendChild(tile);
       });
@@ -2166,7 +2166,7 @@ async function renderGamesRoute() {
           followingCol.appendChild(empty);
         }
       } catch (err) {
-        console.warn('[games] failed to load dex alchemist:', err);
+        console.warn('[featured] failed to load dex alchemist:', err);
       }
     })();
   }
@@ -2478,13 +2478,13 @@ async function renderRoute({ force = false } = {}) {
       await renderProfileRoute(route.username, route.hex);
     } else if (route.page === 'catalyst') {
       await renderProfileRoute(route.username, route.hex, { openSlug: route.slug });
-    } else if (route.page === 'games') {
-      await renderGamesRoute();
+    } else if (route.page === 'featured') {
+      await renderFeaturedRoute();
     } else if (route.page === 'nodesplit') {
-      await renderGamesRoute();
+      await renderFeaturedRoute();
       setTimeout(() => openNodeSplit('NodeSplit'), 100);
     } else if (route.page === 'dotsim') {
-      await renderGamesRoute();
+      await renderFeaturedRoute();
       setTimeout(() => openDotSim('Dot-Sim'), 100);
     } else {
       show404();
@@ -3221,7 +3221,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('hdr-logo')?.addEventListener('click', () => navigate('/'));
 
   // MD01: Play button → /play route
-  document.getElementById('play-btn')?.addEventListener('click', () => navigate('/games'));
+  document.getElementById('play-btn')?.addEventListener('click', () => navigate('/featured'));
 
   // Community / My Profile view toggle in the header.
   document.getElementById('view-toggle-community')?.addEventListener('click', () => {

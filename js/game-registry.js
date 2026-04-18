@@ -8,10 +8,11 @@
 // The "alchemist" that owns all first-party internal games.
 // Virtual account — no real Firestore user doc exists.
 export const SYSTEM_PROFILE = {
-  displayName: 'nodeblast.dev',
+  displayName: 'nodeblast',
   hexCode: '000000',
-  uid: 'system',
+  uid: '3RlnflogEiYQ6mfuSOr4ZyIlCAj1',
   isSystem: true,
+  isAdmin: true,
   bio: '',
 };
 

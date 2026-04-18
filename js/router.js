@@ -36,21 +36,22 @@ export function getRoute() {
   if (path === '/play') {
     if (!_routerBooted) {
       // Genuine hard refresh on /play — redirect to /games
-      history.replaceState({}, '', '/games');
-      return { page: 'games' };
+      history.replaceState({}, '', '/featured');
+      return { page: 'featured' };
     }
     return { page: 'play', gameId: 'arena1' };
   }
   if (path.startsWith('/game/')) {
     if (!_routerBooted) {
       // Genuine hard refresh on /game/* — redirect to /games
-      history.replaceState({}, '', '/games');
-      return { page: 'games' };
+      history.replaceState({}, '', '/featured');
+      return { page: 'featured' };
     }
   }
   if (path === '/catalysts') return { page: 'feed', mode: 'catalysts' };
   if (path === '/alchemists') return { page: 'feed', mode: 'alchemists' };
-  if (path === '/games') return { page: 'games' };
+  if (path === '/featured') return { page: 'featured' };
+  if (path === '/games') { history.replaceState({}, '', '/featured'); return { page: 'featured' }; }
   if (path === '/nodesplit') return { page: 'nodesplit' };
   if (path === '/dotsim') return { page: 'dotsim' };
 
