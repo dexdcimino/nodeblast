@@ -111,37 +111,60 @@ function _noise(duration, volume, filterFreq) {
 
 export function playShoot(gunId) {
   if (!_ctx || !_enabled) return;
+
+  function _crack(vol) {
+    const buf = _ctx.createBuffer(1, _ctx.sampleRate * 0.03, _ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+    const src = _ctx.createBufferSource(); src.buffer = buf;
+    const g = _ctx.createGain();
+    g.gain.setValueAtTime(vol, _ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, _ctx.currentTime + 0.05);
+    src.connect(g); g.connect(_master); src.start();
+  }
+
   switch (gunId) {
     case 'pistol':
-      _noise(0.12, VOL_SHOOT, 600);
-      _burst(80, 'sine', 0.08, VOL_SHOOT * 0.8);
+      _crack(VOL_SHOOT * 1.2);
+      _burst(180, 'square', 0.08, VOL_SHOOT * 0.6, 60);
+      _noise(0.06, VOL_SHOOT * 0.4, 3000);
       break;
     case 'machinegun':
-      _noise(0.06, VOL_SHOOT * 0.7, 2000);
-      _burst(200, 'square', 0.04, VOL_SHOOT * 0.5, 80);
+      _crack(VOL_SHOOT * 0.8);
+      _burst(120, 'square', 0.04, VOL_SHOOT * 0.5, 50);
+      _noise(0.03, VOL_SHOOT * 0.3, 4000);
       break;
     case 'plasma':
-      _burst(200, 'sawtooth', 0.3, VOL_SHOOT * 0.6, 800);
-      _noise(0.3, VOL_SHOOT * 0.3, 3000);
+      _burst(300, 'sawtooth', 0.2, VOL_SHOOT * 0.5, 1200);
+      _noise(0.25, VOL_SHOOT * 0.3, 2500);
+      _burst(80, 'sine', 0.3, VOL_SHOOT * 0.4, 40);
       break;
     case 'nodeblaster':
-      _burst(400, 'sine', 0.15, VOL_SHOOT * 0.7, 100);
+      _crack(VOL_SHOOT * 1.0);
+      _burst(200, 'sawtooth', 0.15, VOL_SHOOT * 0.7, 60);
+      _noise(0.12, VOL_SHOOT * 0.5, 800);
       break;
     case 'rocket':
-      _noise(0.25, VOL_SHOOT, 400);
-      _burst(100, 'sine', 0.2, VOL_SHOOT * 0.9, 40);
+      _crack(VOL_SHOOT * 1.3);
+      _burst(80, 'sine', 0.25, VOL_SHOOT * 0.8, 30);
+      _noise(0.3, VOL_SHOOT * 0.6, 600);
       break;
     case 'sniper':
-      _noise(0.15, VOL_SHOOT * 1.2, 1200);
-      _burst(150, 'square', 0.06, VOL_SHOOT, 50);
-      _burst(80, 'sine', 0.12, VOL_SHOOT * 0.6, 30);
+      _crack(VOL_SHOOT * 1.5);
+      _burst(100, 'square', 0.1, VOL_SHOOT * 0.9, 35);
+      _noise(0.2, VOL_SHOOT * 0.8, 1500);
+      setTimeout(() => {
+        if (!_ctx || !_enabled) return;
+        _noise(0.3, VOL_SHOOT * 0.15, 800);
+      }, 80);
       break;
   }
 }
 
 export function playHit() {
-  _noise(0.18, VOL_HIT, 300);
-  _burst(60, 'sine', 0.12, VOL_HIT * 0.8, 30);
+  if (!_ctx || !_enabled) return;
+  _noise(0.1, VOL_HIT * 1.2, 500);
+  _burst(100, 'sine', 0.08, VOL_HIT * 0.6, 40);
 }
 
 export function playEnemyDeath() {
