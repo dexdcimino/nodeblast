@@ -1754,12 +1754,20 @@ function _buildCommunityCard(group) {
   const sortedTiles = _sortCardTiles(group.catalysts);
   const tilesToShow = sortedTiles.slice(0, MAX_VISIBLE_TILES);
   const tileSize = getCommunityTileSize(tilesToShow.length);
+  const _sg = 8;
+  const _hexW = tileSize.w;
+  const _hexH = tileSize.h;
+  const _stepX = _hexW + _sg;
+  const _stepY = _hexH * 0.75 + _sg;
+  const _COLS = Math.min(tilesToShow.length, 5);
+  let _row = 0, _col = 0, _maxR = 0, _maxB = 0;
+
   tilesToShow.forEach((cat) => {
     const tile = createCatalystTileElement(
       cat,
       {
-        width: tileSize.w,
-        height: tileSize.h,
+        width: _hexW,
+        height: _hexH,
         showCreatorAvatar: true,
         showPinButton: !hideOwnPin,
         isPinned: _myTrackedCatIds.has(cat.id),
@@ -1767,14 +1775,24 @@ function _buildCommunityCard(group) {
       { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick, onPinClick: handlePinToggle },
     );
 
+    tile.classList.remove('hex-tile-flow');
+    tile.style.position = 'absolute';
+    const _isOff = _row % 2 === 1;
+    const _left = _sg + (_isOff ? _stepX / 2 : 0) + _col * _stepX;
+    const _top = _row * _stepY;
+    tile.style.left = _left + 'px';
+    tile.style.top = _top + 'px';
+    tile.style.width = _hexW + 'px';
+    tile.style.height = _hexH + 'px';
+    if (_left + _hexW > _maxR) _maxR = _left + _hexW;
+    if (_top + _hexH > _maxB) _maxB = _top + _hexH;
+
     if (isOwnCardForReorder) {
       tile.draggable = true;
       tile.style.cursor = 'grab';
       tile.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', cat.id);
         tile.style.opacity = '0.5';
-
-        // MD#22: hex-clipped drag ghost so the preview isn't a square.
         const ghost = tile.cloneNode(true);
         ghost.style.position = 'absolute';
         ghost.style.top = '-9999px';
@@ -1787,17 +1805,10 @@ function _buildCommunityCard(group) {
         ghost.style.pointerEvents = 'none';
         document.body.appendChild(ghost);
         e.dataTransfer.setDragImage(ghost, tile.offsetWidth / 2, tile.offsetHeight / 2);
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
-          }, 0);
-        });
+        requestAnimationFrame(() => { setTimeout(() => { if (ghost.parentNode) ghost.parentNode.removeChild(ghost); }, 0); });
       });
       tile.addEventListener('dragend', () => { tile.style.opacity = '1'; });
-      tile.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        tile.style.borderLeft = '3px solid var(--clr-adj)';
-      });
+      tile.addEventListener('dragover', (e) => { e.preventDefault(); tile.style.borderLeft = '3px solid var(--clr-adj)'; });
       tile.addEventListener('dragleave', () => { tile.style.borderLeft = ''; });
       tile.addEventListener('drop', (e) => {
         e.preventDefault();
@@ -1817,7 +1828,12 @@ function _buildCommunityCard(group) {
     }
 
     body.appendChild(tile);
+    _col++;
+    if (_col >= _COLS) { _col = 0; _row++; }
   });
+
+  body.style.height = (_maxB + _sg) + 'px';
+  body.style.width = (_maxR + _sg) + 'px';
 
   // NB-MD09 / MD#1 / MD#12: creator-level vote pills — absolute-positioned
   // inside the body. Render for all cards (including own); own-card pills

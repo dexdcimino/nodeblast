@@ -801,10 +801,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-follow.icon-only svg{flex-shrink:0;}
 .community-card.collapsed .community-card-hdr{flex-wrap:nowrap;overflow:hidden;}
 
-.community-tiles{position:relative;display:flex;flex-wrap:nowrap;gap:12px;justify-content:flex-start;align-items:center;height:224px;padding:0 8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;-webkit-overflow-scrolling:touch;}
-.community-tiles::-webkit-scrollbar{height:4px;}
-.community-tiles::-webkit-scrollbar-track{background:transparent;}
-.community-tiles::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px;}
+.community-tiles{position:relative;overflow:visible;min-height:0;}
 
 /* NB-MD05: collapse/expand button + collapsed card state */
 .community-card-collapse{flex-shrink:0;background:transparent;border:none;color:var(--tx3);cursor:pointer;padding:8px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
@@ -812,9 +809,9 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-collapse svg{width:18px;height:18px;}
 .community-card.collapsed .community-tiles > *:not(:first-child){display:none;}
 .community-card.collapsed{min-height:0;}
-.community-card.collapsed .community-tiles{justify-content:center;}
+.community-card.collapsed .community-tiles{height:228px !important;width:auto !important;}
 .community-card.collapsed .community-tiles > *:first-child{width:180px !important;height:208px !important;}
-.community-tiles .hex-tile{width:180px !important;height:208px !important;flex-shrink:0;transform-origin:center center;will-change:transform;}
+.community-tiles .hex-tile{width:180px !important;height:208px !important;transform-origin:center center;will-change:transform;}
 .community-card.collapsed .community-card-hdr{overflow:visible;text-overflow:unset;white-space:normal;}
 .community-card.collapsed .community-card-name{white-space:normal;overflow:visible;text-overflow:unset;}
 

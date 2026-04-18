@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nodeblast-v80';
+const CACHE_NAME = 'nodeblast-v81';
 const STATIC_ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
