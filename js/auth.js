@@ -25,7 +25,7 @@ import { propagateProfileToFriends } from './friends.js';
 // Hardcoded admin emails. Firestore isAdmin field is the source of
 // truth, but any user whose auth email is in this list gets isAdmin
 // automatically on sign-in and the field is backfilled to their doc.
-const ADMIN_EMAILS = new Set(['dexdcimino@gmail.com']);
+const ADMIN_EMAILS = new Set(['dexdcimino@gmail.com', 'admin@nodeblast.dev']);
 
 const auth = getAuth(app);
 const db = getFirestore(app);
