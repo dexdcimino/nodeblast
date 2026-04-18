@@ -942,7 +942,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    ::before image layers over the accent at 0.88 opacity, so ~12%
    of the accent color bleeds through as a subtle tint. Without a
    thumb, the accent is the full hex fill behind the placeholder. */
-.hex-tile{position:absolute;background:var(--accent,var(--bg3));clip-path:url(#hex-clip);overflow:hidden;cursor:pointer;transition:transform .2s ease;}
+.hex-tile{position:absolute;background:var(--accent,var(--bg3));clip-path:url(#hex-clip);overflow:hidden;cursor:pointer;transition:transform .5s ease;}
 /* Flow modifier: lets a .hex-tile sit inside a normal flex/grid
    container instead of the absolutely-positioned honeycomb. Used by
    the community hub cards to drop tiles into a simple flex-wrap row. */
@@ -951,8 +951,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    is clearly the star of the tile. The hover brightness bump stays. */
 .hex-tile::before{content:'';position:absolute;inset:0;background-image:var(--thumb,none);background-size:cover;background-position:center;opacity:1;transition:filter .25s ease;}
 .hex-tile:hover::before{filter:brightness(1.05);}
-.hex-tile:hover{transform:scale(1.12);z-index:10;filter:brightness(1.05);transition:transform .2s cubic-bezier(.34,1.56,.64,1), filter .2s ease;}
+.hex-tile:hover{transform:scale(1.12);z-index:10;filter:brightness(1.05);transition:transform .5s cubic-bezier(.34,1.56,.64,1), filter .3s ease;}
 .hex-tile-flow:hover{transform:scale(1.06);z-index:100;}
+.community-tiles .hex-tile-flow:has(+ .hex-tile-flow:hover){transform:scale(1.02) translateX(-3px);transition:transform .4s ease;}
+.community-tiles .hex-tile-flow:hover + .hex-tile-flow{transform:scale(1.02) translateX(3px);transition:transform .4s ease;}
 
 /* MD21+MD26: faded yin-yang placeholder shown on no-thumb catalyst
    tiles. Centered with ~20% margin from each edge so the logo stays
