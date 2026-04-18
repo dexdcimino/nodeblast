@@ -403,8 +403,13 @@ function showProfileBar(user, catalystCount, isOwn) {
     const socialEl = document.getElementById('profile-bar-socials');
     if (socialEl) { socialEl.innerHTML = ''; socialEl.classList.remove('visible'); }
     const bioEl = document.getElementById('profile-bio');
-    if (bioEl && user.bio) { bioEl.textContent = user.bio; bioEl.classList.add('visible'); }
-    else if (bioEl) { bioEl.textContent = ''; bioEl.classList.remove('visible'); }
+    if (bioEl) {
+      bioEl.textContent = user.bio || '';
+      bioEl.style.display = 'block';
+      bioEl.contentEditable = 'false';
+      bioEl.classList.remove('editable');
+      bioEl.dataset.placeholder = user.bio ? '' : '';
+    }
     const actionBtn = document.getElementById('profile-bar-action');
     if (actionBtn) actionBtn.style.display = 'none';
     const shareBtn = document.getElementById('profile-bar-share');
@@ -458,16 +463,29 @@ function showProfileBar(user, catalystCount, isOwn) {
   const bioEl = document.getElementById('profile-bio');
   if (bioEl) {
     bioEl.textContent = user.bio || '';
-    if (isOwn || user.bio) bioEl.classList.add('visible');
-    else bioEl.classList.remove('visible');
+    bioEl.style.display = 'block';
+    const MAX_BIO = 200;
     if (isOwn) {
       bioEl.contentEditable = 'true';
       bioEl.classList.add('editable');
+      bioEl.dataset.placeholder = 'What do you like to build?';
       bioEl.spellcheck = false;
       if (!bioEl._wired) {
         bioEl._wired = true;
+        bioEl.addEventListener('input', () => {
+          const text = bioEl.textContent || '';
+          if (text.length > MAX_BIO) {
+            bioEl.textContent = text.slice(0, MAX_BIO);
+            const range = document.createRange();
+            range.selectNodeContents(bioEl);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        });
         bioEl.addEventListener('blur', async () => {
-          const newBio = bioEl.textContent.trim().slice(0, 500);
+          const newBio = (bioEl.textContent || '').trim().slice(0, MAX_BIO);
           if (newBio !== (State.profile?.bio || '')) {
             try {
               const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
@@ -482,6 +500,8 @@ function showProfileBar(user, catalystCount, isOwn) {
     } else {
       bioEl.contentEditable = 'false';
       bioEl.classList.remove('editable');
+      bioEl.dataset.placeholder = user.bio ? '' : 'No bio yet';
+      if (!user.bio) bioEl.textContent = '';
     }
   }
 
