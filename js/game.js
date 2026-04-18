@@ -1530,10 +1530,6 @@ function _buildArenaCollision(){
     _addCol(t.x,0,TW+4,TW+4,TOWER_H+0.4,TOWER_H-0.1);
   });
 
-  // Sky bridge collision
-  const bridgeLen=TX*2-TW;
-  _addCol(0,0,bridgeLen,3.5,TOWER_H+0.2,TOWER_H-0.2);
-
   // Spotlight
   const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
   spot.intensity=0.6;spot.diffuse=new B.Color3(0.85,0.95,1.0);
