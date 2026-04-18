@@ -112,6 +112,9 @@ const _collapsedCards = new Set();
 const _collapseUndoStack = [];
 const _collapseRedoStack = [];
 const MAX_UNDO = 30;
+const PROFILE_COLLAPSE_KEY = 'nb-profile-card-states';
+function _loadProfileCardStates() { try { const raw = localStorage.getItem(PROFILE_COLLAPSE_KEY); return raw ? JSON.parse(raw) : {}; } catch { return {}; } }
+function _saveProfileCardState(uid, state) { try { const s = _loadProfileCardStates(); if (state === 'expanded') delete s[uid]; else s[uid] = state; localStorage.setItem(PROFILE_COLLAPSE_KEY, JSON.stringify(s)); } catch {} }
 
 function _applyCollapseAction(uid, action) {
   const card = [...document.querySelectorAll('.community-card')].find(c => {
@@ -987,12 +990,15 @@ function _renderProfileView(user, catalysts, isOwn) {
   if (followingCol) {
     followingCol.style.display = '';
     followingCol.innerHTML = '';
+    followingCol.style.opacity = '0';
+    followingCol.style.transition = 'opacity 0.15s ease';
     followingCol.appendChild(_buildSectionTitle('Alchemists', 'Search...', followingCol));
     const alchemistsToShow = isOwn
       ? _myTrackedAlchemists
       : (_viewedUserTracked?.alchemists || []);
 
     if (alchemistsToShow.length === 0) {
+      followingCol.style.opacity = '1';
       const empty = document.createElement('div');
       empty.className = 'profile-col-empty';
       empty.textContent = isOwn ? 'Follow alchemists from the community hub' : 'No alchemists yet';
@@ -1010,6 +1016,7 @@ function _renderProfileView(user, catalysts, isOwn) {
         // Abort if the profile view has moved on.
         if (!_currentProfileView || _currentProfileView.user?.uid !== requestUid) return;
         followingCol.innerHTML = '';
+        followingCol.style.opacity = '1';
         followingCol.appendChild(_buildSectionTitle('Alchemists', 'Search...', followingCol));
         alchemistsToShow.forEach((alch) => {
           const cats = catMap.get(alch.uid) || [];
@@ -1030,6 +1037,14 @@ function _renderProfileView(user, catalysts, isOwn) {
             totalFrostCount: cats.reduce((s, c) => s + (c.frostCount || 0), 0),
           };
           const card = _buildCommunityCard(group);
+          if (isOwn) {
+            const _ss = _loadProfileCardStates();
+            const _sv = _ss[group.uid];
+            if (_sv === 'collapsed' || _sv === 'pill') {
+              const _cb = card.querySelector('.community-card-collapse');
+              if (_cb) { card.classList.add(_sv); if (_sv === 'collapsed') card.dataset.count = '1'; }
+            }
+          }
           followingCol.appendChild(card);
         });
         if (followingCol.children.length <= 1) {
@@ -1705,6 +1720,7 @@ function _buildCommunityCard(group) {
       _collapsedCards.delete(group.uid);
     }
     setCardState(card, nextState, collapseBtn);
+    if (card.closest('#profile-col-following')) _saveProfileCardState(group.uid, nextState);
   });
   hdr.appendChild(collapseBtn);
 
