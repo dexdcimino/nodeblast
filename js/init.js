@@ -2109,23 +2109,10 @@ async function renderFeaturedRoute() {
     pinnedCol.style.display = '';
     pinnedCol.innerHTML = '';
     pinnedCol.appendChild(_buildSectionTitle('Catalysts', 'Search...', pinnedCol));
-    const pinned = getGamesAsCatalysts();
-    if (pinned.length > 0) {
-      const tilesWrap = document.createElement('div');
-      tilesWrap.className = 'profile-col-tiles';
-      pinned.forEach((cat) => {
-        const tile = createCatalystTileElement(
-          cat,
-          { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, isPinned: true },
-          { onTileClick: handleFeaturedTileClick }
-        );
-        tilesWrap.appendChild(tile);
-      });
-      pinnedCol.appendChild(tilesWrap);
-    } else {
+    {
       const empty = document.createElement('div');
       empty.className = 'profile-col-empty';
-      empty.textContent = 'No pinned catalysts';
+      empty.textContent = 'No pinned catalysts yet';
       pinnedCol.appendChild(empty);
     }
   }
@@ -2547,6 +2534,10 @@ function paintGuestProfilePill() {
 
 function updateAuthUI(user, profile) {
   if (!user) {
+    // MD#57: redirect to home before re-rendering to avoid 404 on profile/featured
+    if (_currentRoute?.page === 'featured' || _currentRoute?.page === 'profile') {
+      navigate('/');
+    }
     paintGuestProfilePill();
     _profileCache.clear();
     _viewingOther = null;
