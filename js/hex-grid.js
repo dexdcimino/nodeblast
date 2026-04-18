@@ -118,8 +118,9 @@ const GLOBE_MINI_SVG = '<svg class="hex-globe-mini" viewBox="0 0 24 24" fill="no
 // at full opacity, right half at 50% for two-tone watermark.
 export const PLACEHOLDER_LOGO_SVG = `<svg class="hex-placeholder-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 234.6" aria-hidden="true">
   <g fill="currentColor">
-    <path d="M0,117.3s.7,28.6,19,46c18.3,17.4,45.1,18.1,45.1,18.1,35.3,0,64-28.7,64-64s28.6-64,64-64h.6c15.1,0,24.6-16.1,17.1-29.2C201.1,9.2,185.2,0,167.9,0h-79.7c-17.3,0-33.3,9.2-41.9,24.2,0,0-22.5,38.9-27.8,48.1C13.2,81.5,0,99.7,0,117.3ZM40,115.8c.8-12,10.5-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5Z"/>
-    <path fill-opacity="0.5" d="M46.2,210.4c8.7,15,24.6,24.2,41.9,24.2h79.7c17.3,0,33.3-9.2,41.9-24.2,0,0,22.5-38.9,27.8-48.1,5.3-9.2,18.5-27.4,18.5-45,0,0,.2-28.5-19.8-46.7-20-18.2-44.3-17.4-44.3-17.4-35.3,0-64,28.7-64,64s-28.6,64-64,64h-.6c-15.1,0-24.6,16.1-17.1,29.2h0ZM168.1,115.7c.8-12,10.5-21.6,22.4-22.4,14.5-.9,26.4,11,25.5,25.5-.8,12-10.5,21.6-22.4,22.4-14.5.9-26.4-11-25.5-25.5Z"/>
+    <path d="M7.9,117s.7,26.9,17.9,43.3c17.2,16.4,42.5,17,42.5,17,33.3,0,60.3-27,60.3-60.3s26.9-60.3,60.3-60.3h.6c14.2,0,23.2-15.2,16.1-27.5-8.2-14.1-23.2-22.8-39.5-22.8h-75.1c-16.3,0-31.4,8.7-39.5,22.8,0,0-21.2,36.6-26.2,45.3-5,8.7-17.4,25.8-17.4,42.4ZM45.6,115.6c.8-11.3,9.9-20.3,21.1-21.1,13.7-.8,24.9,10.4,24,24-.8,11.3-9.9,20.3-21.1,21.1-13.7.8-24.9-10.4-24-24Z"/>
+    <path d="M166,234h-75.1c-18.5,0-35.8-10-45.1-26h0c-4.5-7.8-4.4-17.1,0-24.8,4.5-7.8,12.6-12.5,21.7-12.5h.6c29.7,0,53.8-24.1,53.8-53.8s29.9-66.7,66.7-66.8c2.2,0,26.2-.1,46.2,18.1,20.7,18.9,20.8,47.6,20.8,48.8,0,15.8-9.4,31-15.6,41.1-1.1,1.7-2,3.2-2.7,4.5-5,8.7-26.2,45.3-26.2,45.3-9.2,16.1-26.5,26-45.1,26ZM57.1,201.5c7,12.1,20,19.5,33.8,19.5h75.1c14,0,26.9-7.5,33.8-19.5,0,0,21.2-36.7,26.2-45.3.8-1.4,1.8-3.1,2.9-4.8,5.4-8.8,13.7-22.2,13.7-34.4,0-.3-.1-24.3-16.5-39.2-16.5-15-37-14.7-37.2-14.7h-.2c-29.7,0-53.8,24.1-53.8,53.8s-30,66.8-66.8,66.8h-.6c-4.4,0-8.3,2.2-10.5,6-2.2,3.7-2.2,8,0,11.8Z"/>
+    <path d="M166.3,115.5c.8-11.3,9.9-20.3,21.1-21.1,13.7-.8,24.9,10.4,24,24-.8,11.3-9.9,20.3-21.1,21.1-13.7.8-24.9-10.4-24-24Z"/>
   </g>
 </svg>`;
 
@@ -147,31 +148,6 @@ function _accentBrightnessClass(hex) {
   return luma > 128 ? 'accent-light' : 'accent-dark';
 }
 
-function _getLogoColor(accentHex) {
-  if (!accentHex) return 'rgba(255,255,255,0.5)';
-  const h = accentHex.replace('#', '');
-  if (!/^[0-9a-f]{6}$/i.test(h)) return 'rgba(255,255,255,0.5)';
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  let hue = 0, sat = 0;
-  if (max !== min) {
-    const d = max - min;
-    sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    if (max === r) hue = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-    else if (max === g) hue = ((b - r) / d + 2) / 6;
-    else hue = ((r - g) / d + 4) / 6;
-  }
-  const nH = (hue + 0.5) % 1;
-  const nS = Math.min(sat * 0.6, 0.5);
-  const nL = l > 0.55 ? 0.25 : l < 0.3 ? 0.7 : l > 0.45 ? 0.2 : 0.65;
-  function h2r(p, q, t) { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1/6) return p + (q - p) * 6 * t; if (t < 1/2) return q; if (t < 2/3) return p + (q - p) * (2/3 - t) * 6; return p; }
-  const q2 = nL < 0.5 ? nL * (1 + nS) : nL + nS - nL * nS;
-  const p2 = 2 * nL - q2;
-  return '#' + [h2r(p2, q2, nH + 1/3), h2r(p2, q2, nH), h2r(p2, q2, nH - 1/3)].map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
-}
 
 // Small people icon for the collaborator-count badge. Currently hidden
 // (collaborator data model doesn't exist yet), but the markup renders
@@ -419,7 +395,7 @@ function _renderNow(state) {
       const accent = tile.accentColor || '#5AAA72';
       el.style.setProperty('--accent', accent);
       el.classList.add(_accentBrightnessClass(accent));
-      el.style.setProperty('--logo-clr', tile.logoColor || _getLogoColor(accent));
+
       if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
       else el.classList.add('no-thumb');
       if (tile.status === 'placeholder') el.classList.add('wip');
@@ -753,7 +729,7 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
   const accent = cat.accentColor || '#5AAA72';
   el.style.setProperty('--accent', accent);
   el.classList.add(_accentBrightnessClass(accent));
-  el.style.setProperty('--logo-clr', cat.logoColor || _getLogoColor(accent));
+
   if (cat.thumbURL) el.style.setProperty('--thumb', `url("${cat.thumbURL}")`);
   else el.classList.add('no-thumb');
   if (cat.status === 'placeholder') el.classList.add('wip');
@@ -906,7 +882,7 @@ export function renderMiniHexGrid({ container, tiles, showAdd = false, onTileCli
         const accent = tile.accentColor || '#5AAA72';
         el.style.setProperty('--accent', accent);
         el.classList.add(_accentBrightnessClass(accent));
-        el.style.setProperty('--logo-clr', tile.logoColor || _getLogoColor(accent));
+  
         if (tile.thumbURL) {
           el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
         } else {
