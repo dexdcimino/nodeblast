@@ -508,27 +508,26 @@ function showProfileBar(user, catalystCount, isOwn) {
       addLinksBtn.style.display = 'inline-flex';
       addLinksBtn.onclick = (e) => {
         e.stopPropagation();
-        const acctMenu = document.getElementById('acct-menu');
-        const acctBtn = document.getElementById('acct-btn');
-        if (acctMenu && acctBtn) {
-          if (acctMenu.style.display === 'none' || !acctMenu.style.display || getComputedStyle(acctMenu).display === 'none') {
-            acctBtn.click();
-          }
-          setTimeout(() => {
-            const editBtn = document.getElementById('acct-edit-btn');
-            if (editBtn) {
-              editBtn.click();
-              setTimeout(() => {
-                const linksWrap = document.getElementById('acct-links-wrap');
-                if (linksWrap) {
-                  linksWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  const addBtn = document.getElementById('acct-links-add-btn');
-                  if (addBtn) addBtn.focus();
-                }
-              }, 400);
+        const existingLinks = State.profile?.socialLinks || [];
+        openSocialModal(existingLinks, async (links) => {
+          try {
+            const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+            const db = getFirestore();
+            await setDoc(doc(db, 'users', State.user.uid), {
+              socialLinks: links.map(l => ({ url: l.url, active: l.active })),
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+            State.profile.socialLinks = links.map(l => ({ url: l.url, active: l.active }));
+            const iconsEl = document.getElementById('profile-bar-socials');
+            if (iconsEl) {
+              const html = renderSocialIconsHTML(State.profile.socialLinks);
+              iconsEl.innerHTML = html;
+              iconsEl.classList.toggle('visible', !!html);
             }
-          }, 250);
-        }
+          } catch (err) {
+            console.warn('[social] save failed:', err);
+          }
+        });
       };
     } else {
       addLinksBtn.style.display = 'none';
