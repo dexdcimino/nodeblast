@@ -148,35 +148,29 @@ function _accentBrightnessClass(hex) {
 }
 
 function _getLogoColor(accentHex) {
-  if (!accentHex) return '#8888aa';
+  if (!accentHex) return 'rgba(255,255,255,0.5)';
   const h = accentHex.replace('#', '');
-  if (!/^[0-9a-f]{6}$/i.test(h)) return '#8888aa';
+  if (!/^[0-9a-f]{6}$/i.test(h)) return 'rgba(255,255,255,0.5)';
   const r = parseInt(h.slice(0, 2), 16) / 255;
   const g = parseInt(h.slice(2, 4), 16) / 255;
   const b = parseInt(h.slice(4, 6), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
-  let hue = 0, sat = max === 0 ? 0 : d / max, val = max;
-  if (d !== 0) {
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let hue = 0, sat = 0;
+  if (max !== min) {
+    const d = max - min;
+    sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     if (max === r) hue = ((g - b) / d + (g < b ? 6 : 0)) / 6;
     else if (max === g) hue = ((b - r) / d + 2) / 6;
     else hue = ((r - g) / d + 4) / 6;
   }
-  const nH = (hue + 75 / 360) % 1;
-  const nS = Math.min(sat, 0.7);
-  const nV = val * 0.85;
-  const hi = Math.floor(nH * 6) % 6;
-  const f = nH * 6 - Math.floor(nH * 6);
-  const p = nV * (1 - nS), q = nV * (1 - f * nS), t = nV * (1 - (1 - f) * nS);
-  let nr, ng, nb;
-  switch (hi) {
-    case 0: nr = nV; ng = t; nb = p; break;
-    case 1: nr = q; ng = nV; nb = p; break;
-    case 2: nr = p; ng = nV; nb = t; break;
-    case 3: nr = p; ng = q; nb = nV; break;
-    case 4: nr = t; ng = p; nb = nV; break;
-    default: nr = nV; ng = p; nb = q; break;
-  }
-  return '#' + [nr, ng, nb].map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
+  const nH = (hue + 0.5) % 1;
+  const nS = Math.min(sat * 0.6, 0.5);
+  const nL = l > 0.55 ? 0.25 : l < 0.3 ? 0.7 : l > 0.45 ? 0.2 : 0.65;
+  function h2r(p, q, t) { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1/6) return p + (q - p) * 6 * t; if (t < 1/2) return q; if (t < 2/3) return p + (q - p) * (2/3 - t) * 6; return p; }
+  const q2 = nL < 0.5 ? nL * (1 + nS) : nL + nS - nL * nS;
+  const p2 = 2 * nL - q2;
+  return '#' + [h2r(p2, q2, nH + 1/3), h2r(p2, q2, nH), h2r(p2, q2, nH - 1/3)].map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
 }
 
 // Small people icon for the collaborator-count badge. Currently hidden

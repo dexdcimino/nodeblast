@@ -967,7 +967,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    yin-yang look. No z-index — placeholder is emitted as the first
    child in catalystTileHTML so natural paint order puts it behind
    the fade gradient, badges, and title text. */
-.hex-placeholder{position:absolute;inset:20%;display:flex;align-items:center;justify-content:center;color:var(--logo-clr,rgba(255,255,255,0.35));opacity:0.55;pointer-events:none;}
+.hex-placeholder{position:absolute;inset:20%;display:flex;align-items:center;justify-content:center;color:var(--logo-clr,rgba(255,255,255,0.35));opacity:0.4;pointer-events:none;}
 .hex-placeholder-logo{width:100%;height:100%;display:block;}
 .hex-tile.no-thumb:hover .hex-placeholder{opacity:0.42;}
 
