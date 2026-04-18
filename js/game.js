@@ -1739,14 +1739,21 @@ function _buildArenaProc(){
     box('tw_door_l_'+ti,0.5,3.5,(TW-3)/2,frontX,(TW-1)/2-(TW-3)/4,MTw);
     box('tw_door_r_'+ti,0.5,3.5,(TW-3)/2,frontX,-(TW-1)/2+(TW-3)/4,MTw);
 
-    // Ladder zone marker (visual strip on back wall)
-    const ladderStrip=B.MeshBuilder.CreateBox('tw_ladder_strip_'+ti,{width:0.08,height:TOWER_H-2,depth:1.2},_scene);
-    ladderStrip.position.set(t.x+t.facing*(TW/2-0.3),TOWER_H/2,0);ladderStrip.material=MG;
+    // Ladder — two side rails + rungs
+    const ladderX = t.x + t.facing * (TW/2 - 0.35);
+    const ladderW = 1.0;
+    const railMat = mkMat('ladder_rail_'+ti, 0.12, 0.14, 0.12, 0, 0.15, 0.06);
 
-    // Ladder rungs (visual only)
-    for(let r=1;r<TOWER_H-1;r+=0.9){
-      const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:0.06,height:0.06,depth:1.2},_scene);
-      rung.position.set(t.x+t.facing*(TW/2-0.3),r,0);rung.material=MG;
+    const railL = B.MeshBuilder.CreateBox('tw_railL_'+ti, {width:0.06, height:TOWER_H-1, depth:0.06}, _scene);
+    railL.position.set(ladderX, TOWER_H/2, -ladderW/2);
+    railL.material = railMat;
+    const railR = B.MeshBuilder.CreateBox('tw_railR_'+ti, {width:0.06, height:TOWER_H-1, depth:0.06}, _scene);
+    railR.position.set(ladderX, TOWER_H/2, ladderW/2);
+    railR.material = railMat;
+    for (let r = 0.6; r < TOWER_H - 1; r += 0.7) {
+      const rung = B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10), {width:0.05, height:0.05, depth:ladderW}, _scene);
+      rung.position.set(ladderX, r, 0);
+      rung.material = MG;
     }
 
     // Register ladder zone for auto-climb

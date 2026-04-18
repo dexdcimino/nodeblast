@@ -2747,12 +2747,14 @@ function paintLogo(top, bot, mode) {
   const blastEl = document.getElementById('brand-blast');
 
   if (mode === 'mono') {
+    // Color 1 → entire logo SVG
     if (leftHalf) leftHalf.setAttribute('fill', topAdj);
     if (rightHalf) rightHalf.setAttribute('fill', topAdj);
-    if (nodeEl) nodeEl.style.color = topAdj;
-    if (blastEl) blastEl.style.color = topAdj;
     const monoCirc = document.getElementById('nodeblast_circle_right');
     if (monoCirc) monoCirc.setAttribute('fill', topAdj);
+    // Color 2 → "nodeblast" text
+    if (nodeEl) nodeEl.style.color = botAdj;
+    if (blastEl) blastEl.style.color = botAdj;
   } else {
     if (leftHalf) leftHalf.setAttribute('fill', topAdj);
     if (nodeEl) nodeEl.style.color = topAdj;
