@@ -1930,6 +1930,8 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   const grid = document.getElementById('grid');
   const list = document.getElementById('community-list');
   if (!grid || !list) return;
+  grid.classList.add('alchemists-mode');
+  if (list) list.style.display = '';
 
   // feed-mode class is applied synchronously by showFilterBar() before
   // the subscription is even set up, so no need to re-add it here.
@@ -1969,41 +1971,36 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
 function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
   const grid = document.getElementById('grid');
   const list = document.getElementById('community-list');
-  if (!grid || !list) return;
+  const honey = document.getElementById('honeycomb');
+  if (!grid) return;
 
-  // feed-mode class is applied synchronously by showFilterBar() before
-  // the subscription is even set up, so no need to re-add it here.
-  list.innerHTML = '';
+  // Hide alchemist list, show honeycomb for catalysts grid
+  if (list) list.style.display = 'none';
+  grid.classList.remove('alchemists-mode');
 
   if (!catalysts || catalysts.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'community-empty';
-    empty.textContent = emptyMessage || 'No catalysts yet. Be the first to share what you\'re building.';
-    list.appendChild(empty);
+    if (honey) {
+      honey.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'community-empty';
+      empty.textContent = emptyMessage || 'No catalysts yet. Be the first to share what you\'re building.';
+      empty.style.padding = '60px 20px';
+      empty.style.textAlign = 'center';
+      honey.appendChild(empty);
+    }
     return;
   }
 
-  const wrap = document.createElement('div');
-  wrap.className = 'community-flat';
-  // Sort order comes from the active feed sort mode so flipping
-  // Popular / Latest / Oldest reorders the tile flow live.
   const sorted = _sortCatalysts(catalysts, _feedSortMode);
-  sorted.forEach((cat) => {
-    const isOwn = State.user && cat.ownerId === State.user.uid;
-    const tile = createCatalystTileElement(
-      cat,
-      {
-        width: COMMUNITY_TILE_W,
-        height: COMMUNITY_TILE_H,
-        showCreatorAvatar: true,
-        showPinButton: !isOwn,
-        isPinned: _myTrackedCatIds.has(cat.id),
-      },
-      { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick, onPinClick: handlePinToggle },
-    );
-    wrap.appendChild(tile);
+  renderHexGrid({
+    tiles: sorted,
+    showAdd: false,
+    emptyMessage: emptyMessage || 'No catalysts yet.',
+    container: 'honeycomb',
+    showCreatorAvatar: true,
+    onTileClick: handleTileClick,
+    onCreatorClick: handleCreatorClick,
   });
-  list.appendChild(wrap);
 }
 
 // Re-renders the feed view from the latest snapshot. Called by the
