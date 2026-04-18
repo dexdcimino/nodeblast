@@ -554,7 +554,9 @@ function showProfileBar(user, catalystCount, isOwn) {
       addLinksBtn.style.display = 'inline-flex';
       addLinksBtn.onclick = (e) => {
         e.stopPropagation();
-        const existingLinks = State.profile?.socialLinks || [];
+        const existingLinks = (State.profile?.socialLinks || []).map(l =>
+          typeof l === 'string' ? { url: l, active: true } : { url: l.url || '', active: l.active !== false }
+        );
         openSocialModal(existingLinks, async (links) => {
           try {
             const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
@@ -3156,6 +3158,36 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('[BOOT] 15 - initNotifications');
   initNotifications();
   initSocialModal();
+
+  // MD#50: replace dropdown link editor with a button that opens the social modal
+  const _acctLinksWrap = document.getElementById('acct-links-wrap');
+  if (_acctLinksWrap) {
+    _acctLinksWrap.innerHTML = '';
+    const _editLinksBtn = document.createElement('button');
+    _editLinksBtn.type = 'button';
+    _editLinksBtn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:10px;padding:8px 16px;color:var(--tx2);font-family:var(--fn);font-size:14px;cursor:pointer;transition:all .15s;width:100%;justify-content:center;';
+    _editLinksBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Edit Links';
+    _editLinksBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const existing = (State.profile?.socialLinks || []).map(l =>
+        typeof l === 'string' ? { url: l, active: true } : { url: l.url || '', active: l.active !== false }
+      );
+      openSocialModal(existing, async (links) => {
+        try {
+          const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+          const db = getFirestore();
+          const sanitized = links.map(l => ({ url: l.url, active: l.active, platform: l.platform || '' }));
+          await setDoc(doc(db, 'users', State.user.uid), { socialLinks: sanitized, updatedAt: serverTimestamp() }, { merge: true });
+          State.profile.socialLinks = sanitized;
+          const iconsEl = document.getElementById('profile-bar-socials');
+          if (iconsEl) { iconsEl.innerHTML = renderSocialIconsHTML(sanitized); iconsEl.classList.toggle('visible', sanitized.length > 0); }
+        } catch (err) { console.warn('[social] save failed:', err); }
+      });
+    });
+    _editLinksBtn.addEventListener('mouseenter', () => { _editLinksBtn.style.borderColor = 'var(--clr-adj)'; _editLinksBtn.style.color = 'var(--tx)'; });
+    _editLinksBtn.addEventListener('mouseleave', () => { _editLinksBtn.style.borderColor = 'var(--bdr)'; _editLinksBtn.style.color = 'var(--tx2)'; });
+    _acctLinksWrap.appendChild(_editLinksBtn);
+  }
   console.log('[BOOT] 16 - initHelpPanel');
   initHelpPanel();
   console.log('[BOOT] 17 - initFriends');
