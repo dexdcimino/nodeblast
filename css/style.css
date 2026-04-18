@@ -839,6 +839,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card.pill .community-card-follow{padding:4px 10px;font-size:11px;border-radius:12px;}
 .community-card.pill .community-card-follow.icon-only{width:26px;height:26px;padding:4px;}
 .community-card.pill .community-vote-pill{display:none;}
+#community-list .community-card.pill{flex-basis:auto;width:280px;max-width:280px;order:1000;}
+#community-list .community-card:not(.pill){order:0;}
 
 /* MD#1: absolute-positioned vote pills — bottom-left frost, bottom-right fire */
 .community-vote-pill{position:absolute;bottom:14px;display:inline-flex;align-items:center;padding:6px;border-radius:50%;border:1px solid var(--bdr);background:color-mix(in srgb,var(--bg3) 60%,transparent);font-size:20px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s,border-radius .2s,padding .2s;color:var(--tx2);line-height:1;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:3;}

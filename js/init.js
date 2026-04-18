@@ -115,6 +115,9 @@ const MAX_UNDO = 30;
 const PROFILE_COLLAPSE_KEY = 'nb-profile-card-states';
 function _loadProfileCardStates() { try { const raw = localStorage.getItem(PROFILE_COLLAPSE_KEY); return raw ? JSON.parse(raw) : {}; } catch { return {}; } }
 function _saveProfileCardState(uid, state) { try { const s = _loadProfileCardStates(); if (state === 'expanded') delete s[uid]; else s[uid] = state; localStorage.setItem(PROFILE_COLLAPSE_KEY, JSON.stringify(s)); } catch {} }
+const FEED_COLLAPSE_KEY = 'nb-feed-card-states';
+function _loadFeedCardStates() { try { const raw = localStorage.getItem(FEED_COLLAPSE_KEY); return raw ? JSON.parse(raw) : {}; } catch { return {}; } }
+function _saveFeedCardState(uid, state) { try { const s = _loadFeedCardStates(); if (state === 'expanded') delete s[uid]; else s[uid] = state; localStorage.setItem(FEED_COLLAPSE_KEY, JSON.stringify(s)); } catch {} }
 
 function _applyCollapseAction(uid, action) {
   const card = [...document.querySelectorAll('.community-card')].find(c => {
@@ -1712,10 +1715,14 @@ function _buildCommunityCard(group) {
   collapseBtn.type = 'button';
   collapseBtn.className = 'community-card-collapse';
   collapseBtn.setAttribute('aria-label', 'Collapse card');
-  const startCollapsed = _collapsedCards.has(group.uid);
-  if (startCollapsed) {
+  const _feedSaved = _loadFeedCardStates();
+  const _feedState = _feedSaved[group.uid];
+  const startPill = _feedState === 'pill';
+  const startCollapsed = _feedState === 'collapsed' || _collapsedCards.has(group.uid);
+  if (startPill) {
+    setCardState(card, 'pill', collapseBtn);
+  } else if (startCollapsed) {
     setCardState(card, 'collapsed', collapseBtn);
-    // Defer pin icon shrink until after followBtn is appended
     requestAnimationFrame(() => {
       const _initPin = card.querySelector('.community-card-follow');
       if (_initPin) setCardState(card, 'collapsed', collapseBtn);
@@ -1739,6 +1746,7 @@ function _buildCommunityCard(group) {
     }
     setCardState(card, nextState, collapseBtn);
     if (card.closest('#profile-col-following')) _saveProfileCardState(group.uid, nextState);
+    _saveFeedCardState(group.uid, nextState);
   });
   hdr.appendChild(collapseBtn);
 
