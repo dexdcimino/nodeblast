@@ -899,6 +899,34 @@ function _updateProfileColumns() {
   });
 }
 
+function _buildSectionTitle(titleText, searchPlaceholder, parentCol) {
+  const row = document.createElement('div');
+  row.className = 'profile-col-title';
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.className = 'profile-col-search';
+  search.placeholder = searchPlaceholder;
+  search.addEventListener('input', () => {
+    const q = search.value.toLowerCase();
+    parentCol.querySelectorAll('.hex-tile, .community-card, .pinned-tile-wrap').forEach((el) => {
+      const text = el.textContent.toLowerCase();
+      el.style.display = text.includes(q) || !q ? '' : 'none';
+    });
+  });
+  row.appendChild(search);
+  const label = document.createElement('span');
+  label.className = 'profile-col-title-label';
+  label.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> ' + titleText;
+  row.appendChild(label);
+  const filter = document.createElement('button');
+  filter.type = 'button';
+  filter.className = 'profile-col-filter-btn';
+  filter.setAttribute('data-tip', 'Filter');
+  filter.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>';
+  row.appendChild(filter);
+  return row;
+}
+
 function _renderProfileView(user, catalysts, isOwn) {
   console.log('[profile-view] rendering', { user: user?.displayName, isOwn, catalystsCount: catalysts?.length });
   _currentProfileView = { user, catalysts, isOwn };
@@ -949,34 +977,6 @@ function _renderProfileView(user, catalysts, isOwn) {
   if (_wasCollapsed) {
     _profileBarEl?.classList.add('collapsed');
     _profileBarEl?.classList.remove('has-grid');
-  }
-
-  function _buildSectionTitle(titleText, searchPlaceholder, parentCol) {
-    const row = document.createElement('div');
-    row.className = 'profile-col-title';
-    const search = document.createElement('input');
-    search.type = 'text';
-    search.className = 'profile-col-search';
-    search.placeholder = searchPlaceholder;
-    search.addEventListener('input', () => {
-      const q = search.value.toLowerCase();
-      parentCol.querySelectorAll('.hex-tile, .community-card, .pinned-tile-wrap').forEach((el) => {
-        const text = el.textContent.toLowerCase();
-        el.style.display = text.includes(q) || !q ? '' : 'none';
-      });
-    });
-    row.appendChild(search);
-    const label = document.createElement('span');
-    label.className = 'profile-col-title-label';
-    label.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg> ' + titleText;
-    row.appendChild(label);
-    const filter = document.createElement('button');
-    filter.type = 'button';
-    filter.className = 'profile-col-filter-btn';
-    filter.setAttribute('data-tip', 'Filter');
-    filter.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>';
-    row.appendChild(filter);
-    return row;
   }
 
   // Pinned column — always visible
