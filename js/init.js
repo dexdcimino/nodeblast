@@ -415,6 +415,9 @@ function showProfileBar(user, catalystCount, isOwn) {
       bioEl.classList.remove('editable');
       bioEl.dataset.placeholder = user.bio ? '' : '';
     }
+    // Hide presence indicator for system/admin account
+    const _onlineDot = document.getElementById('online-dot');
+    if (_onlineDot) _onlineDot.style.display = 'none';
     const actionBtn = document.getElementById('profile-bar-action');
     if (actionBtn) actionBtn.style.display = 'none';
     const shareBtn = document.getElementById('profile-bar-share');
