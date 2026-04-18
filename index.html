@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="css/style.css?v=84" />
+  <link rel="stylesheet" href="css/style.css?v=85" />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -1249,7 +1249,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=84"></script>
+  <script type="module" src="js/init.js?v=85"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -1259,5 +1259,25 @@
       });
     }
   </script>
+  <!-- Social Links Modal -->
+  <div id="social-modal-backdrop"></div>
+  <div id="social-modal">
+    <div id="social-modal-hdr">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <span>Edit Social Links</span>
+      <button id="social-modal-close" type="button" data-tip="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="social-modal-urls"></div>
+    <div id="social-modal-btns">
+      <button id="social-modal-add" type="button" data-tip="Add link">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="3" x2="7" y2="11"/><line x1="3" y1="7" x2="11" y2="7"/></svg>
+      </button>
+      <span style="flex:1"></span>
+      <button id="social-modal-cancel" type="button">Cancel</button>
+      <button id="social-modal-save" type="button">Save</button>
+    </div>
+  </div>
 </body>
 </html>

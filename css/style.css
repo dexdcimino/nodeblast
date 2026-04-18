@@ -2005,6 +2005,41 @@ body.cat-modal-open{overflow:hidden;}
 .internal-catalyst-placeholder-title{font-size:17px;font-weight:700;color:var(--tx2);}
 .internal-catalyst-placeholder-sub{font-size:13px;line-height:1.55;color:var(--tx3);}
 
+/* ── Social Links Modal ── */
+#social-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9500;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+#social-modal-backdrop.open{display:block;}
+#social-modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9501;background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:20px;width:min(420px,90vw);box-shadow:0 16px 48px rgba(0,0,0,.45);font-family:var(--fn);}
+#social-modal.open{display:block;}
+#social-modal-hdr{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:var(--tx);margin-bottom:16px;}
+#social-modal-hdr svg:first-child{color:var(--clr-adj);flex-shrink:0;}
+#social-modal-close{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;display:flex;align-items:center;transition:color var(--ease);}
+#social-modal-close:hover{color:var(--tx);}
+#social-modal-urls{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;}
+.social-url-row{display:flex;align-items:center;gap:6px;min-height:42px;}
+.social-url-left{width:48px;flex-shrink:0;height:34px;display:flex;align-items:center;justify-content:flex-start;gap:2px;cursor:grab;border-radius:6px;transition:background var(--ease);overflow:hidden;}
+.social-url-left:hover{background:rgba(255,255,255,0.04);}
+.social-url-left:active{cursor:grabbing;}
+.social-url-bar{width:7px;min-width:7px;align-self:stretch;margin:3px 0;border-radius:3px;background:var(--bdr);flex-shrink:0;transition:background var(--ease);}
+.social-url-bar.active{background:var(--clr-adj);}
+.social-url-favicon{flex:1;display:flex;align-items:center;justify-content:center;}
+.social-url-favicon img{width:17px;height:17px;border-radius:3px;object-fit:contain;}
+.social-url-input-wrap{flex:1;min-width:0;position:relative;display:flex;align-items:center;}
+.social-url-input{width:100%;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:7px;padding:8px 32px 8px 10px;color:var(--tx2);font-family:var(--fn);font-size:14px;outline:none;transition:border-color var(--ease);box-sizing:border-box;}
+.social-url-input:focus{border-color:var(--clr-adj);}
+.social-url-input::placeholder{color:var(--tx3);opacity:0.7;}
+.social-url-copy{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;padding:4px;cursor:pointer;color:var(--tx3);display:flex;align-items:center;transition:color var(--ease);}
+.social-url-copy:hover{color:var(--clr-adj);}
+.social-url-remove{width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg2);border:1.5px solid var(--bdr);border-radius:50%;cursor:pointer;color:var(--tx2);padding:0;transition:border-color var(--ease),color var(--ease);}
+.social-url-remove:hover{border-color:#e05050;color:#e05050;}
+#social-modal-btns{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--bdr);}
+#social-modal-add{width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1.5px solid var(--bdr);border-radius:7px;cursor:pointer;color:var(--tx2);padding:0;transition:all var(--ease);}
+#social-modal-add:hover{border-color:var(--clr-adj);color:var(--clr-adj);}
+#social-modal-cancel{background:none;border:1px solid var(--bdr);border-radius:8px;padding:8px 18px;color:var(--tx2);font-family:var(--fn);font-size:14px;cursor:pointer;transition:all var(--ease);}
+#social-modal-cancel:hover{border-color:var(--tx3);color:var(--tx);}
+#social-modal-save{background:var(--clr-adj);color:var(--clr-adj-on,#000);border:none;border-radius:8px;padding:8px 22px;font-family:var(--fn);font-size:14px;font-weight:600;cursor:pointer;transition:opacity var(--ease);}
+#social-modal-save:hover{opacity:0.85;}
+[data-theme="light"] .social-url-left:hover{background:rgba(0,0,0,0.04);}
+
 @media (max-width: 640px) {
   #internal-catalyst-view{padding:20px 16px 32px;}
   #internal-catalyst-header{flex-direction:column;align-items:center;text-align:center;padding:20px;}
