@@ -2148,6 +2148,12 @@ async function renderFeaturedRoute() {
             totalFireCount: 0,
             totalFrostCount: 0,
           };
+          try {
+            const { getFirestore, collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+            const _fdb = getFirestore();
+            const _cSnap = await getDocs(query(collection(_fdb, 'catalysts'), where('ownerId', '==', dexUser.uid)));
+            _cSnap.forEach((d) => group.catalysts.push({ id: d.id, ...d.data() }));
+          } catch (e) { console.warn('[featured] catalyst fetch failed:', e); }
           const card = _buildCommunityCard(group);
           followingCol.appendChild(card);
         } else {
