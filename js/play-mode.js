@@ -318,7 +318,7 @@ export async function renderPlayRoute(gameId) {
         // Assign spawn based on actor number
         const spawnSide = myId % 2 === 0 ? 1 : -1;
         const spawnX = (Math.random() - 0.5) * 4;
-        const spawnZ = spawnSide * 70;
+        const spawnZ = spawnSide * 55;
         if (window._nbSetSpawn) window._nbSetSpawn(spawnX, spawnZ);
         // Layer Hathora on top of Photon for authoritative state
         const name = State.profile?.displayName || 'player';
