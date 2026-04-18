@@ -974,69 +974,70 @@ function _drawMinimap(){
   const ctx=mc.getContext('2d');
   if(!ctx)return;
   const W=mc.width,H=mc.height,cx=W/2,cy=H/2;
-  const SCALE=0.7;
+  const S=0.65;
+  const px=_camera.position.x, pz=_camera.position.z;
 
   ctx.clearRect(0,0,W,H);
-
   ctx.save();
   ctx.translate(cx,cy);
   ctx.rotate(-_camera.rotation.y);
+  ctx.translate(-px*S,-pz*S);
 
-  // Hex boundary outline (pointy-top)
-  const HR=110*SCALE;
-  ctx.strokeStyle='rgba(0,255,140,0.25)';
+  // Hex boundary (pointy-top)
+  const HR=110;
+  ctx.strokeStyle='rgba(0,255,140,0.3)';
   ctx.lineWidth=1.5;
   ctx.beginPath();
   for(let i=0;i<6;i++){
     const a=Math.PI/3*i-Math.PI/2;
-    const hx=Math.cos(a)*HR,hy=Math.sin(a)*HR;
-    if(i===0)ctx.moveTo(hx,hy);else ctx.lineTo(hx,hy);
+    const hx=Math.cos(a)*HR*S,hz=Math.sin(a)*HR*S;
+    if(i===0)ctx.moveTo(hx,hz);else ctx.lineTo(hx,hz);
   }
   ctx.closePath();ctx.stroke();
 
-  // Zone structure markers
-  ctx.fillStyle='rgba(255,255,255,0.15)';
-  const ZONE_R=90;
+  // Zone markers
+  ctx.fillStyle='rgba(255,255,255,0.12)';
   for(let i=0;i<6;i++){
     const a=Math.PI/3*i;
-    const zx=-_camera.position.x*SCALE+Math.cos(a)*ZONE_R*0.55*SCALE;
-    const zy=-_camera.position.z*SCALE+Math.sin(a)*ZONE_R*0.55*SCALE;
-    ctx.beginPath();
-    ctx.arc(zx,zy,4,0,Math.PI*2);
-    ctx.fill();
+    const zx=Math.cos(a)*90*0.55*S;
+    const zz=Math.sin(a)*90*0.55*S;
+    ctx.beginPath();ctx.arc(zx,zz,4,0,Math.PI*2);ctx.fill();
   }
 
   // Tower markers
-  ctx.fillStyle='rgba(0,255,140,0.3)';
+  ctx.fillStyle='rgba(0,255,140,0.35)';
   [{x:75,z:0},{x:-75,z:0}].forEach(t=>{
-    const tx=(-_camera.position.x+t.x)*SCALE;
-    const tz=(-_camera.position.z+t.z)*SCALE;
-    ctx.fillRect(tx-3,tz-3,6,6);
+    ctx.fillRect(t.x*S-3,t.z*S-3,6,6);
   });
 
   // Center platform
-  ctx.fillStyle='rgba(255,255,255,0.2)';
-  const pcx=-_camera.position.x*SCALE;
-  const pcz=-_camera.position.z*SCALE;
-  ctx.beginPath();
-  ctx.arc(pcx,pcz,8,0,Math.PI*2);
-  ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.15)';
+  ctx.beginPath();ctx.arc(0,0,7,0,Math.PI*2);ctx.fill();
+
+  // Bridge
+  ctx.strokeStyle='rgba(0,255,140,0.2)';
+  ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(-75*S,0);ctx.lineTo(75*S,0);ctx.stroke();
+
+  // Mid-ring cover
+  ctx.fillStyle='rgba(255,255,255,0.08)';
+  for(let i=0;i<6;i++){
+    const a=Math.PI/3*i;
+    ctx.fillRect(Math.cos(a)*40*S-2,Math.sin(a)*40*S-2,4,4);
+  }
 
   ctx.restore();
 
-  // Player dot (always center)
+  // Player dot (always dead center)
   ctx.fillStyle='#00ff8c';
-  ctx.beginPath();
-  ctx.arc(cx,cy,3,0,Math.PI*2);
-  ctx.fill();
+  ctx.shadowColor='#00ff8c';ctx.shadowBlur=6;
+  ctx.beginPath();ctx.arc(cx,cy,3.5,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
 
-  // Player direction indicator
+  // Direction arrow
   ctx.strokeStyle='#00ff8c';
   ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(cx,cy);
-  ctx.lineTo(cx,cy-8);
-  ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy-10);ctx.stroke();
 }
 
 function _physicsTick() {
