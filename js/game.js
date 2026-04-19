@@ -1149,7 +1149,7 @@ function _physicsTick() {
   _velZ += ((mz * spd) - _velZ) * accel * ctrl * _delta;
   if (ml === 0 && _onGround) { const fd = Math.pow(FRICTION, _delta); _velX *= fd; _velZ *= fd; }
 
-  // Ladder auto-climb
+  // Ladder auto-climb — lock to center, no horizontal sway
   let _onLadder = false;
   for (const lz of _ladderZones) {
     const ldx = _camera.position.x - lz.x;
@@ -1159,6 +1159,10 @@ function _physicsTick() {
     if (ldist < lz.radius && feetY < lz.topY) {
       _onLadder = true;
       _velY = 0.06;
+      _velX = 0;
+      _velZ = 0;
+      _camera.position.x = lz.x;
+      _camera.position.z = lz.z;
       _onGround = false;
       break;
     }
