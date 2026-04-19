@@ -3222,7 +3222,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const _acctLinksWrap = document.getElementById('acct-links-wrap');
   if (_acctLinksWrap) {
     _acctLinksWrap.innerHTML = '';
-    _acctLinksWrap.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;';
+    _acctLinksWrap.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:nowrap;';
     const _linkBtn = document.createElement('button');
     _linkBtn.type = 'button';
     _linkBtn.style.cssText = 'background:none;border:1.5px solid var(--bdr);border-radius:8px;padding:6px;cursor:pointer;color:var(--tx3);display:flex;align-items:center;justify-content:center;transition:all var(--ease);flex-shrink:0;';

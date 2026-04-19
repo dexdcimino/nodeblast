@@ -1666,10 +1666,6 @@ function _buildArenaProc(){
     const segLen=Math.sqrt(dx*dx+dz*dz);
     const wallAngle=Math.atan2(dx,dz);
 
-    // Skip walls that would pass through tower positions
-    const towerClash = (Math.abs(mx) > 60 && Math.abs(mz) < 20);
-    if(towerClash) continue;
-
     const wall=B.MeshBuilder.CreateBox('hex_wall_'+i,{width:segLen,height:WALL_H,depth:0.5},_scene);
     wall.position.set(mx,WALL_H/2,mz);wall.rotation.y=wallAngle;wall.material=wallMat;
 
