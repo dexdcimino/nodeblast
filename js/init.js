@@ -1025,25 +1025,10 @@ function _renderProfileView(user, catalysts, isOwn) {
             ownerHex: pinned.ownerHex,
             slug: pinned.slug,
           },
-          { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, isPinned: true },
-          { onTileClick: handleTileClick }
+          { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, showPinButton: true, isPinned: true },
+          { onTileClick: handleTileClick, onPinClick: handlePinToggle }
         );
-        // MD#51: unpin button on each pinned tile
-        const unpinBtn = document.createElement('button');
-        unpinBtn.className = 'profile-col-unpin';
-        unpinBtn.type = 'button';
-        unpinBtn.setAttribute('data-tip', 'Unpin');
-        unpinBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-        unpinBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          unpinCatalyst(pinned.catId).then(() => toast('Catalyst unpinned')).catch(() => toast('Failed to unpin'));
-        });
-        // MD#59: wrap tile + unpin button so the button isn't clipped by hex clip-path
-        const tileWrap = document.createElement('div');
-        tileWrap.className = 'pinned-tile-wrap';
-        tileWrap.appendChild(tile);
-        tileWrap.appendChild(unpinBtn);
-        tilesWrap.appendChild(tileWrap);
+        tilesWrap.appendChild(tile);
       });
       pinnedCol.appendChild(tilesWrap);
     } else {
@@ -3262,6 +3247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _linkBtn.addEventListener('mouseenter', () => { _linkBtn.style.borderColor = 'var(--clr-adj)'; _linkBtn.style.color = 'var(--tx)'; });
     _linkBtn.addEventListener('mouseleave', () => { _linkBtn.style.borderColor = 'var(--bdr)'; _linkBtn.style.color = 'var(--tx3)'; });
     const _inlineIcons = document.createElement('span');
+    _inlineIcons.id = 'acct-links-inline';
     _inlineIcons.innerHTML = renderSocialIconsHTML(State.profile?.socialLinks || [], { extraClass: 'social-icons--sm' });
     _linkBtn.addEventListener('click', async (e) => {
       e.stopPropagation();

@@ -1838,6 +1838,14 @@ function _buildArenaProc(){
   rail1.position.set(0,BRIDGE_Y+0.5,1.7);rail1.material=MTw;
   const rail2=B.MeshBuilder.CreateBox('bridge_rail_s',{width:bridgeLen,height:1,depth:0.12},_scene);
   rail2.position.set(0,BRIDGE_Y+0.5,-1.7);rail2.material=MTw;
+  const RAIL_SEGS=12;
+  const railTop=BRIDGE_Y+1.0, railBot=BRIDGE_Y;
+  const segLen=bridgeLen/RAIL_SEGS;
+  for(let s=0;s<RAIL_SEGS;s++){
+    const sx=-bridgeLen/2+segLen/2+s*segLen;
+    _addCol(sx,1.7,segLen,0.3,railTop,railBot);
+    _addCol(sx,-1.7,segLen,0.3,railTop,railBot);
+  }
   strip('bridge_gn',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,1.6);
   strip('bridge_gs',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,-1.6);
   const bLight=new B.PointLight('bridge_light',new B.Vector3(0,BRIDGE_Y+2,0),_scene);
