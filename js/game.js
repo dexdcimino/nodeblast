@@ -1506,6 +1506,7 @@ function _physicsTick() {
   });
 
   updateEnemyNodes();
+  _updateLabelFades();
 
   // Track previous key state for single-press detection
   Object.keys(_keys).forEach(k => { _prevKeys[k] = _keys[k]; });
@@ -1555,6 +1556,59 @@ function _hexVertex(i, r) {
   return { x: Math.cos(a) * r, z: Math.sin(a) * r, angle: a };
 }
 const CORNER_FOR_VERTEX = [6, 5, 4, 3, 2, 1];
+
+const _labelMeshes = [];
+
+function _makeLabel(text, worldX, worldY, worldZ, opts = {}) {
+  const B = window.BABYLON;
+  const {
+    fontSize=72, fontFamily='Outfit, sans-serif', color='#7afcff', outline='#000000',
+    bgAlpha=0.0, scale=2.2, fadeStart=7, fadeEnd=14,
+  } = opts;
+  const DT_W=512, DT_H=128;
+  const dt=new B.DynamicTexture('label_tex_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    {width:DT_W,height:DT_H},_scene,false);
+  const ctx=dt.getContext();
+  ctx.clearRect(0,0,DT_W,DT_H);
+  if(bgAlpha>0){ctx.fillStyle='rgba(0,0,0,'+bgAlpha+')';ctx.fillRect(0,0,DT_W,DT_H);}
+  ctx.font='bold '+fontSize+'px '+fontFamily;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.lineWidth=8;ctx.strokeStyle=outline;ctx.strokeText(text,DT_W/2,DT_H/2);
+  ctx.fillStyle=color;ctx.fillText(text,DT_W/2,DT_H/2);
+  dt.update();
+  const mat=new B.StandardMaterial('label_mat_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),_scene);
+  mat.diffuseTexture=dt;mat.opacityTexture=dt;mat.emissiveTexture=dt;
+  mat.useAlphaFromDiffuseTexture=true;mat.disableLighting=true;mat.backFaceCulling=false;mat.alpha=0;
+  const plane=B.MeshBuilder.CreatePlane('label_'+text.replace(/\s+/g,'_').toLowerCase()+'_'+Date.now(),
+    {width:4*scale,height:1*scale},_scene);
+  plane.position.set(worldX,worldY,worldZ);plane.material=mat;
+  plane.billboardMode=B.TransformNode.BILLBOARDMODE_ALL;plane.isPickable=false;
+  _labelMeshes.push({mesh:plane,material:mat,pos:new B.Vector3(worldX,worldY,worldZ),fadeStart,fadeEnd});
+  return plane;
+}
+
+function _updateLabelFades(){
+  if(!_camera||_labelMeshes.length===0)return;
+  const cam=_camera.position;
+  for(const L of _labelMeshes){
+    const dx=cam.x-L.pos.x, dy=cam.y-L.pos.y, dz=cam.z-L.pos.z;
+    const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+    let alpha;
+    if(d<=L.fadeStart)alpha=1.0;
+    else if(d>=L.fadeEnd)alpha=0.0;
+    else alpha=1.0-(d-L.fadeStart)/(L.fadeEnd-L.fadeStart);
+    if(L.material.alpha!==alpha)L.material.alpha=alpha;
+  }
+}
+
+function _disposeAllLabels(){
+  for(const L of _labelMeshes){
+    try{L.material.diffuseTexture?.dispose();}catch{}
+    try{L.material.dispose();}catch{}
+    try{L.mesh.dispose();}catch{}
+  }
+  _labelMeshes.length=0;
+}
 
 function _buildArenaCollision(){
   const B=window.BABYLON;
@@ -1874,6 +1928,34 @@ function _buildArenaProc(){
   bLight.diffuse=new B.Color3(0.8,0.2,0.9);bLight.intensity=1.5;bLight.range=10;
   const sniperMarker=B.MeshBuilder.CreateTorus('sniper_marker',{diameter:2,thickness:0.1,tessellation:6},_scene);
   sniperMarker.position.set(0,BRIDGE_Y+0.3,0);sniperMarker.material=MG;
+
+  // ── PROXIMITY LABELS ──
+  _makeLabel('MONUMENT 1',0,A.CTR_H+A.CTR_PILLAR_H+1.4,0,{color:'#ffd256',scale:2.4});
+  const MON_NAMES=['MONUMENT 2','MONUMENT 3','MONUMENT 4','MONUMENT 5','MONUMENT 6','MONUMENT 7'];
+  for(let i=0;i<6;i++){
+    const zv=_hexVertex(i,A.HEX_R*A.ZONE_R_MULT);
+    _makeLabel(MON_NAMES[i],zv.x,12,zv.z,{color:'#7afcff',scale:2.0});
+  }
+  _makeLabel('TOWER N',0,A.TOWER_H+2.5,A.TOWER_Z,{color:'#7afcff',scale:2.4});
+  _makeLabel('TOWER S',0,A.TOWER_H+2.5,-A.TOWER_Z,{color:'#7afcff',scale:2.4});
+  const FENCE_NAMES=['','FENCE 1','FENCE 2','','FENCE 3','FENCE 4'];
+  for(let i=0;i<6;i++){
+    if(i===0||i===3)continue;
+    const vOut=_hexVertex(i,A.HEX_R), vIn=_hexVertex(i,A.FENCE_INNER);
+    const midX=(vOut.x+vIn.x)/2, midZ=(vOut.z+vIn.z)/2;
+    _makeLabel(FENCE_NAMES[i],midX,A.FENCE_H+1.5,midZ,{color:'#aaffaa',scale:1.8});
+  }
+  for(let i=0;i<6;i++){
+    const v1=_hexVertex(i,A.HEX_R), v2=_hexVertex(i+1,A.HEX_R);
+    const midX=(v1.x+v2.x)/2, midZ=(v1.z+v2.z)/2;
+    const pull=5.0, mag=Math.sqrt(midX*midX+midZ*midZ);
+    _makeLabel('WALL '+(i+1),midX*(1-pull/mag),7,midZ*(1-pull/mag),{color:'#ff9c66',scale:2.2});
+  }
+  for(let i=0;i<6;i++){
+    const v=_hexVertex(i,A.HEX_R);
+    const pull=6.0, mag=Math.sqrt(v.x*v.x+v.z*v.z);
+    _makeLabel('CORNER '+CORNER_FOR_VERTEX[i],v.x*(1-pull/mag),3.5,v.z*(1-pull/mag),{color:'#ffffff',scale:1.4,fontSize:56});
+  }
 }
 
 function _buildArena(){
@@ -2065,6 +2147,7 @@ export function destroyGame(engine){
   if(_rightClickHandler){document.removeEventListener('mousedown',_rightClickHandler);_rightClickHandler=null;}
   _pointerLocked=false;_scoped=false;
   _ladderZones.length=0;
+  _disposeAllLabels();
   window._nbUnscope=null;
   if(_scene&&_obsHandler){_scene.onBeforeRenderObservable.remove(_obsHandler);_obsHandler=null;}
   if(_resizeHandler){window.removeEventListener('resize',_resizeHandler);_resizeHandler=null;}
