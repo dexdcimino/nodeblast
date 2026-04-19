@@ -877,10 +877,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    to the accent color so the toggle reads at a glance. */
 /* MD08: SVG pin button — percentage-positioned so it stays inside the
    hex clip-path at any tile size; frosted bg + colored glow when pinned. */
-.hex-pin-btn{position:absolute;top:18%;right:12%;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.8);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease),box-shadow var(--ease);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
-.hex-pin-btn:hover{background:rgba(0,0,0,0.85);transform:scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,0.45);}
+.hex-pin-btn{position:absolute;top:26%;right:18%;transform:translate(50%,-50%);width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.8);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease),box-shadow var(--ease);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.hex-pin-btn:hover{background:rgba(0,0,0,0.85);transform:translate(50%,-50%) scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,0.45);}
 .hex-pin-btn.pinned{background:var(--clr-adj);color:var(--clr-adj-on,#000);box-shadow:0 2px 8px color-mix(in srgb,var(--clr-adj) 50%,transparent);}
-.hex-pin-btn.pinned:hover{background:color-mix(in srgb,var(--clr-adj) 85%,#000);}
+.hex-pin-btn.pinned:hover{background:color-mix(in srgb,var(--clr-adj) 85%,#000);transform:translate(50%,-50%) scale(1.1);}
 .hex-pin-btn svg{pointer-events:none;flex-shrink:0;}
 
 /* Catalysts view: a flat flex-wrap of standalone hex tiles, no
@@ -1015,7 +1015,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    through to the tile body handler, which opens the detail modal.
    Percentage top scales correctly with the fixed community tile size
    and any future profile-page usage. */
-.hex-creator-avatar{position:absolute;top:18%;left:12%;width:28px;height:28px;border-radius:50%;border:2px solid var(--clr-adj);background:var(--bg3);overflow:hidden;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
+.hex-creator-avatar{position:absolute;top:26%;left:18%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;border:2px solid var(--clr-adj);background:var(--bg3);overflow:hidden;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
 .hex-creator-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
 .hex-creator-avatar-initial{line-height:1;}
 
@@ -1023,24 +1023,24 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    in MD6 so the bottom corners are free for fire/poop vote badges.
    Default is 1 so the DOM is skipped entirely; only renders when the
    template sees > 1. */
-.hex-collab-badge{position:absolute;top:18%;left:12%;display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 7px;border-radius:12px;z-index:3;pointer-events:none;}
+.hex-collab-badge{position:absolute;top:10%;left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 7px;border-radius:12px;z-index:3;pointer-events:none;}
 .hex-collab-badge svg{width:10px;height:10px;}
 
 /* Fire + poop vote badges — bottom corners of the hex. Positioned at
    bottom:22% (where the hex clip is still reasonably wide) so they
    sit above the title without getting clipped by the rounded bottom
    point. Only rendered when count > 0. */
-.hex-vote{position:absolute;bottom:18%;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 7px;border-radius:12px;z-index:3;pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
-.hex-vote-fire{left:12%;}
-.hex-vote-poop{right:12%;}
-.hex-vote-emoji{font-size:22px;line-height:1;}
+.hex-vote{position:absolute;bottom:26%;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:4px 10px 4px 8px;border-radius:12px;z-index:3;pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
+.hex-vote-fire{left:18%;transform:translate(-50%,50%);}
+.hex-vote-poop{right:18%;transform:translate(50%,50%);}
+.hex-vote-emoji{font-size:32px;line-height:1;}
 
 /* Status badge moved to top-right so it never conflicts with the
    top-center creator avatar. The .hex-status wrapper is still absolute;
    only the position offsets changed. Live is a tiny dot, early/placeholder
    are short pills — both fit inside the narrowing upper quadrant at this
    offset across every tile size we use. */
-.hex-status{position:absolute;top:14%;right:24%;z-index:2;pointer-events:none;display:flex;align-items:center;justify-content:center;}
+.hex-status{position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:2;pointer-events:none;display:flex;align-items:center;justify-content:center;}
 .hex-status[data-status="live"]{width:8px;height:8px;border-radius:50%;background:var(--clr);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 6px color-mix(in srgb,var(--clr) 60%,transparent);}
 .hex-status[data-status="early"]{padding:2px 6px;border-radius:10px;background:rgba(232,133,58,.88);color:#fff;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
 .hex-status[data-status="placeholder"]{padding:2px 6px;border-radius:10px;background:rgba(130,132,143,.7);color:#ddd;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
