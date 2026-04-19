@@ -1597,13 +1597,13 @@ function _buildArenaCollision(){
   }
 
   for(let i=0;i<6;i++){
-    const angle=Math.PI/3*i;
-    const mx=Math.cos(angle)*A.MID_R, mz=Math.sin(angle)*A.MID_R;
+    const _mv=_hexVertex(i,A.MID_R);
+    const mx=_mv.x, mz=_mv.z;
     _addCol(mx,mz,5,5,2.5);
   }
 
-  [{x: A.TOWER_Z, z:0},{x:-A.TOWER_Z, z:0}].forEach((t)=>{
-    _addCol(t.x, 0, A.TOWER_W, A.TOWER_W, A.TOWER_H);
+  [{x:0, z:A.TOWER_Z},{x:0, z:-A.TOWER_Z}].forEach((t)=>{
+    _addCol(t.x, t.z, A.TOWER_W, A.TOWER_W, A.TOWER_H);
   });
 
   const spot=new B.SpotLight('spot', new B.Vector3(0,35,0), new B.Vector3(0,-1,0), Math.PI/4, 8, _scene);
@@ -1640,9 +1640,9 @@ function _buildArenaProc(){
 
   // ── PERIMETER WALL — 6 unbroken panels ──
   for(let i=0;i<6;i++){
-    const a1=Math.PI/3*i, a2=Math.PI/3*(i+1);
-    const x1=Math.cos(a1)*A.HEX_R, z1=Math.sin(a1)*A.HEX_R;
-    const x2=Math.cos(a2)*A.HEX_R, z2=Math.sin(a2)*A.HEX_R;
+    const v1=_hexVertex(i,A.HEX_R), v2=_hexVertex(i+1,A.HEX_R);
+    const x1=v1.x, z1=v1.z;
+    const x2=v2.x, z2=v2.z;
     const mx=(x1+x2)/2, mz=(z1+z2)/2;
     const dx=x2-x1, dz=z2-z1;
     const segLen=Math.sqrt(dx*dx+dz*dz);
@@ -1664,8 +1664,8 @@ function _buildArenaProc(){
     }
   }
   for(let i=0;i<6;i++){
-    const a=Math.PI/3*i;
-    const vx=Math.cos(a)*A.HEX_R, vz=Math.sin(a)*A.HEX_R;
+    const _v=_hexVertex(i,A.HEX_R);
+    const vx=_v.x, vz=_v.z;
     const pil=B.MeshBuilder.CreateCylinder('perim_vpil_'+i,{height:A.WALL_H+1,diameter:2.4,tessellation:6},_scene);
     pil.position.set(vx,(A.WALL_H+1)/2,vz);pil.material=MWall;
     const cap=B.MeshBuilder.CreateSphere('perim_vcap_'+i,{diameter:1.8,segments:6},_scene);
@@ -1677,9 +1677,9 @@ function _buildArenaProc(){
   // ── SHORT RADIAL FENCES — skip i=0 and i=3 (tower axes) ──
   for(let i=0;i<6;i++){
     if(i===0||i===3) continue;
-    const a=Math.PI/3*i;
-    const vx=Math.cos(a)*A.HEX_R, vz=Math.sin(a)*A.HEX_R;
-    const innerX=Math.cos(a)*A.FENCE_INNER, innerZ=Math.sin(a)*A.FENCE_INNER;
+    const vOut=_hexVertex(i,A.HEX_R), vIn=_hexVertex(i,A.FENCE_INNER);
+    const vx=vOut.x, vz=vOut.z;
+    const innerX=vIn.x, innerZ=vIn.z;
     const fdx=innerX-vx, fdz=innerZ-vz;
     const fenceLen=Math.sqrt(fdx*fdx+fdz*fdz);
     const fAngle=Math.atan2(fdx,fdz);
@@ -1735,9 +1735,8 @@ function _buildArenaProc(){
 
   // ── 6 ZONE STRUCTURES ──
   for(let i=0;i<6;i++){
-    const angle=Math.PI/3*i;
-    const cx=Math.cos(angle)*A.HEX_R*A.ZONE_R_MULT;
-    const cz=Math.sin(angle)*A.HEX_R*A.ZONE_R_MULT;
+    const _zv=_hexVertex(i,A.HEX_R*A.ZONE_R_MULT);
+    const cx=_zv.x, cz=_zv.z;
 
     if(i===0){
       box('zt0_tL',4,9,4,cx-8,cz,MD);box('zt0_tR',4,9,4,cx+8,cz,MD);
@@ -1791,8 +1790,8 @@ function _buildArenaProc(){
 
   // ── MID-RING COVER ──
   for(let i=0;i<6;i++){
-    const angle=Math.PI/3*i;
-    const mx=Math.cos(angle)*40,mz=Math.sin(angle)*40;
+    const _mv=_hexVertex(i,A.MID_R);
+    const mx=_mv.x, mz=_mv.z;
     box('mid_'+i,5,2.5,5,mx,mz,MHex);
     strip('mid_g_'+i,5,0.08,5,mx,2.56,mz);
   }

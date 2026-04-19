@@ -2923,10 +2923,11 @@ function paintLogo(top, bot, mode) {
     if (nodeEl) nodeEl.style.color = botAdj;
     if (blastEl) blastEl.style.color = botAdj;
   } else {
-    if (leftHalf) leftHalf.setAttribute('fill', topAdj);
-    if (nodeEl) nodeEl.style.color = topAdj;
-    if (rightHalf) rightHalf.setAttribute('fill', botAdj);
-    if (blastEl) blastEl.style.color = botAdj;
+    const sameColor = !!(top && bot) && top.toLowerCase() === bot.toLowerCase();
+    if (leftHalf) { leftHalf.setAttribute('fill', topAdj); leftHalf.setAttribute('fill-opacity', '1'); }
+    if (nodeEl) { nodeEl.style.color = topAdj; nodeEl.style.opacity = '1'; }
+    if (rightHalf) { rightHalf.setAttribute('fill', botAdj); rightHalf.setAttribute('fill-opacity', sameColor ? '0.75' : '1'); }
+    if (blastEl) { blastEl.style.color = botAdj; blastEl.style.opacity = sameColor ? '0.75' : '1'; }
     const circL = document.getElementById('nodeblast_circle_left');
     const circR = document.getElementById('nodeblast_circle_right');
     if (circL) circL.setAttribute('fill', 'transparent');
