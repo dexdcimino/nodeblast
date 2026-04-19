@@ -159,6 +159,7 @@ let _myTrackedCatIds = new Set();
 let _myTrackedAlchUids = new Set();
 let _myTrackedUnsub = null;
 let _lastPinnedRenderKey = null; // MD19: skip pinned re-render when unchanged
+let _lastProfileViewKey = null; // MD20: skip entire profile re-render when unchanged
 
 function profileCacheKey(username, hex) {
   const lower = (username || '').toLowerCase();
@@ -221,6 +222,7 @@ function hideAllViews() {
   if (colsEl) colsEl.style.display = 'none';
   if (honeyEl) { honeyEl.style.display = ''; honeyEl.innerHTML = ''; }
   _currentProfileView = null;
+  _lastProfileViewKey = null;
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
   grid.classList.remove('with-filter', 'feed-mode');
@@ -959,6 +961,16 @@ function _buildSectionTitle(titleText, searchPlaceholder, parentCol) {
 }
 
 function _renderProfileView(user, catalysts, isOwn) {
+  // MD20: short-circuit if nothing visible has changed. Prevents layout
+  // reflow (and pinned-column scrollbar flash) on Firestore snapshot
+  // bounces after a reorder write.
+  const viewKey = JSON.stringify({
+    uid: user?.uid, isOwn,
+    cats: catalysts.map((c) => `${c.id}:${c.sortOrder ?? 0}:${c.title ?? ''}:${c.thumbURL ?? ''}`).join('|'),
+  });
+  if (viewKey === _lastProfileViewKey) return;
+  _lastProfileViewKey = viewKey;
+
   // MD19: invalidate pinned memo when switching profiles
   if (_currentProfileView?.user?.uid !== user?.uid) _lastPinnedRenderKey = null;
   console.log('[profile-view] rendering', { user: user?.displayName, isOwn, catalystsCount: catalysts?.length });
@@ -1214,6 +1226,7 @@ function _startMyTrackedSub() {
     _myTrackedCatIds = new Set(_myTrackedCatalysts.map((c) => c.catId));
     _myTrackedAlchUids = new Set(_myTrackedAlchemists.map((a) => a.uid));
     _lastPinnedRenderKey = null; // MD19: invalidate so next render rebuilds
+    _lastProfileViewKey = null; // MD20: tracked changes affect render output
 
     // MD#10: seed defaults for new accounts — auto-follow nodeblast.dev
     // and auto-pin the three original games on first visit.
@@ -1268,6 +1281,7 @@ function _stopMyTrackedSub() {
   _myTrackedCatIds = new Set();
   _myTrackedAlchUids = new Set();
   _lastPinnedRenderKey = null;
+  _lastProfileViewKey = null;
 }
 
 // Handler passed to community tiles so the pin button toggles the
