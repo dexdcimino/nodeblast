@@ -1616,13 +1616,13 @@ const COMMUNITY_TILE_W = COMMUNITY_TILE_BASE_W;
 const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_BASE_W * 1.1547);
 function getCommunityTileSize(count, containerWidth) {
   const availW = containerWidth || 500;
-  const gap = 12;
+  const gap = 6;
   let perRow;
   if (count <= 4) perRow = count;
   else if (count <= 6) perRow = count;
   else if (count <= 11) perRow = 6;
   else perRow = 6;
-  let w = Math.floor((availW - gap * Math.max(perRow - 1, 0)) / Math.max(perRow, 1));
+  let w = Math.floor((availW - gap * (perRow + 1)) / Math.max(perRow, 1));
   w = Math.min(w, 200);
   w = Math.max(w, 60);
   const rows = Math.ceil(count / perRow);

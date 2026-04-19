@@ -911,18 +911,23 @@ function _buildGunPickups() {
     _currentGunId: 'rocket',
   });
 
-  // Sniper pickup on sky bridge center
-  const sniperY = 30.4; // bridge surface
+  // Sniper pickup on sky bridge center — at eye level
+  const BRIDGE_DECK_TOP = 28.2;
+  const EYE_ON_BRIDGE   = BRIDGE_DECK_TOP + 1.8;
+  const sniperModelY    = EYE_ON_BRIDGE - 0.15;
+  const sniperGlowY     = BRIDGE_DECK_TOP + 0.15;
   const sniperModel = _buildPickupGunModel(5);
-  sniperModel.position.set(0, sniperY + 0.6, 0);
+  sniperModel.position.set(0, sniperModelY, 0);
   const sniperGlow = B.MeshBuilder.CreateTorus('sniper_glow', { diameter: 2, thickness: 0.1, tessellation: 6 }, _scene);
-  sniperGlow.position.set(0, sniperY + 0.1, 0); sniperGlow.material = new B.StandardMaterial('sniper_glow_m', _scene);
-  sniperGlow.material.emissiveColor = new B.Color3(0.8, 0.2, 0.9); sniperGlow.material.disableLighting = true;
-  const sniperPt = new B.PointLight('sniper_pickup_pt', new B.Vector3(0, sniperY + 1.5, 0), _scene);
+  sniperGlow.position.set(0, sniperGlowY, 0);
+  sniperGlow.material = new B.StandardMaterial('sniper_glow_m', _scene);
+  sniperGlow.material.emissiveColor = new B.Color3(0.8, 0.2, 0.9);
+  sniperGlow.material.disableLighting = true;
+  const sniperPt = new B.PointLight('sniper_pickup_pt', new B.Vector3(0, sniperModelY + 0.8, 0), _scene);
   sniperPt.diffuse = new B.Color3(0.8, 0.2, 0.9); sniperPt.intensity = 1; sniperPt.range = 6;
   _gunPickups.push({
     tableTop: null, glowRing: sniperGlow, pt: sniperPt, gunModel: sniperModel,
-    pos: new B.Vector3(0, sniperY + 0.6, 0),
+    pos: new B.Vector3(0, sniperModelY, 0),
     slot: 5,
     _currentGunId: 'sniper',
   });
