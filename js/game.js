@@ -298,7 +298,7 @@ function _spawnRocketExplosion(pos, color) {
     }, _scene);
     ring.position.copyFrom(pos);
     ring.position.y = 0.3 + w * 0.4;
-    ring.rotation.x = Math.PI / 2;
+    ring.billboardMode = B.TransformNode.BILLBOARDMODE_ALL;
     const rm = new B.StandardMaterial('rk_rm_' + Date.now() + '_' + w, _scene);
     rm.emissiveColor = new B.Color3(c.r, c.g, c.b);
     rm.disableLighting = true;
