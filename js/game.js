@@ -1545,13 +1545,19 @@ function _createSkybox(){
 }
 
 const ARENA = {
-  HEX_R:110, WALL_H:50, WALL_THICK:1.2, FLOOR_R:115,
+  HEX_R:110, HEX_ROT:Math.PI/2, WALL_H:50, WALL_THICK:1.2, FLOOR_R:115,
   FENCE_INNER:15, FENCE_H:1.5, FENCE_THICK:0.4, FENCE_TOP_H:0.18, FENCE_DOOR_W:3.2,
   CTR_R:11, CTR_H:1.6, CTR_PILLAR_H:8, CTR_TOP_R:3,
   ZONE_R_MULT:0.45, MID_R:40,
-  TOWER_X:75, TOWER_W:7, TOWER_H:28, TOWER_PLAT_W:11, LADDER_CUT:2.5,
+  TOWER_Z:75, TOWER_W:7, TOWER_H:28, TOWER_PLAT_W:11, LADDER_CUT:2.5,
   BRIDGE_D:3.5,
 };
+
+function _hexVertex(i, r) {
+  const a = Math.PI/3 * i + ARENA.HEX_ROT;
+  return { x: Math.cos(a) * r, z: Math.sin(a) * r, angle: a };
+}
+const CORNER_FOR_VERTEX = [6, 1, 2, 3, 4, 5];
 
 function _buildArenaCollision(){
   const B=window.BABYLON;
@@ -1563,9 +1569,8 @@ function _buildArenaCollision(){
   _addCol(0, 0, A.CTR_TOP_R*2, A.CTR_TOP_R*2, TOP_Y + 0.6, TOP_Y - 0.05);
 
   for(let i=0;i<6;i++){
-    const angle = Math.PI/3 * i;
-    const cx = Math.cos(angle) * A.HEX_R * A.ZONE_R_MULT;
-    const cz = Math.sin(angle) * A.HEX_R * A.ZONE_R_MULT;
+    const _zv = _hexVertex(i, A.HEX_R * A.ZONE_R_MULT);
+    const cx = _zv.x, cz = _zv.z;
     if(i===0){
       _addCol(cx-8,cz,4,4,9); _addCol(cx+8,cz,4,4,9);
       _addCol(cx,cz,18,4,9.5,8.8); _addCol(cx,cz,20,8,0.6);
@@ -1597,7 +1602,7 @@ function _buildArenaCollision(){
     _addCol(mx,mz,5,5,2.5);
   }
 
-  [{x: A.TOWER_X, z:0},{x:-A.TOWER_X, z:0}].forEach((t)=>{
+  [{x: A.TOWER_Z, z:0},{x:-A.TOWER_Z, z:0}].forEach((t)=>{
     _addCol(t.x, 0, A.TOWER_W, A.TOWER_W, A.TOWER_H);
   });
 
@@ -1793,7 +1798,7 @@ function _buildArenaProc(){
   }
 
   // ── SPAWN PADS ──
-  [{x:A.TOWER_X+15,z:0},{x:-(A.TOWER_X+15),z:0}].forEach((s,i)=>{
+  [{x:A.TOWER_Z+15,z:0},{x:-(A.TOWER_Z+15),z:0}].forEach((s,i)=>{
     const pad=B.MeshBuilder.CreateDisc('spawn_'+i,{radius:3,tessellation:6},_scene);
     pad.rotation.x=Math.PI/2;pad.position.set(s.x,0.03,s.z);pad.material=MGD;
     const ring=B.MeshBuilder.CreateTorus('spawn_ring_'+i,{diameter:7,thickness:0.1,tessellation:6},_scene);
@@ -1801,7 +1806,7 @@ function _buildArenaProc(){
   });
 
   // ── TWIN TOWERS ──
-  [{x:A.TOWER_X,z:0},{x:-A.TOWER_X,z:0}].forEach((t,ti)=>{
+  [{x:A.TOWER_Z,z:0},{x:-A.TOWER_Z,z:0}].forEach((t,ti)=>{
     box('tw_block_'+ti,A.TOWER_W,A.TOWER_H,A.TOWER_W,t.x,0,MTw);
     const ladderSide=t.x>0?1:-1;
     const ladderX=t.x+ladderSide*(A.TOWER_W/2+0.15);
@@ -1850,7 +1855,7 @@ function _buildArenaProc(){
 
   // ── SKY BRIDGE ──
   const BRIDGE_Y=A.TOWER_H;
-  const bridgeLen=A.TOWER_X*2-A.TOWER_W;
+  const bridgeLen=A.TOWER_Z*2-A.TOWER_W;
   const bridgeMesh=B.MeshBuilder.CreateBox('sky_bridge',{width:bridgeLen,height:0.4,depth:A.BRIDGE_D},_scene);
   bridgeMesh.position.set(0,BRIDGE_Y,0);bridgeMesh.material=MC;
   _addCol(0,0,bridgeLen,A.BRIDGE_D,BRIDGE_Y+0.2,BRIDGE_Y-0.2);
