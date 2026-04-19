@@ -870,7 +870,8 @@ function _buildPickupGunModel(gunIndex) {
 function _buildGunPickups() {
   const B = window.BABYLON;
   const PICKUP_POS = { x: 0, z: 0 };
-  const TABLE_BASE_Y = 8.3;
+  const CTR_TOP_SURFACE_Y = ARENA.CTR_H + ARENA.CTR_PILLAR_H + 0.6;
+  const TABLE_BASE_Y = CTR_TOP_SURFACE_Y;
   const TABLE_W = 1.2, TABLE_D = 1.2, TABLE_H = 0.8;
   const LEG_W = 0.12, LEG_D = 0.12;
   const gc = GUNS[4].color;
@@ -1526,7 +1527,7 @@ function _createSkybox(){
 
 const ARENA = {
   HEX_R:110, WALL_H:50, WALL_THICK:1.2, FLOOR_R:115,
-  FENCE_INNER:15, FENCE_H:3.2, FENCE_THICK:0.4, FENCE_DOOR_W:3.2,
+  FENCE_INNER:15, FENCE_H:1.5, FENCE_THICK:0.4, FENCE_TOP_H:0.18, FENCE_DOOR_W:3.2,
   CTR_R:11, CTR_H:1.6, CTR_PILLAR_H:8, CTR_TOP_R:3,
   ZONE_R_MULT:0.45, MID_R:40,
   TOWER_X:75, TOWER_W:7, TOWER_H:28, TOWER_PLAT_W:11, LADDER_CUT:2.5,
@@ -1613,7 +1614,7 @@ function _buildArenaProc(){
   hexInner.rotation.x=Math.PI/2;hexInner.rotation.y=0;
   hexInner.position.y=0.02;hexInner.material=mkMat('hex_inner',0.07,0.08,0.10);
 
-  // ── PERIMETER WALL ──
+  // ── PERIMETER WALL — 6 unbroken panels ──
   for(let i=0;i<6;i++){
     const a1=Math.PI/3*i, a2=Math.PI/3*(i+1);
     const x1=Math.cos(a1)*A.HEX_R, z1=Math.sin(a1)*A.HEX_R;
@@ -1621,97 +1622,90 @@ function _buildArenaProc(){
     const mx=(x1+x2)/2, mz=(z1+z2)/2;
     const dx=x2-x1, dz=z2-z1;
     const segLen=Math.sqrt(dx*dx+dz*dz);
-    const angle=Math.atan2(dx,dz);
+    const wAngle=Math.atan2(dx,dz);
     const wall=B.MeshBuilder.CreateBox('perim_wall_'+i,{width:segLen,height:A.WALL_H,depth:A.WALL_THICK},_scene);
-    wall.position.set(mx,A.WALL_H/2,mz);wall.rotation.y=angle;wall.material=MWall;
-    const topGlow=B.MeshBuilder.CreateBox('perim_top_'+i,{width:segLen,height:0.12,depth:A.WALL_THICK+0.05},_scene);
-    topGlow.position.set(mx,A.WALL_H+0.06,mz);topGlow.rotation.y=angle;topGlow.material=MWallTop;
-    const botGlow=B.MeshBuilder.CreateBox('perim_bot_'+i,{width:segLen,height:0.10,depth:A.WALL_THICK+0.05},_scene);
-    botGlow.position.set(mx,0.3,mz);botGlow.rotation.y=angle;botGlow.material=MWallTop;
-    const SEGS=14, segStep=segLen/SEGS, wallDirX=dx/segLen, wallDirZ=dz/segLen;
+    wall.position.set(mx,A.WALL_H/2,mz);wall.rotation.y=wAngle;wall.material=MWall;
+    const topGlow=B.MeshBuilder.CreateBox('perim_top_'+i,{width:segLen,height:0.14,depth:A.WALL_THICK+0.06},_scene);
+    topGlow.position.set(mx,A.WALL_H+0.07,mz);topGlow.rotation.y=wAngle;topGlow.material=MWallTop;
+    const botGlow=B.MeshBuilder.CreateBox('perim_bot_'+i,{width:segLen,height:0.12,depth:A.WALL_THICK+0.06},_scene);
+    botGlow.position.set(mx,0.35,mz);botGlow.rotation.y=wAngle;botGlow.material=MWallTop;
+    const SEGS=14, segStep=segLen/SEGS, dirX=dx/segLen, dirZ=dz/segLen;
     for(let s=0;s<SEGS;s++){
       const t=(s+0.5)/SEGS;
       const sx=x1+(x2-x1)*t, sz=z1+(z2-z1)*t;
-      const halfLen=segStep/2+0.3, thickness=A.WALL_THICK/2+0.3;
-      const boxW=Math.abs(wallDirX)*halfLen*2+Math.abs(wallDirZ)*thickness*2;
-      const boxD=Math.abs(wallDirZ)*halfLen*2+Math.abs(wallDirX)*thickness*2;
+      const halfLen=segStep/2+0.4, thick=A.WALL_THICK/2+0.4;
+      const boxW=Math.abs(dirX)*halfLen*2+Math.abs(dirZ)*thick*2;
+      const boxD=Math.abs(dirZ)*halfLen*2+Math.abs(dirX)*thick*2;
       _addCol(sx,sz,boxW,boxD,A.WALL_H);
     }
   }
   for(let i=0;i<6;i++){
     const a=Math.PI/3*i;
     const vx=Math.cos(a)*A.HEX_R, vz=Math.sin(a)*A.HEX_R;
-    const pil=B.MeshBuilder.CreateCylinder('perim_vpil_'+i,{height:A.WALL_H+1,diameter:2.2,tessellation:6},_scene);
+    const pil=B.MeshBuilder.CreateCylinder('perim_vpil_'+i,{height:A.WALL_H+1,diameter:2.4,tessellation:6},_scene);
     pil.position.set(vx,(A.WALL_H+1)/2,vz);pil.material=MWall;
-    const cap=B.MeshBuilder.CreateSphere('perim_vcap_'+i,{diameter:1.6,segments:6},_scene);
+    const cap=B.MeshBuilder.CreateSphere('perim_vcap_'+i,{diameter:1.8,segments:6},_scene);
     cap.position.set(vx,A.WALL_H+1,vz);cap.material=MWallTop;
     const vLight=new B.PointLight('vpil_light_'+i,new B.Vector3(vx,A.WALL_H+2,vz),_scene);
     vLight.diffuse=new B.Color3(0.1,1,0.5);vLight.intensity=1.2;vLight.range=18;
   }
 
-  // ── RADIAL FENCES ──
+  // ── SHORT RADIAL FENCES — skip i=0 and i=3 (tower axes) ──
   for(let i=0;i<6;i++){
+    if(i===0||i===3) continue;
     const a=Math.PI/3*i;
     const vx=Math.cos(a)*A.HEX_R, vz=Math.sin(a)*A.HEX_R;
     const innerX=Math.cos(a)*A.FENCE_INNER, innerZ=Math.sin(a)*A.FENCE_INNER;
     const fdx=innerX-vx, fdz=innerZ-vz;
     const fenceLen=Math.sqrt(fdx*fdx+fdz*fdz);
-    const fenceAngle=Math.atan2(fdx,fdz);
+    const fAngle=Math.atan2(fdx,fdz);
     const halfBeforeDoor=(fenceLen-A.FENCE_DOOR_W)/2;
     if(halfBeforeDoor<=0.5) continue;
     const ux=fdx/fenceLen, uz=fdz/fenceLen;
-    // Segment A (outer half)
     const segA_mx=vx+ux*(halfBeforeDoor/2), segA_mz=vz+uz*(halfBeforeDoor/2);
     const segA=B.MeshBuilder.CreateBox('fence_'+i+'_A',{width:halfBeforeDoor,height:A.FENCE_H,depth:A.FENCE_THICK},_scene);
-    segA.position.set(segA_mx,A.FENCE_H/2,segA_mz);segA.rotation.y=fenceAngle;segA.material=MFence;
-    const segA_top=B.MeshBuilder.CreateBox('fence_'+i+'_A_top',{width:halfBeforeDoor,height:0.10,depth:A.FENCE_THICK+0.05},_scene);
-    segA_top.position.set(segA_mx,A.FENCE_H+0.05,segA_mz);segA_top.rotation.y=fenceAngle;segA_top.material=MFenceTop;
-    // Segment B (inner half)
+    segA.position.set(segA_mx,A.FENCE_H/2,segA_mz);segA.rotation.y=fAngle;segA.material=MFence;
+    const segA_top=B.MeshBuilder.CreateBox('fence_'+i+'_A_top',{width:halfBeforeDoor,height:A.FENCE_TOP_H,depth:A.FENCE_THICK+0.05},_scene);
+    segA_top.position.set(segA_mx,A.FENCE_H+A.FENCE_TOP_H/2,segA_mz);segA_top.rotation.y=fAngle;segA_top.material=MFenceTop;
     const segB_cd=halfBeforeDoor+A.FENCE_DOOR_W+(halfBeforeDoor/2);
     const segB_mx=vx+ux*segB_cd, segB_mz=vz+uz*segB_cd;
     const segB=B.MeshBuilder.CreateBox('fence_'+i+'_B',{width:halfBeforeDoor,height:A.FENCE_H,depth:A.FENCE_THICK},_scene);
-    segB.position.set(segB_mx,A.FENCE_H/2,segB_mz);segB.rotation.y=fenceAngle;segB.material=MFence;
-    const segB_top=B.MeshBuilder.CreateBox('fence_'+i+'_B_top',{width:halfBeforeDoor,height:0.10,depth:A.FENCE_THICK+0.05},_scene);
-    segB_top.position.set(segB_mx,A.FENCE_H+0.05,segB_mz);segB_top.rotation.y=fenceAngle;segB_top.material=MFenceTop;
-    // Doorway posts + lintel
+    segB.position.set(segB_mx,A.FENCE_H/2,segB_mz);segB.rotation.y=fAngle;segB.material=MFence;
+    const segB_top=B.MeshBuilder.CreateBox('fence_'+i+'_B_top',{width:halfBeforeDoor,height:A.FENCE_TOP_H,depth:A.FENCE_THICK+0.05},_scene);
+    segB_top.position.set(segB_mx,A.FENCE_H+A.FENCE_TOP_H/2,segB_mz);segB_top.rotation.y=fAngle;segB_top.material=MFenceTop;
     const doorStart_d=halfBeforeDoor, doorEnd_d=halfBeforeDoor+A.FENCE_DOOR_W;
     const doorL_x=vx+ux*doorStart_d, doorL_z=vz+uz*doorStart_d;
     const doorR_x=vx+ux*doorEnd_d, doorR_z=vz+uz*doorEnd_d;
-    const doorL=B.MeshBuilder.CreateBox('fence_'+i+'_doorL',{width:A.FENCE_THICK,height:A.FENCE_H+0.4,depth:A.FENCE_THICK},_scene);
-    doorL.position.set(doorL_x,(A.FENCE_H+0.4)/2,doorL_z);doorL.material=MFence;
-    const doorR=B.MeshBuilder.CreateBox('fence_'+i+'_doorR',{width:A.FENCE_THICK,height:A.FENCE_H+0.4,depth:A.FENCE_THICK},_scene);
-    doorR.position.set(doorR_x,(A.FENCE_H+0.4)/2,doorR_z);doorR.material=MFence;
-    const lint_mx=vx+ux*(halfBeforeDoor+A.FENCE_DOOR_W/2), lint_mz=vz+uz*(halfBeforeDoor+A.FENCE_DOOR_W/2);
-    const lint=B.MeshBuilder.CreateBox('fence_'+i+'_lint',{width:A.FENCE_DOOR_W,height:0.3,depth:A.FENCE_THICK},_scene);
-    lint.position.set(lint_mx,A.FENCE_H+0.1,lint_mz);lint.rotation.y=fenceAngle;lint.material=MFenceTop;
-    // Fence collision (segments A + B)
-    const dirX=fdx/fenceLen, dirZ=fdz/fenceLen;
-    {const SEGS=Math.max(2,Math.floor(halfBeforeDoor/2.5));for(let s=0;s<SEGS;s++){const t=(s+0.5)/SEGS;const seg_dist=t*halfBeforeDoor;const sx=vx+ux*seg_dist,sz=vz+uz*seg_dist;const segPart=halfBeforeDoor/SEGS;const boxW=Math.abs(dirX)*segPart+Math.abs(dirZ)*A.FENCE_THICK+0.15;const boxD=Math.abs(dirZ)*segPart+Math.abs(dirX)*A.FENCE_THICK+0.15;_addCol(sx,sz,boxW,boxD,A.FENCE_H);}}
-    {const SEGS=Math.max(2,Math.floor(halfBeforeDoor/2.5));for(let s=0;s<SEGS;s++){const t=(s+0.5)/SEGS;const seg_dist=halfBeforeDoor+A.FENCE_DOOR_W+t*halfBeforeDoor;const sx=vx+ux*seg_dist,sz=vz+uz*seg_dist;const segPart=halfBeforeDoor/SEGS;const boxW=Math.abs(dirX)*segPart+Math.abs(dirZ)*A.FENCE_THICK+0.15;const boxD=Math.abs(dirZ)*segPart+Math.abs(dirX)*A.FENCE_THICK+0.15;_addCol(sx,sz,boxW,boxD,A.FENCE_H);}}
-    _addCol(doorL_x,doorL_z,A.FENCE_THICK+0.2,A.FENCE_THICK+0.2,A.FENCE_H+0.4);
-    _addCol(doorR_x,doorR_z,A.FENCE_THICK+0.2,A.FENCE_THICK+0.2,A.FENCE_H+0.4);
+    const POST_H=A.FENCE_H+0.6;
+    const doorL=B.MeshBuilder.CreateBox('fence_'+i+'_doorL',{width:A.FENCE_THICK,height:POST_H,depth:A.FENCE_THICK},_scene);
+    doorL.position.set(doorL_x,POST_H/2,doorL_z);doorL.material=MFence;
+    const doorR=B.MeshBuilder.CreateBox('fence_'+i+'_doorR',{width:A.FENCE_THICK,height:POST_H,depth:A.FENCE_THICK},_scene);
+    doorR.position.set(doorR_x,POST_H/2,doorR_z);doorR.material=MFence;
+    [{mid_dist:halfBeforeDoor/2,len:halfBeforeDoor},{mid_dist:segB_cd,len:halfBeforeDoor}].forEach(seg=>{
+      const SEGS_F=Math.max(2,Math.floor(seg.len/2.5));
+      const partLen=seg.len/SEGS_F;
+      for(let s=0;s<SEGS_F;s++){
+        const t=(s+0.5)/SEGS_F;
+        const seg_dist=seg.mid_dist-seg.len/2+t*seg.len;
+        const sx=vx+ux*seg_dist, sz=vz+uz*seg_dist;
+        const boxW=Math.abs(ux)*partLen+Math.abs(uz)*A.FENCE_THICK+0.15;
+        const boxD=Math.abs(uz)*partLen+Math.abs(ux)*A.FENCE_THICK+0.15;
+        _addCol(sx,sz,boxW,boxD,A.FENCE_H);
+      }
+    });
+    _addCol(doorL_x,doorL_z,A.FENCE_THICK+0.2,A.FENCE_THICK+0.2,POST_H);
+    _addCol(doorR_x,doorR_z,A.FENCE_THICK+0.2,A.FENCE_THICK+0.2,POST_H);
   }
 
-  // ── CENTER PLATFORM ──
+  // ── CENTER MONUMENT ──
   const ctrHex=B.MeshBuilder.CreateCylinder('ctr_hex',{height:A.CTR_H,diameter:A.CTR_R*2,tessellation:6},_scene);
   ctrHex.position.y=A.CTR_H/2;ctrHex.material=MD;
-
   const ctrGlow=B.MeshBuilder.CreateTorus('ctr_glow',{diameter:A.CTR_R*2,thickness:0.15,tessellation:6},_scene);
   ctrGlow.position.y=A.CTR_H+0.05;ctrGlow.material=MG;
-
-  for(let i=0;i<6;i++){
-    const a=Math.PI/3*i+Math.PI/6;
-    const rx=Math.cos(a)*(A.CTR_R*0.7), rz=Math.sin(a)*(A.CTR_R*0.7);
-    const marker=B.MeshBuilder.CreateBox('ctr_marker_'+i,{width:0.6,height:0.15,depth:0.6},_scene);
-    marker.position.set(rx,A.CTR_H+0.08,rz);marker.material=MFenceTop;
-  }
-
   const ctrPillar=B.MeshBuilder.CreateCylinder('ctr_pillar',{height:A.CTR_PILLAR_H,diameter:3,tessellation:6},_scene);
   ctrPillar.position.y=A.CTR_H+A.CTR_PILLAR_H/2;ctrPillar.material=MC;
-
   const ctrTop=B.MeshBuilder.CreateCylinder('ctr_top',{height:0.6,diameter:A.CTR_TOP_R*2,tessellation:6},_scene);
   ctrTop.position.y=A.CTR_H+A.CTR_PILLAR_H+0.3;ctrTop.material=MHex;
-
   const ctrLight=new B.PointLight('ctr_light',new B.Vector3(0,A.CTR_H+A.CTR_PILLAR_H+2,0),_scene);
   ctrLight.diffuse=new B.Color3(0.1,1,0.5);ctrLight.intensity=2.2;ctrLight.range=28;
 
