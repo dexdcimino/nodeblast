@@ -425,14 +425,9 @@ export async function sendFriendRequest(targetUid) {
     const alreadySnap = await getDoc(doc(db, 'users', State.user.uid, 'friends', targetUid));
     if (alreadySnap.exists()) { toast('Already friends'); return false; }
 
-    // MD32: check if a request is already pending before sending a
-    // new one. The doc id is the sender's uid so the check is O(1).
-    const pendingSnap = await getDoc(doc(db, 'users', targetUid, 'friend_requests', State.user.uid));
-    if (pendingSnap.exists() && pendingSnap.data()?.status === 'pending') {
-      toast('Request already sent');
-      return false;
-    }
-
+    // MD26: removed the pre-check read on target's friend_requests —
+    // Firestore rules don't allow the sender to read the target's inbox.
+    // Doc ID is sender's uid, so duplicate sends are idempotent overwrites.
     const me = _mySelf();
     await setDoc(doc(db, 'users', targetUid, 'friend_requests', State.user.uid), {
       fromUid: me.uid,
