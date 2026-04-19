@@ -1030,11 +1030,11 @@ function _renderProfileView(user, catalysts, isOwn) {
         const colW = (pinnedCol.clientWidth || 400) - colPad;
         const count = _myTrackedCatalysts.length;
         const tileGap = 16;
-        const maxPerRow = Math.max(1, Math.floor((colW + tileGap) / (80 + tileGap))); // min tile = 80
+        const maxPerRow = Math.max(1, Math.floor((colW + tileGap) / (48 + tileGap))); // min tile = 48
         const perRow = Math.min(count, maxPerRow);
         let tw = Math.floor((colW - tileGap * (perRow - 1)) / Math.max(perRow, 1));
         tw = Math.min(tw, COMMUNITY_TILE_W);
-        tw = Math.max(tw, 80);
+        tw = Math.max(tw, 48);
         const th = Math.round(tw * 1.1547);
         _myTrackedCatalysts.forEach((pinned) => {
           const tile = createCatalystTileElement(
@@ -1635,7 +1635,7 @@ const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_BASE_W * 1.1547);
 function getCommunityTileSize(count, containerWidth) {
   const availW = containerWidth || 500;
   const gap = 6;
-  const MIN_TILE = 80;
+  const MIN_TILE = 48;
   const MAX_TILE = 200;
   // Determine how many tiles fit per row without going below MIN_TILE.
   // Start with all tiles on one row and reduce perRow until they fit.
@@ -1654,9 +1654,9 @@ function getCommunityTileSize(count, containerWidth) {
   if (totalH > 220 && rows > 1) {
     const newH = Math.floor((220 - gap * (rows - 1)) / (1 + (rows - 1) * 0.75));
     const newW = Math.floor(newH / 1.1547);
-    return { w: Math.max(newW, MIN_TILE), h: newH, perRow, rows, showCount: Math.min(count, perRow * 3) };
+    return { w: Math.max(newW, MIN_TILE), h: newH, perRow, rows, showCount: count };
   }
-  return { w, h, perRow, rows, showCount: Math.min(count, perRow * rows) };
+  return { w, h, perRow, rows, showCount: count };
 }
 
 // MD10: after cards are in the DOM, re-measure each card's available
@@ -1675,11 +1675,11 @@ function _fitCommunityTiles(list) {
     const padR = parseFloat(cardStyle.paddingRight) || 0;
     const availW = card.clientWidth - padL - padR;
     if (availW <= 0) return;
-    // Check if body overflows
-    const bodyW = parseFloat(body.style.width) || body.scrollWidth;
-    if (bodyW <= availW + 2) return; // fits, no action needed
-    // Re-calculate tile size to fit
+    // MD17: always recompute — tiles must grow back after zoom-out
     const tileSize = getCommunityTileSize(tiles.length, availW);
+    const firstTile = tiles[0];
+    const currentW = firstTile ? parseFloat(firstTile.style.width) || 0 : 0;
+    if (Math.abs(currentW - tileSize.w) < 2) return; // already at correct size
     const gap = 6;
     const hW = tileSize.w;
     const hH = tileSize.h;
@@ -3675,25 +3675,31 @@ document.addEventListener('DOMContentLoaded', () => {
   // is a no-op visually.
   requestAnimationFrame(() => paintLogo(_logoTop, _logoBot, _logoMode));
 
+  // MD17: debounce resize/zoom via rAF to avoid stacking renders
+  let _resizeRaf = null;
   window.addEventListener('resize', () => {
-    // On profile routes, re-render the catalysts column; otherwise
-    // re-render the default #honeycomb grid.
-    const onProfile = !!_currentProfileView;
-    renderHexGrid({
-      tiles: _currentTiles,
-      showAdd: _currentShowAdd,
-      container: onProfile ? 'profile-col-catalysts' : null,
-      onTileClick: handleTileClick,
-      onAddClick: _handleAddCatalystClick,
-      onCreatorClick: handleCreatorClick,
-      onReorder: _currentShowAdd ? handleReorder : null,
-      onVoteClick: handleCatalystVote,
-      onPinClick: _currentShowAdd ? null : handlePinToggle,
-      isPinned: _currentShowAdd ? null : (catId) => _myTrackedCatIds.has(catId),
+    if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
+    _resizeRaf = requestAnimationFrame(() => {
+      _resizeRaf = null;
+      // On profile routes, re-render the catalysts column; otherwise
+      // re-render the default #honeycomb grid.
+      const onProfile = !!_currentProfileView;
+      renderHexGrid({
+        tiles: _currentTiles,
+        showAdd: _currentShowAdd,
+        container: onProfile ? 'profile-col-catalysts' : null,
+        onTileClick: handleTileClick,
+        onAddClick: _handleAddCatalystClick,
+        onCreatorClick: handleCreatorClick,
+        onReorder: _currentShowAdd ? handleReorder : null,
+        onVoteClick: handleCatalystVote,
+        onPinClick: _currentShowAdd ? null : handlePinToggle,
+        isPinned: _currentShowAdd ? null : (catId) => _myTrackedCatIds.has(catId),
+      });
+      // MD10: re-fit community tiles on resize
+      const communityList = document.getElementById('community-list');
+      if (communityList) _fitCommunityTiles(communityList);
     });
-    // MD10: re-fit community tiles on resize
-    const communityList = document.getElementById('community-list');
-    if (communityList) _fitCommunityTiles(communityList);
   });
   console.log('[BOOT] 20 - boot complete');
   // Hide loading screen — boot succeeded
