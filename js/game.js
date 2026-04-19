@@ -1523,11 +1523,10 @@ function _buildArenaCollision(){
 
   // Hex boundary walls are added in _buildArenaProc via _addCol
 
-  // Twin tower collision (solid blocks)
+  // Twin tower collision (solid blocks — top platform collision is in _buildArenaProc)
   const TX=75,TW=7,TOWER_H=28;
   [{x:TX,z:0},{x:-TX,z:0}].forEach((t)=>{
     _addCol(t.x,0,TW,TW,TOWER_H);
-    _addCol(t.x,0,TW+4,TW+4,TOWER_H+0.4,TOWER_H-0.1);
   });
 
   // Spotlight
@@ -1720,18 +1719,52 @@ function _buildArenaProc(){
     // Solid block (one big box — NOT hollow)
     box('tw_block_'+ti,TW,TOWER_H,TW,t.x,0,MTw);
 
-    // Top platform (wider, landable)
-    const topPlat=B.MeshBuilder.CreateBox('tw_top_'+ti,{width:TW+4,height:0.4,depth:TW+4},_scene);
-    topPlat.position.set(t.x,TOWER_H+0.2,0);topPlat.material=MC;
-    _addCol(t.x,0,TW+4,TW+4,TOWER_H+0.4,TOWER_H-0.1);
+    // Ladder on OUTER side (away from center)
+    const ladderSide = t.x > 0 ? 1 : -1;
+    const ladderX    = t.x + ladderSide * (TW/2 + 0.15);
+
+    // Top platform with SQUARE CUT where the ladder comes through
+    const PLAT_W  = TW + 4;
+    const CUT_SZ  = 2.5;
+    const platY   = TOWER_H + 0.2;
+    const platH   = 0.4;
+
+    const cutDx = ladderX - t.x;
+    const nearEdge = t.x + ladderSide * PLAT_W/2;
+    const farEdge  = t.x - ladderSide * PLAT_W/2;
+    const cutNear  = ladderX - ladderSide * CUT_SZ/2;
+    const cutFar   = ladderX + ladderSide * CUT_SZ/2;
+
+    // FAR plat: full-width strip opposite the cut
+    const farPlatW = Math.abs(cutNear - farEdge);
+    const farPlatX = (farEdge + cutNear) / 2;
+    const farPlat = B.MeshBuilder.CreateBox('tw_top_far_'+ti,{width:farPlatW,height:platH,depth:PLAT_W},_scene);
+    farPlat.position.set(farPlatX, platY, 0); farPlat.material = MC;
+    _addCol(farPlatX, 0, farPlatW, PLAT_W, platY + platH/2, platY - platH/2);
+
+    // NEAR plat: narrow strip on the ladder-outer side
+    const nearPlatW = Math.abs(nearEdge - cutFar);
+    const nearPlatX = (cutFar + nearEdge) / 2;
+    const nearPlat = B.MeshBuilder.CreateBox('tw_top_near_'+ti,{width:nearPlatW,height:platH,depth:PLAT_W},_scene);
+    nearPlat.position.set(nearPlatX, platY, 0); nearPlat.material = MC;
+    _addCol(nearPlatX, 0, nearPlatW, PLAT_W, platY + platH/2, platY - platH/2);
+
+    // SIDE A/B: fill strips flanking the cut along z
+    const sideW = CUT_SZ;
+    const sideD = (PLAT_W - CUT_SZ) / 2;
+    const sideX = ladderX;
+    const sideZA = -(CUT_SZ/2 + sideD/2);
+    const sideZB =  (CUT_SZ/2 + sideD/2);
+    const sideA = B.MeshBuilder.CreateBox('tw_top_sideA_'+ti,{width:sideW,height:platH,depth:sideD},_scene);
+    sideA.position.set(sideX, platY, sideZA); sideA.material = MC;
+    _addCol(sideX, sideZA, sideW, sideD, platY + platH/2, platY - platH/2);
+    const sideB = B.MeshBuilder.CreateBox('tw_top_sideB_'+ti,{width:sideW,height:platH,depth:sideD},_scene);
+    sideB.position.set(sideX, platY, sideZB); sideB.material = MC;
+    _addCol(sideX, sideZB, sideW, sideD, platY + platH/2, platY - platH/2);
 
     // Top glow ring
-    const topRing=B.MeshBuilder.CreateTorus('tw_glow_'+ti,{diameter:TW+4,thickness:0.12,tessellation:6},_scene);
+    const topRing=B.MeshBuilder.CreateTorus('tw_glow_'+ti,{diameter:PLAT_W,thickness:0.12,tessellation:6},_scene);
     topRing.position.set(t.x,TOWER_H+0.5,0);topRing.material=MG;
-
-    // External ladder on the side facing center (X=0)
-    const ladderSide=t.x>0?-1:1;
-    const ladderX=t.x+ladderSide*(TW/2+0.15);
 
     // Ladder rails
     const railMat=mkMat('tw_rail_'+ti,0.12,0.14,0.12,0,0.15,0.06);
@@ -1740,14 +1773,14 @@ function _buildArenaProc(){
     const railR=B.MeshBuilder.CreateBox('tw_railR_'+ti,{width:0.06,height:TOWER_H,depth:0.06},_scene);
     railR.position.set(ladderX,TOWER_H/2,0.5);railR.material=railMat;
 
-    // Ladder rungs
-    for(let r=0.6;r<TOWER_H;r+=0.7){
+    // Ladder rungs — extended through the cut to the roof top
+    for(let r=0.6;r<TOWER_H+0.3;r+=0.7){
       const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:0.05,height:0.05,depth:1.0},_scene);
       rung.position.set(ladderX,r,0);rung.material=MG;
     }
 
-    // Ladder climb zone (external, on the center-facing side)
-    _ladderZones.push({x:ladderX,z:0,radius:1.0,topY:TOWER_H+0.3});
+    // Ladder climb zone — top exit above roof surface
+    _ladderZones.push({x:ladderX,z:0,radius:1.0,topY:TOWER_H+0.5});
 
     // Tower light
     const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,TOWER_H+2,0),_scene);
