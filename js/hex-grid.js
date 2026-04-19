@@ -196,7 +196,7 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     const photo = cat.ownerPhoto
       ? `<img src="${escapeHtml(cat.ownerPhoto)}" alt="">`
       : `<span class="hex-creator-avatar-initial">${initial}</span>`;
-    avatarHTML = `<div class="hex-creator-avatar" style="border-color:#${hex}">${photo}</div>`;
+    avatarHTML = `<button type="button" class="hex-creator-avatar" style="border-color:#${hex}" data-creator-link data-tip="View profile" aria-label="View ${escapeHtml(cat.ownerName || 'creator')}'s profile">${photo}</button>`;
   }
 
   // Collaborator count. The owner is implicit (not stored in the

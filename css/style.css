@@ -1015,7 +1015,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    through to the tile body handler, which opens the detail modal.
    Percentage top scales correctly with the fixed community tile size
    and any future profile-page usage. */
-.hex-creator-avatar{position:absolute;top:25%;left:22%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;border:2px solid var(--clr-adj);background:var(--bg3);overflow:hidden;z-index:3;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
+.hex-creator-avatar{position:absolute;top:25%;left:22%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;border:2px solid var(--clr-adj);background:var(--bg3);overflow:hidden;z-index:3;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.35);cursor:pointer;padding:0;transition:transform .15s,border-color .15s;}
+.hex-creator-avatar:hover{transform:translate(-50%,-50%) scale(1.1);border-color:#fff;}
 .hex-creator-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
 .hex-creator-avatar-initial{line-height:1;}
 
