@@ -249,7 +249,11 @@ export async function renderPlayRoute(gameId) {
       if (e.key === 'Escape' && _exitModalOpen) {
         e.preventDefault();
         e.stopPropagation();
-        closeExitModal();
+        closeExitModal(true);
+        const canvas = document.getElementById('play-canvas');
+        if (canvas && !document.pointerLockElement) {
+          canvas.requestPointerLock().catch(() => {});
+        }
       }
     });
   }
