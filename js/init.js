@@ -1866,6 +1866,8 @@ function _buildCommunityCard(group) {
   const _hStepX = _hW + _hGap;
   const _hStepY = _hH * 0.75 + _hGap;
   const _hPerRow = tileSize.perRow || 4;
+  // Offset rows (odd) get one fewer tile so they don't overflow
+  const _hColsForRow = (r) => r % 2 === 0 ? _hPerRow : Math.max(_hPerRow - 1, 1);
   let _hRow = 0, _hCol = 0, _hMaxR = 0, _hMaxB = 0;
 
   tilesToShow.forEach((cat) => {
@@ -1936,7 +1938,7 @@ function _buildCommunityCard(group) {
 
     body.appendChild(tile);
     _hCol++;
-    if (_hCol >= _hPerRow) { _hCol = 0; _hRow++; }
+    if (_hCol >= _hColsForRow(_hRow)) { _hCol = 0; _hRow++; }
   });
 
   // Set container dimensions to fit all absolute tiles
