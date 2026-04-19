@@ -1654,7 +1654,9 @@ function getCommunityTileSize(count, containerWidth) {
   if (totalH > 220 && rows > 1) {
     const newH = Math.floor((220 - gap * (rows - 1)) / (1 + (rows - 1) * 0.75));
     const newW = Math.floor(newH / 1.1547);
-    return { w: Math.max(newW, MIN_TILE), h: newH, perRow, rows, showCount: count };
+    const finalW = Math.max(newW, MIN_TILE);
+    const finalH = Math.round(finalW * 1.1547);
+    return { w: finalW, h: finalH, perRow, rows, showCount: count };
   }
   return { w, h, perRow, rows, showCount: count };
 }
@@ -1679,7 +1681,8 @@ function _fitCommunityTiles(list) {
     const tileSize = getCommunityTileSize(tiles.length, availW);
     const firstTile = tiles[0];
     const currentW = firstTile ? parseFloat(firstTile.style.width) || 0 : 0;
-    if (Math.abs(currentW - tileSize.w) < 2) return; // already at correct size
+    const currentH = firstTile ? parseFloat(firstTile.style.height) || 0 : 0;
+    if (Math.abs(currentW - tileSize.w) < 2 && Math.abs(currentH - tileSize.h) < 2) return;
     const gap = 6;
     const hW = tileSize.w;
     const hH = tileSize.h;
@@ -1703,6 +1706,19 @@ function _fitCommunityTiles(list) {
     });
     body.style.width = (maxR + gap) + 'px';
     body.style.height = (maxB + gap) + 'px';
+  });
+}
+
+// MD18: ResizeObserver per community card — re-fits tiles when a
+// card's width changes (zoom, sidebar collapse, card animation).
+let _communityRO = null;
+function _observeCommunityCards(list) {
+  if (_communityRO) _communityRO.disconnect();
+  _communityRO = new ResizeObserver(() => {
+    requestAnimationFrame(() => _fitCommunityTiles(list));
+  });
+  list.querySelectorAll('.community-card').forEach((card) => {
+    _communityRO.observe(card);
   });
 }
 
@@ -2131,7 +2147,10 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   // MD10: post-render fit — re-layout tiles in any card whose body
   // overflows its card's content area. Uses rAF so the DOM has painted
   // and clientWidth is accurate.
-  requestAnimationFrame(() => _fitCommunityTiles(list));
+  requestAnimationFrame(() => {
+    _fitCommunityTiles(list);
+    _observeCommunityCards(list);
+  });
 
   // NB-MD09: pre-fetch the signed-in user's creator votes for every
   // visible creator so their buttons render in the active state. Runs
