@@ -879,7 +879,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    to the accent color so the toggle reads at a glance. */
 /* MD08: SVG pin button — percentage-positioned so it stays inside the
    hex clip-path at any tile size; frosted bg + colored glow when pinned. */
-.hex-pin-btn{position:absolute;bottom:18%;right:16%;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.8);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease),box-shadow var(--ease);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.hex-pin-btn{position:absolute;top:18%;right:12%;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.8);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease),box-shadow var(--ease);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
 .hex-pin-btn:hover{background:rgba(0,0,0,0.85);transform:scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,0.45);}
 .hex-pin-btn.pinned{background:var(--clr-adj);color:var(--clr-adj-on,#000);box-shadow:0 2px 8px color-mix(in srgb,var(--clr-adj) 50%,transparent);}
 .hex-pin-btn.pinned:hover{background:color-mix(in srgb,var(--clr-adj) 85%,#000);}
@@ -1017,7 +1017,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    through to the tile body handler, which opens the detail modal.
    Percentage top scales correctly with the fixed community tile size
    and any future profile-page usage. */
-.hex-creator-avatar{position:absolute;top:8%;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;border:2px solid var(--clr-adj);background:var(--bg3);overflow:hidden;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
+.hex-creator-avatar{position:absolute;top:18%;left:12%;width:28px;height:28px;border-radius:50%;border:2px solid var(--clr-adj);background:var(--bg3);overflow:hidden;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
 .hex-creator-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
 .hex-creator-avatar-initial{line-height:1;}
 
@@ -1032,10 +1032,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    bottom:22% (where the hex clip is still reasonably wide) so they
    sit above the title without getting clipped by the rounded bottom
    point. Only rendered when count > 0. */
-.hex-vote{position:absolute;bottom:22%;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 8px;border-radius:12px;z-index:3;pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
+.hex-vote{position:absolute;bottom:18%;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 7px;border-radius:12px;z-index:3;pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
 .hex-vote-fire{left:12%;}
 .hex-vote-poop{right:12%;}
-.hex-vote-emoji{font-size:12px;line-height:1;}
+.hex-vote-emoji{font-size:22px;line-height:1;}
 
 /* Status badge moved to top-right so it never conflicts with the
    top-center creator avatar. The .hex-status wrapper is still absolute;

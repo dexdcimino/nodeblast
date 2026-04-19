@@ -1498,74 +1498,79 @@ function _createSkybox(){
   mat.backFaceCulling=false;sky.material=mat;sky.infiniteDistance=true;
 }
 
+const ARENA = {
+  HEX_R:110, WALL_H:50, WALL_THICK:1.2, FLOOR_R:115,
+  FENCE_INNER:15, FENCE_H:3.2, FENCE_THICK:0.4, FENCE_DOOR_W:3.2,
+  CTR_R:11, CTR_H:1.6, CTR_PILLAR_H:8, CTR_TOP_R:3,
+  ZONE_R_MULT:0.45, MID_R:40,
+  TOWER_X:75, TOWER_W:7, TOWER_H:28, TOWER_PLAT_W:11, LADDER_CUT:2.5,
+  BRIDGE_D:3.5,
+};
+
 function _buildArenaCollision(){
   const B=window.BABYLON;
+  const A=ARENA;
 
-  // Center hex platform
-  _addCol(0,0,20,20,1.2);
-  _addCol(0,0,2.5,2.5,7.5);
-  _addCol(0,0,7,7,8.0,7.9);
+  _addCol(0, 0, A.CTR_R*2, A.CTR_R*2, A.CTR_H);
+  _addCol(0, 0, 3, 3, A.CTR_H + A.CTR_PILLAR_H);
+  const TOP_Y = A.CTR_H + A.CTR_PILLAR_H;
+  _addCol(0, 0, A.CTR_TOP_R*2, A.CTR_TOP_R*2, TOP_Y + 0.6, TOP_Y - 0.05);
 
-  // 6 zone structures (same positions as _buildArenaProc)
-  const HEX_R=90;
   for(let i=0;i<6;i++){
-    const angle=Math.PI/3*i;
-    const cx=Math.cos(angle)*HEX_R*0.55;
-    const cz=Math.sin(angle)*HEX_R*0.55;
-
+    const angle = Math.PI/3 * i;
+    const cx = Math.cos(angle) * A.HEX_R * A.ZONE_R_MULT;
+    const cz = Math.sin(angle) * A.HEX_R * A.ZONE_R_MULT;
     if(i===0){
-      _addCol(cx-8,cz,4,4,9);_addCol(cx+8,cz,4,4,9);
-      _addCol(cx,cz,18,4,9.5,8.8);_addCol(cx,cz,20,8,0.6);
+      _addCol(cx-8,cz,4,4,9); _addCol(cx+8,cz,4,4,9);
+      _addCol(cx,cz,18,4,9.5,8.8); _addCol(cx,cz,20,8,0.6);
     }else if(i===1){
-      _addCol(cx,cz,16,16,1.5);_addCol(cx,cz,10,10,3);_addCol(cx,cz,5,5,5);
+      _addCol(cx,cz,16,16,1.5); _addCol(cx,cz,10,10,3); _addCol(cx,cz,5,5,5);
     }else if(i===2){
-      _addCol(cx-5,cz,1,14,2.5);_addCol(cx+5,cz,1,14,2.5);
-      _addCol(cx,cz-4,10,1,2.5);_addCol(cx,cz+4,10,1,2.5);
+      _addCol(cx-5,cz,1,14,2.5); _addCol(cx+5,cz,1,14,2.5);
+      _addCol(cx,cz-4,10,1,2.5); _addCol(cx,cz+4,10,1,2.5);
       _addCol(cx,cz,3,3,5);
     }else if(i===3){
-      _addCol(cx,cz,14,14,2.5);_addCol(cx,cz,8,8,5);_addCol(cx,cz,3,3,8);
+      _addCol(cx,cz,14,14,2.5); _addCol(cx,cz,8,8,5); _addCol(cx,cz,3,3,8);
       const rDir=Math.atan2(cz,cx);
       for(let s=1;s<=3;s++){
-        const rx=cx-Math.cos(rDir)*(7+s*3),rz=cz-Math.sin(rDir)*(7+s*3);
+        const rx=cx-Math.cos(rDir)*(7+s*3), rz=cz-Math.sin(rDir)*(7+s*3);
         _addCol(rx,rz,4,3,s*0.7);
       }
     }else if(i===4){
-      // Pillar positions are random — individual pillar cols are added by box() in _buildArenaProc
     }else{
-      _addCol(cx,cz+8,16,1,1.5);_addCol(cx,cz-8,16,1,1.5);
-      _addCol(cx+8,cz,1,16,1.5);_addCol(cx-8,cz,1,16,1.5);
-      _addCol(cx-5,cz+5,2,2,4);_addCol(cx+5,cz-5,2,2,4);
-      _addCol(cx-5,cz-5,2,2,3);_addCol(cx+5,cz+5,2,2,3);
+      _addCol(cx,cz+8,16,1,1.5); _addCol(cx,cz-8,16,1,1.5);
+      _addCol(cx+8,cz,1,16,1.5); _addCol(cx-8,cz,1,16,1.5);
+      _addCol(cx-5,cz+5,2,2,4); _addCol(cx+5,cz-5,2,2,4);
+      _addCol(cx-5,cz-5,2,2,3); _addCol(cx+5,cz+5,2,2,3);
     }
   }
 
-  // Mid-ring cover
   for(let i=0;i<6;i++){
     const angle=Math.PI/3*i;
-    const mx=Math.cos(angle)*40,mz=Math.sin(angle)*40;
+    const mx=Math.cos(angle)*A.MID_R, mz=Math.sin(angle)*A.MID_R;
     _addCol(mx,mz,5,5,2.5);
   }
 
-  // Hex boundary walls are added in _buildArenaProc via _addCol
-
-  // Twin tower collision (solid blocks — top platform collision is in _buildArenaProc)
-  const TX=75,TW=7,TOWER_H=28;
-  [{x:TX,z:0},{x:-TX,z:0}].forEach((t)=>{
-    _addCol(t.x,0,TW,TW,TOWER_H);
+  [{x: A.TOWER_X, z:0},{x:-A.TOWER_X, z:0}].forEach((t)=>{
+    _addCol(t.x, 0, A.TOWER_W, A.TOWER_W, A.TOWER_H);
   });
 
-  // Spotlight
-  const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
-  spot.intensity=0.6;spot.diffuse=new B.Color3(0.85,0.95,1.0);
+  const spot=new B.SpotLight('spot', new B.Vector3(0,35,0), new B.Vector3(0,-1,0), Math.PI/4, 8, _scene);
+  spot.intensity=0.6; spot.diffuse=new B.Color3(0.85,0.95,1.0);
 }
 
 function _buildArenaProc(){
   const B=window.BABYLON;
+  const A=ARENA;
   function mkMat(n,r,g,b,er,eg,eb){const m=new B.StandardMaterial(n,_scene);m.diffuseColor=new B.Color3(r,g,b);m.emissiveColor=new B.Color3(er||0,eg||0,eb||0);m.specularColor=new B.Color3(0.08,0.08,0.12);m.specularPower=48;return m;}
   const MC=mkMat('mc',0.16,0.17,0.21),MD=mkMat('md',0.10,0.11,0.14);
   const MG=mkMat('mg',0.03,0.18,0.09,0,0.6,0.25),MGD=mkMat('mgd',0.02,0.10,0.05,0,0.2,0.08);
   const MHex=mkMat('mhex',0.08,0.15,0.10,0,0.3,0.12);
-  const MAccent=mkMat('maccent',0.05,0.20,0.12,0,0.5,0.2);
+  const MTw=mkMat('mtw',0.12,0.13,0.17,0,0.05,0.02);
+  const MWall=mkMat('mwall',0.09,0.11,0.09,0,0.12,0.04);
+  const MWallTop=mkMat('mwtop',0.05,0.09,0.05,0,0.5,0.2);
+  const MFence=mkMat('mfnc',0.13,0.15,0.13,0,0.15,0.05);
+  const MFenceTop=mkMat('mfnct',0.05,0.12,0.06,0,0.45,0.18);
 
   function box(n,w,h,d,x,z,mat,nc){const m=B.MeshBuilder.CreateBox(n,{width:w,height:h,depth:d},_scene);m.position.set(x,h/2,z);m.material=mat;if(!nc)_addCol(x,z,w,d,h);return m;}
   function strip(n,w,h,d,x,y,z){const m=B.MeshBuilder.CreateBox(n,{width:w,height:h,depth:d},_scene);m.position.set(x,y,z);m.material=MG;return m;}
@@ -1574,7 +1579,7 @@ function _buildArenaProc(){
   const gndExt=B.MeshBuilder.CreateGround('ground_ext',{width:400,height:400,subdivisions:2},_scene);
   gndExt.position.y=-0.02;gndExt.material=mkMat('gnd_ext',0.03,0.03,0.05);
 
-  const hexFloor=B.MeshBuilder.CreateDisc('hex_floor',{radius:115,tessellation:6},_scene);
+  const hexFloor=B.MeshBuilder.CreateDisc('hex_floor',{radius:A.FLOOR_R,tessellation:6},_scene);
   hexFloor.rotation.x=Math.PI/2;hexFloor.rotation.y=0;
   hexFloor.position.y=0.01;hexFloor.material=mkMat('hex_gnd',0.06,0.07,0.09);
 
@@ -1582,28 +1587,113 @@ function _buildArenaProc(){
   hexInner.rotation.x=Math.PI/2;hexInner.rotation.y=0;
   hexInner.position.y=0.02;hexInner.material=mkMat('hex_inner',0.07,0.08,0.10);
 
+  // ── PERIMETER WALL ──
+  for(let i=0;i<6;i++){
+    const a1=Math.PI/3*i, a2=Math.PI/3*(i+1);
+    const x1=Math.cos(a1)*A.HEX_R, z1=Math.sin(a1)*A.HEX_R;
+    const x2=Math.cos(a2)*A.HEX_R, z2=Math.sin(a2)*A.HEX_R;
+    const mx=(x1+x2)/2, mz=(z1+z2)/2;
+    const dx=x2-x1, dz=z2-z1;
+    const segLen=Math.sqrt(dx*dx+dz*dz);
+    const angle=Math.atan2(dx,dz);
+    const wall=B.MeshBuilder.CreateBox('perim_wall_'+i,{width:segLen,height:A.WALL_H,depth:A.WALL_THICK},_scene);
+    wall.position.set(mx,A.WALL_H/2,mz);wall.rotation.y=angle;wall.material=MWall;
+    const topGlow=B.MeshBuilder.CreateBox('perim_top_'+i,{width:segLen,height:0.12,depth:A.WALL_THICK+0.05},_scene);
+    topGlow.position.set(mx,A.WALL_H+0.06,mz);topGlow.rotation.y=angle;topGlow.material=MWallTop;
+    const botGlow=B.MeshBuilder.CreateBox('perim_bot_'+i,{width:segLen,height:0.10,depth:A.WALL_THICK+0.05},_scene);
+    botGlow.position.set(mx,0.3,mz);botGlow.rotation.y=angle;botGlow.material=MWallTop;
+    const SEGS=14, segStep=segLen/SEGS, wallDirX=dx/segLen, wallDirZ=dz/segLen;
+    for(let s=0;s<SEGS;s++){
+      const t=(s+0.5)/SEGS;
+      const sx=x1+(x2-x1)*t, sz=z1+(z2-z1)*t;
+      const halfLen=segStep/2+0.3, thickness=A.WALL_THICK/2+0.3;
+      const boxW=Math.abs(wallDirX)*halfLen*2+Math.abs(wallDirZ)*thickness*2;
+      const boxD=Math.abs(wallDirZ)*halfLen*2+Math.abs(wallDirX)*thickness*2;
+      _addCol(sx,sz,boxW,boxD,A.WALL_H);
+    }
+  }
+  for(let i=0;i<6;i++){
+    const a=Math.PI/3*i;
+    const vx=Math.cos(a)*A.HEX_R, vz=Math.sin(a)*A.HEX_R;
+    const pil=B.MeshBuilder.CreateCylinder('perim_vpil_'+i,{height:A.WALL_H+1,diameter:2.2,tessellation:6},_scene);
+    pil.position.set(vx,(A.WALL_H+1)/2,vz);pil.material=MWall;
+    const cap=B.MeshBuilder.CreateSphere('perim_vcap_'+i,{diameter:1.6,segments:6},_scene);
+    cap.position.set(vx,A.WALL_H+1,vz);cap.material=MWallTop;
+    const vLight=new B.PointLight('vpil_light_'+i,new B.Vector3(vx,A.WALL_H+2,vz),_scene);
+    vLight.diffuse=new B.Color3(0.1,1,0.5);vLight.intensity=1.2;vLight.range=18;
+  }
+
+  // ── RADIAL FENCES ──
+  for(let i=0;i<6;i++){
+    const a=Math.PI/3*i;
+    const vx=Math.cos(a)*A.HEX_R, vz=Math.sin(a)*A.HEX_R;
+    const innerX=Math.cos(a)*A.FENCE_INNER, innerZ=Math.sin(a)*A.FENCE_INNER;
+    const fdx=innerX-vx, fdz=innerZ-vz;
+    const fenceLen=Math.sqrt(fdx*fdx+fdz*fdz);
+    const fenceAngle=Math.atan2(fdx,fdz);
+    const halfBeforeDoor=(fenceLen-A.FENCE_DOOR_W)/2;
+    if(halfBeforeDoor<=0.5) continue;
+    const ux=fdx/fenceLen, uz=fdz/fenceLen;
+    // Segment A (outer half)
+    const segA_mx=vx+ux*(halfBeforeDoor/2), segA_mz=vz+uz*(halfBeforeDoor/2);
+    const segA=B.MeshBuilder.CreateBox('fence_'+i+'_A',{width:halfBeforeDoor,height:A.FENCE_H,depth:A.FENCE_THICK},_scene);
+    segA.position.set(segA_mx,A.FENCE_H/2,segA_mz);segA.rotation.y=fenceAngle;segA.material=MFence;
+    const segA_top=B.MeshBuilder.CreateBox('fence_'+i+'_A_top',{width:halfBeforeDoor,height:0.10,depth:A.FENCE_THICK+0.05},_scene);
+    segA_top.position.set(segA_mx,A.FENCE_H+0.05,segA_mz);segA_top.rotation.y=fenceAngle;segA_top.material=MFenceTop;
+    // Segment B (inner half)
+    const segB_cd=halfBeforeDoor+A.FENCE_DOOR_W+(halfBeforeDoor/2);
+    const segB_mx=vx+ux*segB_cd, segB_mz=vz+uz*segB_cd;
+    const segB=B.MeshBuilder.CreateBox('fence_'+i+'_B',{width:halfBeforeDoor,height:A.FENCE_H,depth:A.FENCE_THICK},_scene);
+    segB.position.set(segB_mx,A.FENCE_H/2,segB_mz);segB.rotation.y=fenceAngle;segB.material=MFence;
+    const segB_top=B.MeshBuilder.CreateBox('fence_'+i+'_B_top',{width:halfBeforeDoor,height:0.10,depth:A.FENCE_THICK+0.05},_scene);
+    segB_top.position.set(segB_mx,A.FENCE_H+0.05,segB_mz);segB_top.rotation.y=fenceAngle;segB_top.material=MFenceTop;
+    // Doorway posts + lintel
+    const doorStart_d=halfBeforeDoor, doorEnd_d=halfBeforeDoor+A.FENCE_DOOR_W;
+    const doorL_x=vx+ux*doorStart_d, doorL_z=vz+uz*doorStart_d;
+    const doorR_x=vx+ux*doorEnd_d, doorR_z=vz+uz*doorEnd_d;
+    const doorL=B.MeshBuilder.CreateBox('fence_'+i+'_doorL',{width:A.FENCE_THICK,height:A.FENCE_H+0.4,depth:A.FENCE_THICK},_scene);
+    doorL.position.set(doorL_x,(A.FENCE_H+0.4)/2,doorL_z);doorL.material=MFence;
+    const doorR=B.MeshBuilder.CreateBox('fence_'+i+'_doorR',{width:A.FENCE_THICK,height:A.FENCE_H+0.4,depth:A.FENCE_THICK},_scene);
+    doorR.position.set(doorR_x,(A.FENCE_H+0.4)/2,doorR_z);doorR.material=MFence;
+    const lint_mx=vx+ux*(halfBeforeDoor+A.FENCE_DOOR_W/2), lint_mz=vz+uz*(halfBeforeDoor+A.FENCE_DOOR_W/2);
+    const lint=B.MeshBuilder.CreateBox('fence_'+i+'_lint',{width:A.FENCE_DOOR_W,height:0.3,depth:A.FENCE_THICK},_scene);
+    lint.position.set(lint_mx,A.FENCE_H+0.1,lint_mz);lint.rotation.y=fenceAngle;lint.material=MFenceTop;
+    // Fence collision (segments A + B)
+    const dirX=fdx/fenceLen, dirZ=fdz/fenceLen;
+    {const SEGS=Math.max(2,Math.floor(halfBeforeDoor/2.5));for(let s=0;s<SEGS;s++){const t=(s+0.5)/SEGS;const seg_dist=t*halfBeforeDoor;const sx=vx+ux*seg_dist,sz=vz+uz*seg_dist;const segPart=halfBeforeDoor/SEGS;const boxW=Math.abs(dirX)*segPart+Math.abs(dirZ)*A.FENCE_THICK+0.15;const boxD=Math.abs(dirZ)*segPart+Math.abs(dirX)*A.FENCE_THICK+0.15;_addCol(sx,sz,boxW,boxD,A.FENCE_H);}}
+    {const SEGS=Math.max(2,Math.floor(halfBeforeDoor/2.5));for(let s=0;s<SEGS;s++){const t=(s+0.5)/SEGS;const seg_dist=halfBeforeDoor+A.FENCE_DOOR_W+t*halfBeforeDoor;const sx=vx+ux*seg_dist,sz=vz+uz*seg_dist;const segPart=halfBeforeDoor/SEGS;const boxW=Math.abs(dirX)*segPart+Math.abs(dirZ)*A.FENCE_THICK+0.15;const boxD=Math.abs(dirZ)*segPart+Math.abs(dirX)*A.FENCE_THICK+0.15;_addCol(sx,sz,boxW,boxD,A.FENCE_H);}}
+    _addCol(doorL_x,doorL_z,A.FENCE_THICK+0.2,A.FENCE_THICK+0.2,A.FENCE_H+0.4);
+    _addCol(doorR_x,doorR_z,A.FENCE_THICK+0.2,A.FENCE_THICK+0.2,A.FENCE_H+0.4);
+  }
+
   // ── CENTER PLATFORM ──
-  const ctrHex=B.MeshBuilder.CreateCylinder('ctr_hex',{height:1.2,diameter:22,tessellation:6},_scene);
-  ctrHex.position.y=0.6;ctrHex.material=MD;
+  const ctrHex=B.MeshBuilder.CreateCylinder('ctr_hex',{height:A.CTR_H,diameter:A.CTR_R*2,tessellation:6},_scene);
+  ctrHex.position.y=A.CTR_H/2;ctrHex.material=MD;
 
-  const ctrPillar=B.MeshBuilder.CreateCylinder('ctr_pillar',{height:8,diameter:3,tessellation:6},_scene);
-  ctrPillar.position.y=4;ctrPillar.material=MC;
+  const ctrGlow=B.MeshBuilder.CreateTorus('ctr_glow',{diameter:A.CTR_R*2,thickness:0.15,tessellation:6},_scene);
+  ctrGlow.position.y=A.CTR_H+0.05;ctrGlow.material=MG;
 
-  const ctrTop=B.MeshBuilder.CreateCylinder('ctr_top',{height:0.3,diameter:6,tessellation:6},_scene);
-  ctrTop.position.y=8.15;ctrTop.material=MHex;
+  for(let i=0;i<6;i++){
+    const a=Math.PI/3*i+Math.PI/6;
+    const rx=Math.cos(a)*(A.CTR_R*0.7), rz=Math.sin(a)*(A.CTR_R*0.7);
+    const marker=B.MeshBuilder.CreateBox('ctr_marker_'+i,{width:0.6,height:0.15,depth:0.6},_scene);
+    marker.position.set(rx,A.CTR_H+0.08,rz);marker.material=MFenceTop;
+  }
 
-  const ctrGlow=B.MeshBuilder.CreateTorus('ctr_glow',{diameter:22,thickness:0.15,tessellation:6},_scene);
-  ctrGlow.position.y=1.25;ctrGlow.material=MG;
+  const ctrPillar=B.MeshBuilder.CreateCylinder('ctr_pillar',{height:A.CTR_PILLAR_H,diameter:3,tessellation:6},_scene);
+  ctrPillar.position.y=A.CTR_H+A.CTR_PILLAR_H/2;ctrPillar.material=MC;
 
-  const ctrLight=new B.PointLight('ctr_light',new B.Vector3(0,9,0),_scene);
-  ctrLight.diffuse=new B.Color3(0.1,1,0.5);ctrLight.intensity=2;ctrLight.range=25;
+  const ctrTop=B.MeshBuilder.CreateCylinder('ctr_top',{height:0.6,diameter:A.CTR_TOP_R*2,tessellation:6},_scene);
+  ctrTop.position.y=A.CTR_H+A.CTR_PILLAR_H+0.3;ctrTop.material=MHex;
+
+  const ctrLight=new B.PointLight('ctr_light',new B.Vector3(0,A.CTR_H+A.CTR_PILLAR_H+2,0),_scene);
+  ctrLight.diffuse=new B.Color3(0.1,1,0.5);ctrLight.intensity=2.2;ctrLight.range=28;
 
   // ── 6 ZONE STRUCTURES ──
-  const HEX_R=90;
   for(let i=0;i<6;i++){
     const angle=Math.PI/3*i;
-    const cx=Math.cos(angle)*HEX_R*0.55;
-    const cz=Math.sin(angle)*HEX_R*0.55;
+    const cx=Math.cos(angle)*A.HEX_R*A.ZONE_R_MULT;
+    const cz=Math.sin(angle)*A.HEX_R*A.ZONE_R_MULT;
 
     if(i===0){
       box('zt0_tL',4,9,4,cx-8,cz,MD);box('zt0_tR',4,9,4,cx+8,cz,MD);
@@ -1663,179 +1753,73 @@ function _buildArenaProc(){
     strip('mid_g_'+i,5,0.08,5,mx,2.56,mz);
   }
 
-  // ── SPAWN PADS (2, on opposite sides) ──
-  const SPAWN_DIST=55;
-  [{x:0,z:SPAWN_DIST},{x:0,z:-SPAWN_DIST}].forEach((s,i)=>{
+  // ── SPAWN PADS ──
+  [{x:A.TOWER_X+15,z:0},{x:-(A.TOWER_X+15),z:0}].forEach((s,i)=>{
     const pad=B.MeshBuilder.CreateDisc('spawn_'+i,{radius:3,tessellation:6},_scene);
     pad.rotation.x=Math.PI/2;pad.position.set(s.x,0.03,s.z);pad.material=MGD;
-    // Glow ring around spawn
     const ring=B.MeshBuilder.CreateTorus('spawn_ring_'+i,{diameter:7,thickness:0.1,tessellation:6},_scene);
     ring.position.set(s.x,0.05,s.z);ring.material=MG;
   });
 
-  // ── HEX BOUNDARY WALLS ──
-  const WALL_R=110,WALL_H=4;
-  const wallMat=new B.StandardMaterial('wall_mat',_scene);
-  wallMat.diffuseColor=new B.Color3(0.08,0.10,0.08);wallMat.emissiveColor=new B.Color3(0.0,0.18,0.06);
-  wallMat.specularColor=new B.Color3(0.1,0.3,0.1);wallMat.alpha=0.85;
-  const wallGlowMat=new B.StandardMaterial('wall_glow_mat',_scene);
-  wallGlowMat.emissiveColor=new B.Color3(0.0,0.7,0.25);wallGlowMat.disableLighting=true;
-
-  for(let i=0;i<6;i++){
-    const a1=Math.PI/3*i,a2=Math.PI/3*(i+1);
-    const x1=Math.cos(a1)*WALL_R,z1=Math.sin(a1)*WALL_R;
-    const x2=Math.cos(a2)*WALL_R,z2=Math.sin(a2)*WALL_R;
-    const mx=(x1+x2)/2,mz=(z1+z2)/2;
-    const dx=x2-x1,dz=z2-z1;
-    const segLen=Math.sqrt(dx*dx+dz*dz);
-    const wallAngle=Math.atan2(dx,dz);
-
-    const wall=B.MeshBuilder.CreateBox('hex_wall_'+i,{width:segLen,height:WALL_H,depth:0.5},_scene);
-    wall.position.set(mx,WALL_H/2,mz);wall.rotation.y=wallAngle;wall.material=wallMat;
-
-    // Collision — segmented along wall for accurate hit detection
-    const SEGS=12;
-    const segStep=segLen/SEGS;
-    for(let s=0;s<SEGS;s++){
-      const t=(s+0.5)/SEGS;
-      const sx=x1+(x2-x1)*t,sz=z1+(z2-z1)*t;
-      const wallDirX=dx/segLen,wallDirZ=dz/segLen;
-      const halfLen=segStep/2+0.5;
-      const thickness=1.5;
-      const boxW=Math.abs(wallDirX)*halfLen+Math.abs(wallDirZ)*thickness+0.5;
-      const boxD=Math.abs(wallDirZ)*halfLen+Math.abs(wallDirX)*thickness+0.5;
-      _addCol(sx,sz,boxW*2,boxD*2,WALL_H);
+  // ── TWIN TOWERS ──
+  [{x:A.TOWER_X,z:0},{x:-A.TOWER_X,z:0}].forEach((t,ti)=>{
+    box('tw_block_'+ti,A.TOWER_W,A.TOWER_H,A.TOWER_W,t.x,0,MTw);
+    const ladderSide=t.x>0?1:-1;
+    const ladderX=t.x+ladderSide*(A.TOWER_W/2+0.15);
+    const PLAT_W=A.TOWER_PLAT_W, CUT_SZ=A.LADDER_CUT;
+    const platY=A.TOWER_H+0.2, platH=0.4;
+    const nearEdge=t.x+ladderSide*PLAT_W/2, farEdge=t.x-ladderSide*PLAT_W/2;
+    const cutNear=ladderX-ladderSide*CUT_SZ/2, cutFar=ladderX+ladderSide*CUT_SZ/2;
+    const farPlatW=Math.abs(cutNear-farEdge), farPlatX=(farEdge+cutNear)/2;
+    const farPlat=B.MeshBuilder.CreateBox('tw_top_far_'+ti,{width:farPlatW,height:platH,depth:PLAT_W},_scene);
+    farPlat.position.set(farPlatX,platY,0);farPlat.material=MC;
+    _addCol(farPlatX,0,farPlatW,PLAT_W,platY+platH/2,platY-platH/2);
+    const nearPlatW=Math.abs(nearEdge-cutFar), nearPlatX=(cutFar+nearEdge)/2;
+    if(nearPlatW>0.05){
+      const nearPlat=B.MeshBuilder.CreateBox('tw_top_near_'+ti,{width:nearPlatW,height:platH,depth:PLAT_W},_scene);
+      nearPlat.position.set(nearPlatX,platY,0);nearPlat.material=MC;
+      _addCol(nearPlatX,0,nearPlatW,PLAT_W,platY+platH/2,platY-platH/2);
     }
-
-    const topGlow=B.MeshBuilder.CreateBox('hex_wall_top_'+i,{width:segLen,height:0.08,depth:0.55},_scene);
-    topGlow.position.set(mx,WALL_H+0.04,mz);topGlow.rotation.y=wallAngle;topGlow.material=wallGlowMat;
-    const botGlow=B.MeshBuilder.CreateBox('hex_wall_bot_'+i,{width:segLen,height:0.06,depth:0.55},_scene);
-    botGlow.position.set(mx,0.3,mz);botGlow.rotation.y=wallAngle;botGlow.material=wallGlowMat;
-
-    const postCount=Math.floor(segLen/10);
-    for(let p=0;p<=postCount;p++){
-      const t=p/postCount;
-      const px=x1+(x2-x1)*t,pz=z1+(z2-z1)*t;
-      const post=B.MeshBuilder.CreateBox('wall_post_'+i+'_'+p,{width:0.25,height:WALL_H+0.5,depth:0.4},_scene);
-      post.position.set(px,(WALL_H+0.5)/2,pz);post.rotation.y=wallAngle;post.material=wallMat;
-      const pip=B.MeshBuilder.CreateSphere('wall_pip_'+i+'_'+p,{diameter:0.22,segments:4},_scene);
-      pip.position.set(px,WALL_H+0.5,pz);pip.material=wallGlowMat;
-    }
-
-    const wLight=new B.PointLight('wall_light_'+i,new B.Vector3(mx,2.5,mz),_scene);
-    wLight.diffuse=new B.Color3(0,0.8,0.3);wLight.intensity=0.6;wLight.range=15;
-  }
-
-  // ── VERTEX PILLARS ──
-  for(let i=0;i<6;i++){
-    const a=Math.PI/3*i;
-    const vx=Math.cos(a)*WALL_R,vz=Math.sin(a)*WALL_R;
-    const pil=B.MeshBuilder.CreateCylinder('hex_vpil_'+i,{height:8,diameter:2.5,tessellation:6},_scene);
-    pil.position.set(vx,4,vz);pil.material=MD;
-    const vLight=new B.PointLight('vpil_light_'+i,new B.Vector3(vx,8.5,vz),_scene);
-    vLight.diffuse=new B.Color3(0.1,1,0.5);vLight.intensity=0.8;vLight.range=12;
-  }
-
-  // ── TWIN TOWERS (solid blocks + external ladders) ──
-  const TOWER_H=28,TW=7,TX=75;
-  const MTw=mkMat('mtower',0.12,0.13,0.17,0,0.05,0.02);
-
-  [{x:TX,z:0},{x:-TX,z:0}].forEach((t,ti)=>{
-    // Solid block (one big box — NOT hollow)
-    box('tw_block_'+ti,TW,TOWER_H,TW,t.x,0,MTw);
-
-    // Ladder on OUTER side (away from center)
-    const ladderSide = t.x > 0 ? 1 : -1;
-    const ladderX    = t.x + ladderSide * (TW/2 + 0.15);
-
-    // Top platform with SQUARE CUT where the ladder comes through
-    const PLAT_W  = TW + 4;
-    const CUT_SZ  = 2.5;
-    const platY   = TOWER_H + 0.2;
-    const platH   = 0.4;
-
-    const cutDx = ladderX - t.x;
-    const nearEdge = t.x + ladderSide * PLAT_W/2;
-    const farEdge  = t.x - ladderSide * PLAT_W/2;
-    const cutNear  = ladderX - ladderSide * CUT_SZ/2;
-    const cutFar   = ladderX + ladderSide * CUT_SZ/2;
-
-    // FAR plat: full-width strip opposite the cut
-    const farPlatW = Math.abs(cutNear - farEdge);
-    const farPlatX = (farEdge + cutNear) / 2;
-    const farPlat = B.MeshBuilder.CreateBox('tw_top_far_'+ti,{width:farPlatW,height:platH,depth:PLAT_W},_scene);
-    farPlat.position.set(farPlatX, platY, 0); farPlat.material = MC;
-    _addCol(farPlatX, 0, farPlatW, PLAT_W, platY + platH/2, platY - platH/2);
-
-    // NEAR plat: narrow strip on the ladder-outer side
-    const nearPlatW = Math.abs(nearEdge - cutFar);
-    const nearPlatX = (cutFar + nearEdge) / 2;
-    const nearPlat = B.MeshBuilder.CreateBox('tw_top_near_'+ti,{width:nearPlatW,height:platH,depth:PLAT_W},_scene);
-    nearPlat.position.set(nearPlatX, platY, 0); nearPlat.material = MC;
-    _addCol(nearPlatX, 0, nearPlatW, PLAT_W, platY + platH/2, platY - platH/2);
-
-    // SIDE A/B: fill strips flanking the cut along z
-    const sideW = CUT_SZ;
-    const sideD = (PLAT_W - CUT_SZ) / 2;
-    const sideX = ladderX;
-    const sideZA = -(CUT_SZ/2 + sideD/2);
-    const sideZB =  (CUT_SZ/2 + sideD/2);
-    const sideA = B.MeshBuilder.CreateBox('tw_top_sideA_'+ti,{width:sideW,height:platH,depth:sideD},_scene);
-    sideA.position.set(sideX, platY, sideZA); sideA.material = MC;
-    _addCol(sideX, sideZA, sideW, sideD, platY + platH/2, platY - platH/2);
-    const sideB = B.MeshBuilder.CreateBox('tw_top_sideB_'+ti,{width:sideW,height:platH,depth:sideD},_scene);
-    sideB.position.set(sideX, platY, sideZB); sideB.material = MC;
-    _addCol(sideX, sideZB, sideW, sideD, platY + platH/2, platY - platH/2);
-
-    // Top glow ring
+    const sideW=CUT_SZ, sideD=(PLAT_W-CUT_SZ)/2, sideX=ladderX;
+    const sideZA=-(CUT_SZ/2+sideD/2), sideZB=(CUT_SZ/2+sideD/2);
+    const sideA=B.MeshBuilder.CreateBox('tw_top_sideA_'+ti,{width:sideW,height:platH,depth:sideD},_scene);
+    sideA.position.set(sideX,platY,sideZA);sideA.material=MC;
+    _addCol(sideX,sideZA,sideW,sideD,platY+platH/2,platY-platH/2);
+    const sideB=B.MeshBuilder.CreateBox('tw_top_sideB_'+ti,{width:sideW,height:platH,depth:sideD},_scene);
+    sideB.position.set(sideX,platY,sideZB);sideB.material=MC;
+    _addCol(sideX,sideZB,sideW,sideD,platY+platH/2,platY-platH/2);
     const topRing=B.MeshBuilder.CreateTorus('tw_glow_'+ti,{diameter:PLAT_W,thickness:0.12,tessellation:6},_scene);
-    topRing.position.set(t.x,TOWER_H+0.5,0);topRing.material=MG;
-
-    // Ladder rails
+    topRing.position.set(t.x,A.TOWER_H+0.5,0);topRing.material=MG;
     const railMat=mkMat('tw_rail_'+ti,0.12,0.14,0.12,0,0.15,0.06);
-    const railL=B.MeshBuilder.CreateBox('tw_railL_'+ti,{width:0.06,height:TOWER_H,depth:0.06},_scene);
-    railL.position.set(ladderX,TOWER_H/2,-0.5);railL.material=railMat;
-    const railR=B.MeshBuilder.CreateBox('tw_railR_'+ti,{width:0.06,height:TOWER_H,depth:0.06},_scene);
-    railR.position.set(ladderX,TOWER_H/2,0.5);railR.material=railMat;
-
-    // Ladder rungs — extended through the cut to the roof top
-    for(let r=0.6;r<TOWER_H+0.3;r+=0.7){
+    const railL=B.MeshBuilder.CreateBox('tw_railL_'+ti,{width:0.06,height:A.TOWER_H,depth:0.06},_scene);
+    railL.position.set(ladderX,A.TOWER_H/2,-0.5);railL.material=railMat;
+    const railR=B.MeshBuilder.CreateBox('tw_railR_'+ti,{width:0.06,height:A.TOWER_H,depth:0.06},_scene);
+    railR.position.set(ladderX,A.TOWER_H/2,0.5);railR.material=railMat;
+    for(let r=0.6;r<A.TOWER_H+0.3;r+=0.7){
       const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:0.05,height:0.05,depth:1.0},_scene);
       rung.position.set(ladderX,r,0);rung.material=MG;
     }
-
-    // Ladder climb zone — top exit above roof surface
-    _ladderZones.push({x:ladderX,z:0,radius:1.0,topY:TOWER_H+0.5});
-
-    // Tower light
-    const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,TOWER_H+2,0),_scene);
+    _ladderZones.push({x:ladderX,z:0,radius:1.0,topY:A.TOWER_H+0.5});
+    const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,A.TOWER_H+2,0),_scene);
     tLight.diffuse=new B.Color3(0.1,1,0.5);tLight.intensity=1.5;tLight.range=20;
   });
 
   // ── SKY BRIDGE ──
-  const BRIDGE_Y=TOWER_H;
-  const bridgeLen=TX*2-TW;
-  const bridgeMesh=B.MeshBuilder.CreateBox('sky_bridge',{width:bridgeLen,height:0.4,depth:3.5},_scene);
+  const BRIDGE_Y=A.TOWER_H;
+  const bridgeLen=A.TOWER_X*2-A.TOWER_W;
+  const bridgeMesh=B.MeshBuilder.CreateBox('sky_bridge',{width:bridgeLen,height:0.4,depth:A.BRIDGE_D},_scene);
   bridgeMesh.position.set(0,BRIDGE_Y,0);bridgeMesh.material=MC;
-  _addCol(0,0,bridgeLen,3.5,BRIDGE_Y+0.2,BRIDGE_Y-0.2);
-
+  _addCol(0,0,bridgeLen,A.BRIDGE_D,BRIDGE_Y+0.2,BRIDGE_Y-0.2);
   const rail1=B.MeshBuilder.CreateBox('bridge_rail_n',{width:bridgeLen,height:1,depth:0.12},_scene);
   rail1.position.set(0,BRIDGE_Y+0.5,1.7);rail1.material=MTw;
   const rail2=B.MeshBuilder.CreateBox('bridge_rail_s',{width:bridgeLen,height:1,depth:0.12},_scene);
   rail2.position.set(0,BRIDGE_Y+0.5,-1.7);rail2.material=MTw;
-
   strip('bridge_gn',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,1.6);
   strip('bridge_gs',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,-1.6);
-
   const bLight=new B.PointLight('bridge_light',new B.Vector3(0,BRIDGE_Y+2,0),_scene);
   bLight.diffuse=new B.Color3(0.8,0.2,0.9);bLight.intensity=1.5;bLight.range=10;
-
   const sniperMarker=B.MeshBuilder.CreateTorus('sniper_marker',{diameter:2,thickness:0.1,tessellation:6},_scene);
   sniperMarker.position.set(0,BRIDGE_Y+0.3,0);sniperMarker.material=MG;
-
-  // ── SPOTLIGHT ──
-  const spot=new B.SpotLight('spot',new B.Vector3(0,35,0),new B.Vector3(0,-1,0),Math.PI/4,8,_scene);
-  spot.intensity=0.6;spot.diffuse=new B.Color3(0.85,0.95,1.0);
 }
 
 function _buildArena(){
