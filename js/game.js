@@ -77,6 +77,7 @@ const E_HOLD_TIME=30;
 let _keyDownHandler=null,_keyUpHandler=null,_mouseDownHandler=null,_mouseUpHandler=null,_plcHandler=null,_canvasClickHandler=null,_rightClickHandler=null,_mouseMoveHandler=null;
 let _scoped=false;
 const _ladderZones=[];
+let _ladderJumpGrace=0;
 let _mouseHeld=false;
 let _lastShot=0;const SHOT_COOLDOWN=220;const _projectiles=[];const _gooSplats=[];
 const _remotePlayers=new Map();
@@ -1819,7 +1820,12 @@ function _buildArenaProc(){
       const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:0.05,height:0.05,depth:1.0},_scene);
       rung.position.set(ladderX,r,0);rung.material=MG;
     }
-    _ladderZones.push({x:ladderX,z:0,radius:1.0,topY:A.TOWER_H+0.5});
+    const standOffset=0.6;
+    const standX=ladderX+ladderSide*standOffset;
+    _ladderZones.push({
+      x:standX, z:0, radius:1.3, topY:A.TOWER_H+0.5,
+      bottomY:0, outerSign:ladderSide, ladderAxisX:ladderX,
+    });
     const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,A.TOWER_H+2,0),_scene);
     tLight.diffuse=new B.Color3(0.1,1,0.5);tLight.intensity=1.5;tLight.range=20;
   });

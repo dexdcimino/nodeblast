@@ -877,7 +877,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    to the accent color so the toggle reads at a glance. */
 /* MD08: SVG pin button — percentage-positioned so it stays inside the
    hex clip-path at any tile size; frosted bg + colored glow when pinned. */
-.hex-pin-btn{position:absolute;top:25%;right:22%;transform:translate(50%,-50%);width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.8);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease),box-shadow var(--ease);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.hex-pin-btn{position:absolute;top:31.2%;right:10%;transform:translate(50%,-50%);width:18cqi;height:18cqi;border-radius:50%;border:none;background:rgba(0,0,0,0.8);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease),box-shadow var(--ease);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
 .hex-pin-btn:hover{background:rgba(0,0,0,0.85);transform:translate(50%,-50%) scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,0.45);}
 .hex-pin-btn.pinned{background:var(--clr-adj);color:var(--clr-adj-on,#000);box-shadow:0 2px 8px color-mix(in srgb,var(--clr-adj) 50%,transparent);}
 .hex-pin-btn.pinned:hover{background:color-mix(in srgb,var(--clr-adj) 85%,#000);transform:translate(50%,-50%) scale(1.1);}
@@ -942,7 +942,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    ::before image layers over the accent at 0.88 opacity, so ~12%
    of the accent color bleeds through as a subtle tint. Without a
    thumb, the accent is the full hex fill behind the placeholder. */
-.hex-tile{position:absolute;background:var(--accent,var(--bg3));clip-path:url(#hex-clip);overflow:hidden;cursor:pointer;transition:transform .5s ease;}
+.hex-tile{position:absolute;background:var(--accent,var(--bg3));clip-path:url(#hex-clip);overflow:hidden;cursor:pointer;transition:transform .5s ease;container-type:inline-size;}
 /* Flow modifier: lets a .hex-tile sit inside a normal flex/grid
    container instead of the absolutely-positioned honeycomb. Used by
    the community hub cards to drop tiles into a simple flex-wrap row. */
@@ -1015,7 +1015,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    through to the tile body handler, which opens the detail modal.
    Percentage top scales correctly with the fixed community tile size
    and any future profile-page usage. */
-.hex-creator-avatar{position:absolute;top:25%;left:22%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;border:2px solid var(--clr-adj);background:var(--bg3);overflow:hidden;z-index:3;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.35);cursor:pointer;padding:0;transition:transform .15s,border-color .15s;}
+.hex-creator-avatar{position:absolute;top:31.2%;left:10%;transform:translate(-50%,-50%);width:18cqi;height:18cqi;border-radius:50%;border:2px solid var(--clr-adj);background:var(--bg3);overflow:hidden;z-index:3;display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.35);cursor:pointer;padding:0;transition:transform .15s,border-color .15s;}
 .hex-creator-avatar:hover{transform:translate(-50%,-50%) scale(1.1);border-color:#fff;}
 .hex-creator-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
 .hex-creator-avatar-initial{line-height:1;}
@@ -1029,17 +1029,17 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 
 /* MD8: hex catalyst vote badges — circle default, pill on hover.
    Behaviour mirrors .community-vote-pill on the alchemist card. */
-.hex-vote{position:absolute;bottom:25%;display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border-radius:50%;border:2px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.6);cursor:pointer;z-index:5;color:#fff;transition:background .15s,border-color .15s,border-radius .2s,padding .2s,width .2s,height .2s;font-variant-numeric:tabular-nums;pointer-events:auto;}
+.hex-vote{position:absolute;display:flex;align-items:center;justify-content:center;width:18cqi;height:18cqi;padding:0;border-radius:50%;border:2px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.6);cursor:pointer;z-index:5;color:#fff;transition:background .15s,border-color .15s,border-radius .2s,padding .2s,width .2s,height .2s;font-variant-numeric:tabular-nums;pointer-events:auto;}
 .hex-vote:hover{border-color:var(--clr-adj);width:auto;height:auto;padding:6px;border-radius:9999px;}
-.hex-vote-fire{left:22%;transform:translate(-50%,50%);}
+.hex-vote-fire{bottom:31.2%;left:10%;transform:translate(-50%,50%);}
 .hex-vote-fire:hover{padding:6px 12px 6px 6px;transform:translate(-50%,50%);}
-.hex-vote-poop{right:22%;transform:translate(50%,50%);}
+.hex-vote-poop{bottom:31.2%;right:10%;transform:translate(50%,50%);}
 .hex-vote-poop:hover{padding:6px 6px 6px 12px;flex-direction:row-reverse;transform:translate(50%,50%);}
 .hex-vote-fire:active{transform:translate(-50%,50%) scale(0.93);}
 .hex-vote-poop:active{transform:translate(50%,50%) scale(0.93);}
 .hex-vote.active.hex-vote-fire{border-color:#ff6b35;background:rgba(255,107,53,0.18);}
 .hex-vote.active.hex-vote-poop{border-color:#a07850;background:rgba(160,120,80,0.18);}
-.hex-vote-emoji{font-size:26px;line-height:1;flex-shrink:0;}
+.hex-vote-emoji{font-size:calc(18cqi * 0.72);line-height:1;flex-shrink:0;}
 .hex-vote-count{font-size:14px;font-weight:700;color:#fff;margin:0 4px;white-space:nowrap;opacity:0;max-width:0;overflow:hidden;transition:opacity .15s,max-width .2s;}
 .hex-vote:hover .hex-vote-count{opacity:1;max-width:40px;}
 
