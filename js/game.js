@@ -1844,73 +1844,10 @@ function _buildArenaProc(){
   }
   strip('bridge_gn',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,1.6);
   strip('bridge_gs',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,-1.6);
-  // ── BRIDGE DETAIL PASS ──
-  const STRUT_COUNT=9;
-  for(let s=1;s<STRUT_COUNT;s++){
-    const sx=-bridgeLen/2+s*(bridgeLen/STRUT_COUNT);
-    const strut=B.MeshBuilder.CreateBox('bridge_strut_'+s,{width:0.3,height:3.5,depth:0.3},_scene);
-    strut.position.set(sx,BRIDGE_Y-1.5,0);strut.material=MTw;
-    const braceN=B.MeshBuilder.CreateBox('bridge_brace_n_'+s,{width:0.18,height:2.2,depth:0.18},_scene);
-    braceN.position.set(sx,BRIDGE_Y-0.5,0.8);braceN.rotation.z=Math.PI/6;braceN.material=MTw;
-    const braceS=B.MeshBuilder.CreateBox('bridge_brace_s_'+s,{width:0.18,height:2.2,depth:0.18},_scene);
-    braceS.position.set(sx,BRIDGE_Y-0.5,-0.8);braceS.rotation.z=-Math.PI/6;braceS.material=MTw;
-  }
-  const LANTERN_N=6;
-  for(let L=0;L<LANTERN_N;L++){
-    const lx=-bridgeLen/2+(L+0.5)*(bridgeLen/LANTERN_N);
-    ['n','s'].forEach((side)=>{
-      const z=side==='n'?1.7:-1.7;
-      const lant=B.MeshBuilder.CreateSphere('bridge_lant_'+L+'_'+side,{diameter:0.28,segments:6},_scene);
-      lant.position.set(lx,BRIDGE_Y+1.1,z);lant.material=MG;
-      const lantPost=B.MeshBuilder.CreateBox('bridge_lpost_'+L+'_'+side,{width:0.08,height:0.3,depth:0.08},_scene);
-      lantPost.position.set(lx,BRIDGE_Y+1.15,z);lantPost.material=MTw;
-    });
-  }
-  const inlay=B.MeshBuilder.CreateDisc('bridge_inlay',{radius:1.3,tessellation:6},_scene);
-  inlay.rotation.x=Math.PI/2;inlay.position.set(0,BRIDGE_Y+0.21,0);inlay.material=MHex;
-  const inlayGlow=B.MeshBuilder.CreateTorus('bridge_inlay_glow',{diameter:2.6,thickness:0.04,tessellation:6},_scene);
-  inlayGlow.position.set(0,BRIDGE_Y+0.22,0);inlayGlow.material=MG;
   const bLight=new B.PointLight('bridge_light',new B.Vector3(0,BRIDGE_Y+2,0),_scene);
   bLight.diffuse=new B.Color3(0.8,0.2,0.9);bLight.intensity=1.5;bLight.range=10;
   const sniperMarker=B.MeshBuilder.CreateTorus('sniper_marker',{diameter:2,thickness:0.1,tessellation:6},_scene);
   sniperMarker.position.set(0,BRIDGE_Y+0.3,0);sniperMarker.material=MG;
-
-  // ── INTER-ZONE DETAIL ──
-  for(let i=0;i<6;i++){
-    const midAngle=Math.PI/3*i+Math.PI/6;
-    const rings=[{r:A.HEX_R*0.35,size:'med'},{r:A.HEX_R*0.22,size:'sm'}];
-    rings.forEach((ring)=>{
-      const cx=Math.cos(midAngle)*ring.r, cz=Math.sin(midAngle)*ring.r;
-      if(ring.size==='med'){
-        const wallFrag=B.MeshBuilder.CreateBox('iz_wall_'+i,{width:3.5,height:1.8,depth:0.5},_scene);
-        wallFrag.position.set(cx,0.9,cz);wallFrag.rotation.y=midAngle+Math.PI/2;wallFrag.material=MHex;
-        _addCol(cx,cz,3.5,0.5,1.8);
-        const crate1X=cx+Math.cos(midAngle)*2.5, crate1Z=cz+Math.sin(midAngle)*2.5;
-        const crate1=B.MeshBuilder.CreateBox('iz_crate1_'+i,{width:1.2,height:1.2,depth:1.2},_scene);
-        crate1.position.set(crate1X,0.6,crate1Z);crate1.material=MD;crate1.rotation.y=midAngle*0.7;
-        _addCol(crate1X,crate1Z,1.2,1.2,1.2);
-        const crate2X=cx-Math.cos(midAngle+Math.PI/4)*2.2, crate2Z=cz-Math.sin(midAngle+Math.PI/4)*2.2;
-        const crate2=B.MeshBuilder.CreateBox('iz_crate2_'+i,{width:0.9,height:0.9,depth:0.9},_scene);
-        crate2.position.set(crate2X,0.45,crate2Z);crate2.material=MC;
-        _addCol(crate2X,crate2Z,0.9,0.9,0.9);
-        const mark=B.MeshBuilder.CreateSphere('iz_mark_'+i,{diameter:0.2,segments:6},_scene);
-        mark.position.set(cx,1.9,cz);mark.material=MG;
-      }else{
-        const slab=B.MeshBuilder.CreateBox('iz_slab_'+i,{width:2.2,height:0.9,depth:0.4},_scene);
-        slab.position.set(cx,0.45,cz);slab.rotation.y=midAngle;slab.material=MD;
-        _addCol(cx,cz,2.2,0.4,0.9);
-        const slabGlow=B.MeshBuilder.CreateBox('iz_slab_g_'+i,{width:2.2,height:0.06,depth:0.4},_scene);
-        slabGlow.position.set(cx,0.93,cz);slabGlow.rotation.y=midAngle;slabGlow.material=MG;
-      }
-    });
-  }
-  for(let i=0;i<6;i++){
-    const a=Math.PI/3*i+Math.PI/12;
-    const r=A.HEX_R*0.75;
-    const px=Math.cos(a)*r, pz=Math.sin(a)*r;
-    const pip=B.MeshBuilder.CreateBox('iz_pip_'+i,{width:0.35,height:0.18,depth:0.35},_scene);
-    pip.position.set(px,0.09,pz);pip.material=MD;pip.rotation.y=a;
-  }
 }
 
 function _buildArena(){
