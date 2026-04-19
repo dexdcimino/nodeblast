@@ -1026,14 +1026,21 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-collab-badge{position:absolute;top:10%;left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:3px 7px;border-radius:12px;z-index:3;pointer-events:none;}
 .hex-collab-badge svg{width:10px;height:10px;}
 
-/* Fire + poop vote badges — bottom corners of the hex. Positioned at
-   bottom:22% (where the hex clip is still reasonably wide) so they
-   sit above the title without getting clipped by the rounded bottom
-   point. Only rendered when count > 0. */
-.hex-vote{position:absolute;bottom:25%;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,0.55);padding:4px 10px 4px 8px;border-radius:12px;z-index:3;pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
+/* MD8: hex catalyst vote badges — circle default, pill on hover.
+   Behaviour mirrors .community-vote-pill on the alchemist card. */
+.hex-vote{position:absolute;bottom:25%;display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border-radius:50%;border:2px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.6);cursor:pointer;z-index:5;color:#fff;transition:background .15s,border-color .15s,border-radius .2s,padding .2s,width .2s,height .2s;font-variant-numeric:tabular-nums;pointer-events:auto;}
+.hex-vote:hover{border-color:var(--clr-adj);width:auto;height:auto;padding:6px;border-radius:9999px;}
 .hex-vote-fire{left:22%;transform:translate(-50%,50%);}
+.hex-vote-fire:hover{padding:6px 12px 6px 6px;transform:translate(-50%,50%);}
 .hex-vote-poop{right:22%;transform:translate(50%,50%);}
-.hex-vote-emoji{font-size:32px;line-height:1;}
+.hex-vote-poop:hover{padding:6px 6px 6px 12px;flex-direction:row-reverse;transform:translate(50%,50%);}
+.hex-vote-fire:active{transform:translate(-50%,50%) scale(0.93);}
+.hex-vote-poop:active{transform:translate(50%,50%) scale(0.93);}
+.hex-vote.active.hex-vote-fire{border-color:#ff6b35;background:rgba(255,107,53,0.18);}
+.hex-vote.active.hex-vote-poop{border-color:#a07850;background:rgba(160,120,80,0.18);}
+.hex-vote-emoji{font-size:26px;line-height:1;flex-shrink:0;}
+.hex-vote-count{font-size:14px;font-weight:700;color:#fff;margin:0 4px;white-space:nowrap;opacity:0;max-width:0;overflow:hidden;transition:opacity .15s,max-width .2s;}
+.hex-vote:hover .hex-vote-count{opacity:1;max-width:40px;}
 
 /* Status badge moved to top-right so it never conflicts with the
    top-center creator avatar. The .hex-status wrapper is still absolute;

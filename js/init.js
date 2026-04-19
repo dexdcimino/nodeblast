@@ -41,6 +41,7 @@ import {
   openUnlockModal,
   listCatalystBackups,
   restoreCatalystBackup,
+  voteCatalyst,
 } from './catalysts.js';
 import { getUserByUsernameHex } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './router.js';
@@ -884,6 +885,7 @@ function renderGrid(tiles, { showAdd = false, emptyMessage = '', container = nul
     onAddClick: _handleAddCatalystClick,
     onCreatorClick: handleCreatorClick,
     onReorder: showAdd ? handleReorder : null,
+    onVoteClick: handleCatalystVote,
   });
 }
 
@@ -998,6 +1000,7 @@ function _renderProfileView(user, catalysts, isOwn) {
     onAddClick: isOwn ? _handleAddCatalystClick : undefined,
     onCreatorClick: handleCreatorClick,
     onReorder: isOwn ? handleReorder : null,
+    onVoteClick: handleCatalystVote,
   });
   // MD#33: restore collapsed state now that the grid has measured
   if (_wasCollapsed) {
@@ -1028,7 +1031,7 @@ function _renderProfileView(user, catalysts, isOwn) {
             slug: pinned.slug,
           },
           { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, showPinButton: true, isPinned: true },
-          { onTileClick: handleTileClick, onPinClick: handlePinToggle }
+          { onTileClick: handleTileClick, onPinClick: handlePinToggle, onVoteClick: handleCatalystVote }
         );
         tilesWrap.appendChild(tile);
       });
@@ -1243,6 +1246,12 @@ function handlePinToggle(cat, nowPinned) {
   }
   if (nowPinned) pinCatalyst(cat);
   else unpinCatalyst(cat.id);
+}
+
+// MD8: handler for hex-tile vote buttons
+async function handleCatalystVote(cat, voteType) {
+  if (!State.user) { toast('Sign in to vote'); return; }
+  await voteCatalyst(cat.id, voteType);
 }
 
 // Handler for the follow/unfollow button on community-hub creator cards.
@@ -1867,7 +1876,7 @@ function _buildCommunityCard(group) {
         showPinButton: !hideOwnPin,
         isPinned: _myTrackedCatIds.has(cat.id),
       },
-      { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick, onPinClick: handlePinToggle },
+      { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick, onPinClick: handlePinToggle, onVoteClick: handleCatalystVote },
     );
 
     // Absolute position for honeycomb interlock
@@ -2097,6 +2106,7 @@ function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
     showCreatorAvatar: true,
     onTileClick: handleTileClick,
     onCreatorClick: handleCreatorClick,
+    onVoteClick: handleCatalystVote,
   });
 }
 
@@ -2152,6 +2162,7 @@ async function renderFeaturedRoute() {
     gap: 24,
     onTileClick: handleFeaturedTileClick,
     showCreatorAvatar: false,
+    onVoteClick: handleCatalystVote,
   });
 
   const _honeyEl = document.getElementById('honeycomb');
@@ -3591,6 +3602,7 @@ document.addEventListener('DOMContentLoaded', () => {
       onAddClick: _handleAddCatalystClick,
       onCreatorClick: handleCreatorClick,
       onReorder: _currentShowAdd ? handleReorder : null,
+      onVoteClick: handleCatalystVote,
     });
   });
   console.log('[BOOT] 20 - boot complete');

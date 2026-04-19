@@ -220,19 +220,12 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     ? `<div class="hex-collab-badge">${PEOPLE_MINI_SVG}<span>${collabCount}</span></div>`
     : '';
 
-  // Fire / poop vote badges. Only render when count > 0 so the static
-  // face stays clean for fresh catalysts. Fire → bottom-left, poop →
-  // bottom-right. The vote type value is still 'frost' internally
-  // (see voteCatalyst comment) — `frostCount` on the catalyst doc is
-  // the poop count in UI land.
+  // MD8: vote badges — always rendered as buttons (circle default, pill on hover).
+  // `frost` is the internal vote type; UI shows it as poop.
   const fireCount = cat.fireCount || 0;
   const poopCount = cat.frostCount || 0;
-  const fireHTML = fireCount > 0
-    ? `<div class="hex-vote hex-vote-fire"><span class="hex-vote-emoji">🔥</span><span>${fireCount}</span></div>`
-    : '';
-  const poopHTML = poopCount > 0
-    ? `<div class="hex-vote hex-vote-poop"><span class="hex-vote-emoji">💩</span><span>${poopCount}</span></div>`
-    : '';
+  const fireHTML = `<button type="button" class="hex-vote hex-vote-fire" data-vote-btn data-vote-type="fire" data-catalyst-id="${cat.id || ''}" aria-label="Fire vote, ${fireCount}"><span class="hex-vote-emoji">🔥</span><span class="hex-vote-count">${fireCount || ''}</span></button>`;
+  const poopHTML = `<button type="button" class="hex-vote hex-vote-poop" data-vote-btn data-vote-type="frost" data-catalyst-id="${cat.id || ''}" aria-label="Poop vote, ${poopCount}"><span class="hex-vote-emoji">💩</span><span class="hex-vote-count">${poopCount || ''}</span></button>`;
 
   // Layers, top → bottom:
   //   .hex-placeholder    — faded logo watermark (no-thumb tiles only)
@@ -412,6 +405,8 @@ function _renderNow(state) {
       });
       el.addEventListener('click', (e) => {
         if (_suppressNextClick) { _suppressNextClick = false; return; }
+        if (e.target.closest('[data-pin-btn]')) return;
+        if (e.target.closest('[data-vote-btn]')) return;
         // MD#8: only activate on a tap — suppress if moved >8px or held >300ms.
         if (_pd) {
           const dx = Math.abs(e.clientX - _pd.x);
@@ -436,6 +431,33 @@ function _renderNow(state) {
         }
         state.onTileClick?.(tile);
       });
+      // MD8: vote button handlers for renderHexGrid tiles
+      if (state.onVoteClick) {
+        el.querySelectorAll('[data-vote-btn]').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const voteType = btn.dataset.voteType;
+            const sibling = el.querySelector(`.hex-vote:not(.hex-vote-${voteType === 'fire' ? 'fire' : 'poop'})`);
+            const wasActive = btn.classList.contains('active');
+            const sibWasActive = sibling?.classList.contains('active');
+            btn.classList.toggle('active', !wasActive);
+            sibling?.classList.remove('active');
+            const countEl = btn.querySelector('.hex-vote-count');
+            const sibCountEl = sibling?.querySelector('.hex-vote-count');
+            const n = parseInt(countEl?.textContent, 10) || 0;
+            const sibN = parseInt(sibCountEl?.textContent, 10) || 0;
+            if (wasActive) {
+              if (countEl) countEl.textContent = Math.max(0, n - 1) || '';
+            } else {
+              if (countEl) countEl.textContent = String(n + 1);
+            }
+            if (sibWasActive && sibCountEl) {
+              sibCountEl.textContent = Math.max(0, sibN - 1) || '';
+            }
+            state.onVoteClick(tile, voteType);
+          });
+        });
+      }
     }
   });
 
@@ -762,6 +784,35 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
     el.appendChild(pinBtn);
   }
 
+  // MD8: wire vote button click handlers
+  if (handlers.onVoteClick) {
+    el.querySelectorAll('[data-vote-btn]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const voteType = btn.dataset.voteType;
+        const sibling = el.querySelector(`.hex-vote:not(.hex-vote-${voteType === 'fire' ? 'fire' : 'poop'})`);
+        const wasActive = btn.classList.contains('active');
+        const sibWasActive = sibling?.classList.contains('active');
+        // Optimistic UI
+        btn.classList.toggle('active', !wasActive);
+        sibling?.classList.remove('active');
+        const countEl = btn.querySelector('.hex-vote-count');
+        const sibCountEl = sibling?.querySelector('.hex-vote-count');
+        const n = parseInt(countEl?.textContent, 10) || 0;
+        const sibN = parseInt(sibCountEl?.textContent, 10) || 0;
+        if (wasActive) {
+          if (countEl) countEl.textContent = Math.max(0, n - 1) || '';
+        } else {
+          if (countEl) countEl.textContent = String(n + 1);
+        }
+        if (sibWasActive && sibCountEl) {
+          sibCountEl.textContent = Math.max(0, sibN - 1) || '';
+        }
+        handlers.onVoteClick(cat, voteType);
+      });
+    });
+  }
+
   let _flowPd = null;
   el.addEventListener('pointerdown', (e) => {
     _flowPd = { x: e.clientX, y: e.clientY, t: Date.now() };
@@ -769,6 +820,7 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
   el.addEventListener('click', (e) => {
     if (_suppressNextClick) { _suppressNextClick = false; return; }
     if (e.target.closest('[data-pin-btn]')) return;
+    if (e.target.closest('[data-vote-btn]')) return;
     // MD#8: tap threshold.
     if (_flowPd) {
       const dx = Math.abs(e.clientX - _flowPd.x);
