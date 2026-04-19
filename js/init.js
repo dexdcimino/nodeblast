@@ -572,19 +572,19 @@ function showProfileBar(user, catalystCount, isOwn) {
           const _lSnap = await getDoc(doc(_ldb, 'users', State.user.uid));
           if (_lSnap.exists()) {
             const raw = _lSnap.data().socialLinks || [];
-            existingLinks = raw.map(l => ({ url: typeof l === 'string' ? l : (l.url || ''), active: typeof l === 'string' ? true : (l.active !== false) }));
+            existingLinks = raw.map(l => ({ url: typeof l === 'string' ? l : (l.url || ''), active: true }));
           }
         } catch (err) {
           console.warn('[social] failed to load links:', err);
-          existingLinks = (State.profile?.socialLinks || []).map(l => ({ url: l.url || '', active: l.active !== false }));
+          existingLinks = (State.profile?.socialLinks || []).map(l => ({ url: l.url || '', active: true }));
         }
         openSocialModal(existingLinks, async (links) => {
           try {
             const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
             const db = getFirestore();
-            const filtered = links.filter(l => l.url);
+            const filtered = links.filter(l => l.url?.trim());
             await setDoc(doc(db, 'users', State.user.uid), {
-              socialLinks: filtered.map(l => ({ url: l.url, active: l.active })),
+              socialLinks: filtered.map(l => ({ url: l.url, active: true })),
               updatedAt: serverTimestamp(),
             }, { merge: true });
             State.profile.socialLinks = filtered.map(l => ({ url: l.url, active: l.active }));

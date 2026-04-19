@@ -244,6 +244,14 @@ export async function renderPlayRoute(gameId) {
     document.getElementById('play-exit-modal')?.addEventListener('click', (e) => {
       if (e.target === document.getElementById('play-exit-modal')) closeExitModal();
     });
+    // Escape closes modal when open (same as clicking "No Stay")
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && _exitModalOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeExitModal();
+      }
+    });
   }
 
   try {
