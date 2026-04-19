@@ -3603,6 +3603,12 @@ window._seedTestProfiles = async function() {
       const catId = uid + '_cat_' + c;
       await setDoc(doc(db, 'catalysts', catId), { title: name + ' Project ' + (c + 1), ownerId: uid, ownerName: name, ownerHex: hex, accentColor: '#' + colors[(i + c) % colors.length], thumbURL: '', status: c === 0 && catCount > 3 ? 'placeholder' : 'published', gameId: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), fireCount: Math.floor(Math.random() * 50), frostCount: Math.floor(Math.random() * 10), isLocked: false, isPublic: true, slug: (name.toLowerCase() + '-project-' + (c + 1)).replace(/\s+/g, '-') });
     }
+    // Seed creator vote counts for variety
+    if (i % 3 === 0) {
+      await setDoc(doc(db, 'users', uid), { fireVoteCount: Math.floor(Math.random() * 400 + 100), frostVoteCount: Math.floor(Math.random() * 30) }, { merge: true });
+    } else if (i % 3 === 1) {
+      await setDoc(doc(db, 'users', uid), { fireVoteCount: Math.floor(Math.random() * 40 + 10), frostVoteCount: Math.floor(Math.random() * 10) }, { merge: true });
+    }
     console.log(`[seed] Created ${name}#${hex} with ${catCount} catalysts`);
   }
   console.log('[seed] Done! Refresh the page.');
