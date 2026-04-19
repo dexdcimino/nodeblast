@@ -158,6 +158,7 @@ let _myTrackedAlchemists = [];
 let _myTrackedCatIds = new Set();
 let _myTrackedAlchUids = new Set();
 let _myTrackedUnsub = null;
+let _lastPinnedRenderKey = null; // MD19: skip pinned re-render when unchanged
 
 function profileCacheKey(username, hex) {
   const lower = (username || '').toLowerCase();
@@ -958,6 +959,8 @@ function _buildSectionTitle(titleText, searchPlaceholder, parentCol) {
 }
 
 function _renderProfileView(user, catalysts, isOwn) {
+  // MD19: invalidate pinned memo when switching profiles
+  if (_currentProfileView?.user?.uid !== user?.uid) _lastPinnedRenderKey = null;
   console.log('[profile-view] rendering', { user: user?.displayName, isOwn, catalystsCount: catalysts?.length });
   _currentProfileView = { user, catalysts, isOwn };
   // Columns always visible; tabs hidden (MD#13).
@@ -1016,51 +1019,58 @@ function _renderProfileView(user, catalysts, isOwn) {
   const pinnedCol = document.getElementById('profile-col-pinned');
   if (pinnedCol) {
     pinnedCol.style.display = '';
-    pinnedCol.innerHTML = '';
-    pinnedCol.appendChild(_buildSectionTitle('Catalysts', 'Search...', pinnedCol));
-    console.log('[profile-view] rendering pinned col, isOwn:', isOwn, 'tracked:', _myTrackedCatalysts?.length);
-    if (isOwn && _myTrackedCatalysts.length > 0) {
-      const tilesWrap = document.createElement('div');
-      tilesWrap.className = 'profile-col-tiles';
-      // MD10: dynamically size pinned tiles to fit column width.
-      // Measure after appending the wrapper so clientWidth is accurate.
-      const _renderPinnedTiles = () => {
-        tilesWrap.innerHTML = '';
-        const colPad = 48; // 24px left + 24px right padding on column
-        const colW = (pinnedCol.clientWidth || 400) - colPad;
-        const count = _myTrackedCatalysts.length;
-        const tileGap = 16;
-        const maxPerRow = Math.max(1, Math.floor((colW + tileGap) / (48 + tileGap))); // min tile = 48
-        const perRow = Math.min(count, maxPerRow);
-        let tw = Math.floor((colW - tileGap * (perRow - 1)) / Math.max(perRow, 1));
-        tw = Math.min(tw, COMMUNITY_TILE_W);
-        tw = Math.max(tw, 48);
-        const th = Math.round(tw * 1.1547);
-        _myTrackedCatalysts.forEach((pinned) => {
-          const tile = createCatalystTileElement(
-            {
-              id: pinned.catId,
-              title: pinned.title,
-              thumbURL: pinned.thumbURL,
-              accentColor: pinned.accentColor,
-              status: pinned.status,
-              ownerName: pinned.ownerName,
-              ownerHex: pinned.ownerHex,
-              slug: pinned.slug,
-            },
-            { width: tw, height: th, showPinButton: true, isPinned: true },
-            { onTileClick: handleTileClick, onPinClick: handlePinToggle, onVoteClick: handleCatalystVote }
-          );
-          tilesWrap.appendChild(tile);
-        });
-      };
-      pinnedCol.appendChild(tilesWrap);
-      requestAnimationFrame(_renderPinnedTiles);
-    } else {
-      const empty = document.createElement('div');
-      empty.className = 'profile-col-empty';
-      empty.textContent = isOwn ? 'Pin catalysts from the community hub' : 'No catalysts yet';
-      pinnedCol.appendChild(empty);
+    // MD19: skip rebuild when pinned data hasn't changed (prevents
+    // scrollbar flash when user reorders their own catalysts).
+    const pinnedKey = JSON.stringify({
+      isOwn, uid: user?.uid,
+      cats: _myTrackedCatalysts.map((c) => c.catId),
+    });
+    if (pinnedKey !== _lastPinnedRenderKey) {
+      _lastPinnedRenderKey = pinnedKey;
+      pinnedCol.innerHTML = '';
+      pinnedCol.appendChild(_buildSectionTitle('Catalysts', 'Search...', pinnedCol));
+      console.log('[profile-view] rendering pinned col, isOwn:', isOwn, 'tracked:', _myTrackedCatalysts?.length);
+      if (isOwn && _myTrackedCatalysts.length > 0) {
+        const tilesWrap = document.createElement('div');
+        tilesWrap.className = 'profile-col-tiles';
+        const _renderPinnedTiles = () => {
+          tilesWrap.innerHTML = '';
+          const colPad = 48;
+          const colW = (pinnedCol.clientWidth || 400) - colPad;
+          const count = _myTrackedCatalysts.length;
+          const tileGap = 16;
+          const maxPerRow = Math.max(1, Math.floor((colW + tileGap) / (48 + tileGap)));
+          const perRow = Math.min(count, maxPerRow);
+          let tw = Math.floor((colW - tileGap * (perRow - 1)) / Math.max(perRow, 1));
+          tw = Math.min(tw, COMMUNITY_TILE_W);
+          tw = Math.max(tw, 48);
+          const th = Math.round(tw * 1.1547);
+          _myTrackedCatalysts.forEach((pinned) => {
+            const tile = createCatalystTileElement(
+              {
+                id: pinned.catId,
+                title: pinned.title,
+                thumbURL: pinned.thumbURL,
+                accentColor: pinned.accentColor,
+                status: pinned.status,
+                ownerName: pinned.ownerName,
+                ownerHex: pinned.ownerHex,
+                slug: pinned.slug,
+              },
+              { width: tw, height: th, showPinButton: true, isPinned: true },
+              { onTileClick: handleTileClick, onPinClick: handlePinToggle, onVoteClick: handleCatalystVote }
+            );
+            tilesWrap.appendChild(tile);
+          });
+        };
+        pinnedCol.appendChild(tilesWrap);
+        requestAnimationFrame(_renderPinnedTiles);
+      } else {
+        const empty = document.createElement('div');
+        empty.className = 'profile-col-empty';
+        empty.textContent = isOwn ? 'Pin catalysts from the community hub' : 'No catalysts yet';
+        pinnedCol.appendChild(empty);
+      }
     }
   }
 
@@ -1203,6 +1213,7 @@ function _startMyTrackedSub() {
     _myTrackedAlchemists = alchemists || [];
     _myTrackedCatIds = new Set(_myTrackedCatalysts.map((c) => c.catId));
     _myTrackedAlchUids = new Set(_myTrackedAlchemists.map((a) => a.uid));
+    _lastPinnedRenderKey = null; // MD19: invalidate so next render rebuilds
 
     // MD#10: seed defaults for new accounts — auto-follow nodeblast.dev
     // and auto-pin the three original games on first visit.
@@ -1256,6 +1267,7 @@ function _stopMyTrackedSub() {
   _myTrackedAlchemists = [];
   _myTrackedCatIds = new Set();
   _myTrackedAlchUids = new Set();
+  _lastPinnedRenderKey = null;
 }
 
 // Handler passed to community tiles so the pin button toggles the
