@@ -323,10 +323,10 @@ export async function renderPlayRoute(gameId) {
       onConnected: (myId) => {
         console.log('[play] photon connected, actor:', myId);
         console.log('[play] multiplayer connected');
-        // Assign spawn based on actor number
+        // Assign spawn BEHIND towers (alternating). Tower A = +x, Tower B = -x.
         const spawnSide = myId % 2 === 0 ? 1 : -1;
-        const spawnX = (Math.random() - 0.5) * 4;
-        const spawnZ = spawnSide * 55;
+        const spawnX = spawnSide * 90;
+        const spawnZ = (Math.random() - 0.5) * 4;
         if (window._nbSetSpawn) window._nbSetSpawn(spawnX, spawnZ);
         // Layer Hathora on top of Photon for authoritative state
         const name = State.profile?.displayName || 'player';

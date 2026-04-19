@@ -958,9 +958,9 @@ function _respawn() {
   if (screen) screen.classList.remove('visible');
   if (window._nbSetSpawn) {
     const spawnSide = (window._nbMyActorId || 0) % 2 === 0 ? 1 : -1;
-    window._nbSetSpawn((Math.random() - 0.5) * 4, spawnSide * 55);
+    window._nbSetSpawn(spawnSide * 90, (Math.random() - 0.5) * 4);
   } else {
-    _camera.position.set(0, GROUND_Y, -55);
+    _camera.position.set(90, GROUND_Y, 0);
   }
   _updateHealthHUD();
   setTimeout(() => {
@@ -1864,7 +1864,7 @@ export function initGame(canvas){
   const hemi=new B.HemisphericLight('hemi',new B.Vector3(0,1,0),_scene);hemi.intensity=0.30;hemi.diffuse=new B.Color3(0.55,0.60,0.85);hemi.groundColor=new B.Color3(0.04,0.04,0.07);
   const dir=new B.DirectionalLight('dir',new B.Vector3(-0.5,-1,-0.3),_scene);dir.intensity=0.65;dir.diffuse=new B.Color3(0.85,0.82,0.75);dir.position=new B.Vector3(30,50,30);
   _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=isLowEnd?0.003:0.004;
-  _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,-55),_scene);_camera.setTarget(B.Vector3.Zero());
+  _camera=new B.UniversalCamera('cam',new B.Vector3(90,GROUND_Y,0),_scene);_camera.setTarget(B.Vector3.Zero());
   _camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
   _camera.angularSensibility=99999;_camera.inertia=0;_camera.minZ=0.05;_camera.fov=1.22;
   window._nbSetSpawn=(x,z)=>{if(_camera){_camera.position.x=x;_camera.position.z=z;_camera.position.y=GROUND_Y;_velX=0;_velZ=0;_velY=0;}};
