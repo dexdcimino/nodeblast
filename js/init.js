@@ -1858,18 +1858,41 @@ function _buildCommunityCard(group) {
   const cardMaxW = Math.floor((window.innerWidth > 900 ? window.innerWidth * 0.5 : window.innerWidth) - 84);
   const tileSize = getCommunityTileSize(sortedTiles.length, cardMaxW);
   const tilesToShow = sortedTiles.slice(0, tileSize.showCount);
+
+  // Honeycomb absolute positioning — same math as _renderTiles in hex-grid.js
+  const _hGap = 6;
+  const _hW = tileSize.w;
+  const _hH = tileSize.h;
+  const _hStepX = _hW + _hGap;
+  const _hStepY = _hH * 0.75 + _hGap;
+  const _hPerRow = tileSize.perRow || 4;
+  let _hRow = 0, _hCol = 0, _hMaxR = 0, _hMaxB = 0;
+
   tilesToShow.forEach((cat) => {
     const tile = createCatalystTileElement(
       cat,
       {
-        width: tileSize.w,
-        height: tileSize.h,
+        width: _hW,
+        height: _hH,
         showCreatorAvatar: true,
         showPinButton: !hideOwnPin,
         isPinned: _myTrackedCatIds.has(cat.id),
       },
       { onTileClick: handleTileClick, onCreatorClick: handleCreatorClick, onPinClick: handlePinToggle },
     );
+
+    // Absolute position for honeycomb interlock
+    tile.classList.remove('hex-tile-flow');
+    tile.style.position = 'absolute';
+    const _isOff = _hRow % 2 === 1;
+    const _left = _hGap + (_isOff ? _hStepX / 2 : 0) + _hCol * _hStepX;
+    const _top = _hRow * _hStepY;
+    tile.style.left = _left + 'px';
+    tile.style.top = _top + 'px';
+    tile.style.width = _hW + 'px';
+    tile.style.height = _hH + 'px';
+    if (_left + _hW > _hMaxR) _hMaxR = _left + _hW;
+    if (_top + _hH > _hMaxB) _hMaxB = _top + _hH;
 
     if (isOwnCardForReorder) {
       tile.draggable = true;
@@ -1912,7 +1935,13 @@ function _buildCommunityCard(group) {
     }
 
     body.appendChild(tile);
+    _hCol++;
+    if (_hCol >= _hPerRow) { _hCol = 0; _hRow++; }
   });
+
+  // Set container dimensions to fit all absolute tiles
+  body.style.height = (_hMaxB + _hGap) + 'px';
+  body.style.width = (_hMaxR + _hGap) + 'px';
 
   // NB-MD09 / MD#1 / MD#12: creator-level vote pills — absolute-positioned
   // inside the body. Render for all cards (including own); own-card pills

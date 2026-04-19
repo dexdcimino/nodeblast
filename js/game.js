@@ -1396,14 +1396,16 @@ function _physicsTick() {
     }
   });
 
-  // Color node pickup
+  // Color node pickup — 3D distance, not XZ-only
   const t2 = Date.now() * 0.0015;
+  const PICKUP_R = 1.5;
   for (const cn of _colorNodes) {
     cn.sphere.position.y = cn.sphere._floatBase + Math.sin(t2 + cn.sphere._floatPhase) * 0.15;
     cn.sphere.rotation.y = t2 * 0.5;
     const dx = _camera.position.x - cn.sphere.position.x;
+    const dy = _camera.position.y - cn.sphere.position.y;
     const dz = _camera.position.z - cn.sphere.position.z;
-    if (Math.sqrt(dx*dx + dz*dz) < 1.5) {
+    if (Math.sqrt(dx*dx + dy*dy + dz*dz) < PICKUP_R) {
       const c = cn.color;
       setProjectileColor(c.r, c.g, c.b);
       if (cn.sphere.material) {
