@@ -999,9 +999,9 @@ function _respawn() {
   if (screen) screen.classList.remove('visible');
   if (window._nbSetSpawn) {
     const spawnSide = (window._nbMyActorId || 0) % 2 === 0 ? 1 : -1;
-    window._nbSetSpawn(spawnSide * 90, (Math.random() - 0.5) * 4);
+    window._nbSetSpawn((Math.random() - 0.5) * 4, spawnSide * 90);
   } else {
-    _camera.position.set(90, GROUND_Y, 0);
+    _camera.position.set(0, GROUND_Y, 90);
   }
   _updateHealthHUD();
   setTimeout(() => {
@@ -1012,74 +1012,70 @@ function _respawn() {
 
 function _drawMinimap(){
   const mc=document.getElementById('play-minimap');
-  if(!mc||!_camera)return;
+  if(!mc||!_camera||typeof ARENA==='undefined')return;
   const ctx=mc.getContext('2d');
   if(!ctx)return;
   const W=mc.width,H=mc.height,cx=W/2,cy=H/2;
   const S=0.8;
-  const px=_camera.position.x, pz=_camera.position.z;
+  const wx=(w)=>cx+w*S;
+  const wy=(w)=>cy-w*S;
 
   ctx.clearRect(0,0,W,H);
-  ctx.save();
-  ctx.translate(cx,cy);
-  ctx.rotate(-_camera.rotation.y);
-  ctx.translate(-px*S,-pz*S);
 
-  // Hex boundary (pointy-top)
-  const HR=110;
+  // Hex boundary
   ctx.strokeStyle='rgba(0,255,140,0.3)';
   ctx.lineWidth=1.5;
   ctx.beginPath();
   for(let i=0;i<6;i++){
-    const a=Math.PI/3*i-Math.PI/2;
-    const hx=Math.cos(a)*HR*S,hz=Math.sin(a)*HR*S;
-    if(i===0)ctx.moveTo(hx,hz);else ctx.lineTo(hx,hz);
+    const a=Math.PI/3*i+ARENA.HEX_ROT;
+    const vx=Math.cos(a)*ARENA.HEX_R, vz=Math.sin(a)*ARENA.HEX_R;
+    if(i===0)ctx.moveTo(wx(vx),wy(vz));else ctx.lineTo(wx(vx),wy(vz));
   }
   ctx.closePath();ctx.stroke();
 
   // Zone markers
-  ctx.fillStyle='rgba(255,255,255,0.12)';
+  ctx.fillStyle='rgba(255,255,255,0.14)';
   for(let i=0;i<6;i++){
-    const a=Math.PI/3*i;
-    const zx=Math.cos(a)*90*0.55*S;
-    const zz=Math.sin(a)*90*0.55*S;
-    ctx.beginPath();ctx.arc(zx,zz,4,0,Math.PI*2);ctx.fill();
+    const a=Math.PI/3*i+ARENA.HEX_ROT;
+    const zr=ARENA.HEX_R*ARENA.ZONE_R_MULT;
+    const zx=Math.cos(a)*zr, zz=Math.sin(a)*zr;
+    ctx.beginPath();ctx.arc(wx(zx),wy(zz),4,0,Math.PI*2);ctx.fill();
   }
 
   // Tower markers
-  ctx.fillStyle='rgba(0,255,140,0.35)';
-  [{x:75,z:0},{x:-75,z:0}].forEach(t=>{
-    ctx.fillRect(t.x*S-3,t.z*S-3,6,6);
+  ctx.fillStyle='rgba(0,255,140,0.4)';
+  [{x:0,z:ARENA.TOWER_Z},{x:0,z:-ARENA.TOWER_Z}].forEach(t=>{
+    ctx.fillRect(wx(t.x)-4,wy(t.z)-4,8,8);
   });
 
   // Center platform
-  ctx.fillStyle='rgba(255,255,255,0.15)';
-  ctx.beginPath();ctx.arc(0,0,7,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  ctx.beginPath();ctx.arc(wx(0),wy(0),7,0,Math.PI*2);ctx.fill();
 
   // Bridge
-  ctx.strokeStyle='rgba(0,255,140,0.2)';
+  ctx.strokeStyle='rgba(0,255,140,0.22)';
   ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(-75*S,0);ctx.lineTo(75*S,0);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(wx(0),wy(-ARENA.TOWER_Z));ctx.lineTo(wx(0),wy(ARENA.TOWER_Z));ctx.stroke();
 
   // Mid-ring cover
-  ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.fillStyle='rgba(255,255,255,0.10)';
   for(let i=0;i<6;i++){
-    const a=Math.PI/3*i;
-    ctx.fillRect(Math.cos(a)*40*S-2,Math.sin(a)*40*S-2,4,4);
+    const a=Math.PI/3*i+ARENA.HEX_ROT;
+    const mx=Math.cos(a)*ARENA.MID_R, mz=Math.sin(a)*ARENA.MID_R;
+    ctx.fillRect(wx(mx)-2,wy(mz)-2,4,4);
   }
 
-  ctx.restore();
-
-  // Player arrow (always center, points UP = forward direction)
+  // Player arrow at actual world position, rotated to match facing
   ctx.save();
-  ctx.translate(cx, cy);
+  ctx.translate(wx(_camera.position.x),wy(_camera.position.z));
+  ctx.rotate(_camera.rotation.y);
   ctx.fillStyle='#00ff8c';
   ctx.shadowColor='#00ff8c';ctx.shadowBlur=8;
   ctx.beginPath();
-  ctx.moveTo(0, -10);
-  ctx.lineTo(-6, 6);
-  ctx.lineTo(0, 2);
-  ctx.lineTo(6, 6);
+  ctx.moveTo(0,-10);
+  ctx.lineTo(-6,6);
+  ctx.lineTo(0,2);
+  ctx.lineTo(6,6);
   ctx.closePath();
   ctx.fill();
   ctx.shadowBlur=0;
@@ -1209,7 +1205,8 @@ function _physicsTick() {
         return Math.sqrt(ldx*ldx + ldz*ldz) < lz.radius;
       });
       if (activeLz && activeLz.outerSign) {
-        _velX = activeLz.outerSign * 0.18;
+        if (activeLz.outerAxis === 'z') _velZ = activeLz.outerSign * 0.18;
+        else _velX = activeLz.outerSign * 0.18;
       }
     }
   }
@@ -1557,7 +1554,7 @@ function _hexVertex(i, r) {
   const a = Math.PI/3 * i + ARENA.HEX_ROT;
   return { x: Math.cos(a) * r, z: Math.sin(a) * r, angle: a };
 }
-const CORNER_FOR_VERTEX = [6, 1, 2, 3, 4, 5];
+const CORNER_FOR_VERTEX = [6, 5, 4, 3, 2, 1];
 
 function _buildArenaCollision(){
   const B=window.BABYLON;
@@ -1797,7 +1794,7 @@ function _buildArenaProc(){
   }
 
   // ── SPAWN PADS ──
-  [{x:A.TOWER_Z+15,z:0},{x:-(A.TOWER_Z+15),z:0}].forEach((s,i)=>{
+  [{x:0,z:A.TOWER_Z+15},{x:0,z:-(A.TOWER_Z+15)}].forEach((s,i)=>{
     const pad=B.MeshBuilder.CreateDisc('spawn_'+i,{radius:3,tessellation:6},_scene);
     pad.rotation.x=Math.PI/2;pad.position.set(s.x,0.03,s.z);pad.material=MGD;
     const ring=B.MeshBuilder.CreateTorus('spawn_ring_'+i,{diameter:7,thickness:0.1,tessellation:6},_scene);
@@ -1805,73 +1802,74 @@ function _buildArenaProc(){
   });
 
   // ── TWIN TOWERS ──
-  [{x:A.TOWER_Z,z:0},{x:-A.TOWER_Z,z:0}].forEach((t,ti)=>{
-    box('tw_block_'+ti,A.TOWER_W,A.TOWER_H,A.TOWER_W,t.x,0,MTw);
-    const ladderSide=t.x>0?1:-1;
-    const ladderX=t.x+ladderSide*(A.TOWER_W/2+0.15);
+  [{x:0,z:A.TOWER_Z},{x:0,z:-A.TOWER_Z}].forEach((t,ti)=>{
+    box('tw_block_'+ti,A.TOWER_W,A.TOWER_H,A.TOWER_W,t.x,t.z,MTw);
+    const ladderSide=t.z>0?1:-1;
+    const ladderZ=t.z+ladderSide*(A.TOWER_W/2+0.15);
+    const ladderX=0;
     const PLAT_W=A.TOWER_PLAT_W, CUT_SZ=A.LADDER_CUT;
     const platY=A.TOWER_H+0.2, platH=0.4;
-    const nearEdge=t.x+ladderSide*PLAT_W/2, farEdge=t.x-ladderSide*PLAT_W/2;
-    const cutNear=ladderX-ladderSide*CUT_SZ/2, cutFar=ladderX+ladderSide*CUT_SZ/2;
-    const farPlatW=Math.abs(cutNear-farEdge), farPlatX=(farEdge+cutNear)/2;
-    const farPlat=B.MeshBuilder.CreateBox('tw_top_far_'+ti,{width:farPlatW,height:platH,depth:PLAT_W},_scene);
-    farPlat.position.set(farPlatX,platY,0);farPlat.material=MC;
-    _addCol(farPlatX,0,farPlatW,PLAT_W,platY+platH/2,platY-platH/2);
-    const nearPlatW=Math.abs(nearEdge-cutFar), nearPlatX=(cutFar+nearEdge)/2;
-    if(nearPlatW>0.05){
-      const nearPlat=B.MeshBuilder.CreateBox('tw_top_near_'+ti,{width:nearPlatW,height:platH,depth:PLAT_W},_scene);
-      nearPlat.position.set(nearPlatX,platY,0);nearPlat.material=MC;
-      _addCol(nearPlatX,0,nearPlatW,PLAT_W,platY+platH/2,platY-platH/2);
+    const nearEdgeZ=t.z+ladderSide*PLAT_W/2, farEdgeZ=t.z-ladderSide*PLAT_W/2;
+    const cutNearZ=ladderZ-ladderSide*CUT_SZ/2, cutFarZ=ladderZ+ladderSide*CUT_SZ/2;
+    const farPlatD=Math.abs(cutNearZ-farEdgeZ), farPlatZ=(farEdgeZ+cutNearZ)/2;
+    const farPlat=B.MeshBuilder.CreateBox('tw_top_far_'+ti,{width:PLAT_W,height:platH,depth:farPlatD},_scene);
+    farPlat.position.set(0,platY,farPlatZ);farPlat.material=MC;
+    _addCol(0,farPlatZ,PLAT_W,farPlatD,platY+platH/2,platY-platH/2);
+    const nearPlatD=Math.abs(nearEdgeZ-cutFarZ), nearPlatZ=(cutFarZ+nearEdgeZ)/2;
+    if(nearPlatD>0.05){
+      const nearPlat=B.MeshBuilder.CreateBox('tw_top_near_'+ti,{width:PLAT_W,height:platH,depth:nearPlatD},_scene);
+      nearPlat.position.set(0,platY,nearPlatZ);nearPlat.material=MC;
+      _addCol(0,nearPlatZ,PLAT_W,nearPlatD,platY+platH/2,platY-platH/2);
     }
-    const sideW=CUT_SZ, sideD=(PLAT_W-CUT_SZ)/2, sideX=ladderX;
-    const sideZA=-(CUT_SZ/2+sideD/2), sideZB=(CUT_SZ/2+sideD/2);
+    const sideD=CUT_SZ, sideW=(PLAT_W-CUT_SZ)/2, sideZ=ladderZ;
+    const sideXA=-(CUT_SZ/2+sideW/2), sideXB=(CUT_SZ/2+sideW/2);
     const sideA=B.MeshBuilder.CreateBox('tw_top_sideA_'+ti,{width:sideW,height:platH,depth:sideD},_scene);
-    sideA.position.set(sideX,platY,sideZA);sideA.material=MC;
-    _addCol(sideX,sideZA,sideW,sideD,platY+platH/2,platY-platH/2);
+    sideA.position.set(sideXA,platY,sideZ);sideA.material=MC;
+    _addCol(sideXA,sideZ,sideW,sideD,platY+platH/2,platY-platH/2);
     const sideB=B.MeshBuilder.CreateBox('tw_top_sideB_'+ti,{width:sideW,height:platH,depth:sideD},_scene);
-    sideB.position.set(sideX,platY,sideZB);sideB.material=MC;
-    _addCol(sideX,sideZB,sideW,sideD,platY+platH/2,platY-platH/2);
+    sideB.position.set(sideXB,platY,sideZ);sideB.material=MC;
+    _addCol(sideXB,sideZ,sideW,sideD,platY+platH/2,platY-platH/2);
     const topRing=B.MeshBuilder.CreateTorus('tw_glow_'+ti,{diameter:PLAT_W,thickness:0.12,tessellation:6},_scene);
-    topRing.position.set(t.x,A.TOWER_H+0.5,0);topRing.material=MG;
+    topRing.position.set(0,A.TOWER_H+0.5,t.z);topRing.material=MG;
     const railMat=mkMat('tw_rail_'+ti,0.12,0.14,0.12,0,0.15,0.06);
     const railL=B.MeshBuilder.CreateBox('tw_railL_'+ti,{width:0.06,height:A.TOWER_H,depth:0.06},_scene);
-    railL.position.set(ladderX,A.TOWER_H/2,-0.5);railL.material=railMat;
+    railL.position.set(-0.5,A.TOWER_H/2,ladderZ);railL.material=railMat;
     const railR=B.MeshBuilder.CreateBox('tw_railR_'+ti,{width:0.06,height:A.TOWER_H,depth:0.06},_scene);
-    railR.position.set(ladderX,A.TOWER_H/2,0.5);railR.material=railMat;
+    railR.position.set(0.5,A.TOWER_H/2,ladderZ);railR.material=railMat;
     for(let r=0.6;r<A.TOWER_H+0.3;r+=0.7){
-      const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:0.05,height:0.05,depth:1.0},_scene);
-      rung.position.set(ladderX,r,0);rung.material=MG;
+      const rung=B.MeshBuilder.CreateBox('tw_rung_'+ti+'_'+Math.floor(r*10),{width:1.0,height:0.05,depth:0.05},_scene);
+      rung.position.set(0,r,ladderZ);rung.material=MG;
     }
     const standOffset=0.6;
-    const standX=ladderX+ladderSide*standOffset;
+    const standZ=ladderZ+ladderSide*standOffset;
     _ladderZones.push({
-      x:standX, z:0, radius:1.3, topY:A.TOWER_H+0.5,
-      bottomY:0, outerSign:ladderSide, ladderAxisX:ladderX,
+      x:0, z:standZ, radius:1.3, topY:A.TOWER_H+0.5,
+      bottomY:0, outerSign:ladderSide, outerAxis:'z', ladderAxisZ:ladderZ,
     });
-    const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(t.x,A.TOWER_H+2,0),_scene);
+    const tLight=new B.PointLight('tw_light_'+ti,new B.Vector3(0,A.TOWER_H+2,t.z),_scene);
     tLight.diffuse=new B.Color3(0.1,1,0.5);tLight.intensity=1.5;tLight.range=20;
   });
 
-  // ── SKY BRIDGE ──
+  // ── SKY BRIDGE (now along z-axis) ──
   const BRIDGE_Y=A.TOWER_H;
   const bridgeLen=A.TOWER_Z*2-A.TOWER_W;
-  const bridgeMesh=B.MeshBuilder.CreateBox('sky_bridge',{width:bridgeLen,height:0.4,depth:A.BRIDGE_D},_scene);
+  const bridgeMesh=B.MeshBuilder.CreateBox('sky_bridge',{width:A.BRIDGE_D,height:0.4,depth:bridgeLen},_scene);
   bridgeMesh.position.set(0,BRIDGE_Y,0);bridgeMesh.material=MC;
-  _addCol(0,0,bridgeLen,A.BRIDGE_D,BRIDGE_Y+0.2,BRIDGE_Y-0.2);
-  const rail1=B.MeshBuilder.CreateBox('bridge_rail_n',{width:bridgeLen,height:1,depth:0.12},_scene);
-  rail1.position.set(0,BRIDGE_Y+0.5,1.7);rail1.material=MTw;
-  const rail2=B.MeshBuilder.CreateBox('bridge_rail_s',{width:bridgeLen,height:1,depth:0.12},_scene);
-  rail2.position.set(0,BRIDGE_Y+0.5,-1.7);rail2.material=MTw;
+  _addCol(0,0,A.BRIDGE_D,bridgeLen,BRIDGE_Y+0.2,BRIDGE_Y-0.2);
+  const rail1=B.MeshBuilder.CreateBox('bridge_rail_e',{width:0.12,height:1,depth:bridgeLen},_scene);
+  rail1.position.set(1.7,BRIDGE_Y+0.5,0);rail1.material=MTw;
+  const rail2=B.MeshBuilder.CreateBox('bridge_rail_w',{width:0.12,height:1,depth:bridgeLen},_scene);
+  rail2.position.set(-1.7,BRIDGE_Y+0.5,0);rail2.material=MTw;
   const RAIL_SEGS=12;
   const railTop=BRIDGE_Y+1.0, railBot=BRIDGE_Y;
-  const segLen=bridgeLen/RAIL_SEGS;
+  const segStep=bridgeLen/RAIL_SEGS;
   for(let s=0;s<RAIL_SEGS;s++){
-    const sx=-bridgeLen/2+segLen/2+s*segLen;
-    _addCol(sx,1.7,segLen,0.3,railTop,railBot);
-    _addCol(sx,-1.7,segLen,0.3,railTop,railBot);
+    const sz=-bridgeLen/2+segStep/2+s*segStep;
+    _addCol(1.7,sz,0.3,segStep,railTop,railBot);
+    _addCol(-1.7,sz,0.3,segStep,railTop,railBot);
   }
-  strip('bridge_gn',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,1.6);
-  strip('bridge_gs',bridgeLen,0.08,0.12,0,BRIDGE_Y+0.06,-1.6);
+  strip('bridge_ge',0.12,0.08,bridgeLen,1.6,BRIDGE_Y+0.06,0);
+  strip('bridge_gw',0.12,0.08,bridgeLen,-1.6,BRIDGE_Y+0.06,0);
   const bLight=new B.PointLight('bridge_light',new B.Vector3(0,BRIDGE_Y+2,0),_scene);
   bLight.diffuse=new B.Color3(0.8,0.2,0.9);bLight.intensity=1.5;bLight.range=10;
   const sniperMarker=B.MeshBuilder.CreateTorus('sniper_marker',{diameter:2,thickness:0.1,tessellation:6},_scene);
@@ -1898,8 +1896,8 @@ function _buildColorNodes(){
   ];
   const nodePositions = [];
   for(let i=0;i<6;i++){
-    const angle=Math.PI/3*i;
-    nodePositions.push({ x: Math.round(Math.cos(angle)*55), z: Math.round(Math.sin(angle)*55) });
+    const _nv=_hexVertex(i,55);
+    nodePositions.push({ x: Math.round(_nv.x), z: Math.round(_nv.z) });
   }
   nodePositions.push({ x: 15, z: 0 }, { x: -15, z: 0 });
   nodePositions.forEach((np, npi) => {
@@ -1929,7 +1927,7 @@ export function initGame(canvas){
   const hemi=new B.HemisphericLight('hemi',new B.Vector3(0,1,0),_scene);hemi.intensity=0.30;hemi.diffuse=new B.Color3(0.55,0.60,0.85);hemi.groundColor=new B.Color3(0.04,0.04,0.07);
   const dir=new B.DirectionalLight('dir',new B.Vector3(-0.5,-1,-0.3),_scene);dir.intensity=0.65;dir.diffuse=new B.Color3(0.85,0.82,0.75);dir.position=new B.Vector3(30,50,30);
   _scene.fogMode=B.Scene.FOGMODE_EXP2;_scene.fogColor=new B.Color3(0.02,0.02,0.05);_scene.fogDensity=isLowEnd?0.003:0.004;
-  _camera=new B.UniversalCamera('cam',new B.Vector3(90,GROUND_Y,0),_scene);_camera.setTarget(B.Vector3.Zero());
+  _camera=new B.UniversalCamera('cam',new B.Vector3(0,GROUND_Y,90),_scene);_camera.setTarget(B.Vector3.Zero());
   _camera.keysUp=[];_camera.keysDown=[];_camera.keysLeft=[];_camera.keysRight=[];
   _camera.angularSensibility=99999;_camera.inertia=0;_camera.minZ=0.05;_camera.fov=1.22;
   window._nbSetSpawn=(x,z)=>{if(_camera){_camera.position.x=x;_camera.position.z=z;_camera.position.y=GROUND_Y;_velX=0;_velZ=0;_velY=0;}};
