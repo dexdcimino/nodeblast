@@ -280,7 +280,19 @@ function _smBuildRow(url = '', isActive = true) {
   removeBtn.type = 'button';
   removeBtn.className = 'social-url-remove';
   removeBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-  removeBtn.addEventListener('click', (e) => { e.stopPropagation(); row.remove(); _smUpdateAddBtn(); });
+  removeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const allRows = container.querySelectorAll('.social-url-row');
+    if (allRows.length <= 1) {
+      const inp = row.querySelector('.social-url-input');
+      if (inp) inp.value = '';
+      const fw = row.querySelector('.social-url-favicon');
+      if (fw) fw.innerHTML = GLOBE_SVG;
+    } else {
+      row.remove();
+      _smUpdateAddBtn();
+    }
+  });
   row.appendChild(removeBtn);
 
   // Drag to reorder

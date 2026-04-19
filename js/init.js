@@ -503,6 +503,8 @@ function showProfileBar(user, catalystCount, isOwn) {
               const db = getFirestore();
               await setDoc(doc(db, 'users', State.user.uid), { bio: newBio, updatedAt: serverTimestamp() }, { merge: true });
               State.profile.bio = newBio;
+              const _acctBioInput = document.getElementById('acct-bio-input');
+              if (_acctBioInput) _acctBioInput.value = newBio;
             } catch (err) { console.warn('[bio] save failed:', err); }
           }
         });
