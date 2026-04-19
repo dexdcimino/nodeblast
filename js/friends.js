@@ -311,6 +311,20 @@ function _pushRequestNotif(requestId, req) {
     icon,
     type: 'friends',
   });
+  // MD23: super overlay for immediate visibility
+  if (typeof window._nbShowSuperNotif === 'function') {
+    window._nbShowSuperNotif({
+      icon,
+      title: fromName,
+      subtitle: 'wants to be friends',
+      body: `<span style="color:#${escapeHtml(fromHex)}">#${escapeHtml(fromHex)}</span>`,
+      actions: [
+        { label: 'Accept', onClick: () => acceptFriendRequest(requestId) },
+        { label: 'Decline', onClick: () => declineFriendRequest(requestId) },
+      ],
+      type: 'friends',
+    });
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -780,6 +794,20 @@ function _pushDmNotif(convoData) {
     icon,
     type: 'dms',
   });
+  // MD23: super overlay for DMs
+  if (typeof window._nbShowSuperNotif === 'function') {
+    const senderUid = convoData.lastMessageBy;
+    window._nbShowSuperNotif({
+      icon,
+      title: fromName,
+      subtitle: 'sent you a message',
+      body: escapeHtml(preview),
+      actions: [
+        { label: 'Open', onClick: () => { if (senderUid) openDM({ uid: senderUid, username: fromName, hexColor: '#' + fromHex }); } },
+      ],
+      type: 'dms',
+    });
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -826,7 +854,20 @@ function _pushSessionInviteNotif(inviteId, inv) {
     icon,
     type: 'invites',
   });
-  // Suppress-lint: fromHex is retained for future styling hooks.
+  // MD23: super overlay for session invites
+  if (typeof window._nbShowSuperNotif === 'function') {
+    window._nbShowSuperNotif({
+      icon,
+      title: fromName,
+      subtitle: 'invited you to a session',
+      body: `<span style="color:${escapeHtml(sessColor)}">${escapeHtml(sessName)}</span>`,
+      actions: [
+        { label: 'Open on DexNote', onClick: () => _acceptSessionInvite(inviteId, inv.sessionId) },
+        { label: 'Decline', onClick: () => _declineSessionInvite(inviteId) },
+      ],
+      type: 'invites',
+    });
+  }
   void fromHex;
 }
 
