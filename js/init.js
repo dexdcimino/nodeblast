@@ -587,7 +587,7 @@ function showProfileBar(user, catalystCount, isOwn) {
               socialLinks: filtered.map(l => ({ url: l.url, active: true })),
               updatedAt: serverTimestamp(),
             }, { merge: true });
-            State.profile.socialLinks = filtered.map(l => ({ url: l.url, active: l.active }));
+            State.profile.socialLinks = filtered;
             const iconsEl = document.getElementById('profile-bar-socials');
             if (iconsEl) {
               const html = renderSocialIconsHTML(State.profile.socialLinks);
@@ -3237,7 +3237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { doc, getDoc, getFirestore } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
         const _db = getFirestore();
         const _s = await getDoc(doc(_db, 'users', State.user.uid));
-        if (_s.exists()) existing = (_s.data().socialLinks || []).map(l => ({ url: l.url || '', active: l.active !== false }));
+        if (_s.exists()) existing = (_s.data().socialLinks || []).map(l => ({ url: l.url || '', active: true }));
       } catch { existing = (State.profile?.socialLinks || []).map(l => ({ url: l.url || '', active: true })); }
       openSocialModal(existing, async (links) => {
         try {
