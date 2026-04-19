@@ -1165,22 +1165,29 @@ function _physicsTick() {
   _velZ += ((mz * spd) - _velZ) * accel * ctrl * _delta;
   if (ml === 0 && _onGround) { const fd = Math.pow(FRICTION, _delta); _velX *= fd; _velZ *= fd; }
 
-  // Ladder auto-climb — lock to center, no horizontal sway
+  // ── Ladder climb — W up, S down, Space jumps off ──
   let _onLadder = false;
-  for (const lz of _ladderZones) {
-    const ldx = _camera.position.x - lz.x;
-    const ldz = _camera.position.z - lz.z;
-    const ldist = Math.sqrt(ldx * ldx + ldz * ldz);
-    const feetY = _camera.position.y - GROUND_Y;
-    if (ldist < lz.radius && feetY < lz.topY) {
-      _onLadder = true;
-      _velY = 0.06;
-      _velX = 0;
-      _velZ = 0;
-      _camera.position.x = lz.x;
-      _camera.position.z = lz.z;
-      _onGround = false;
-      break;
+  if (_ladderJumpGrace > 0) _ladderJumpGrace--;
+
+  if (_ladderJumpGrace === 0) {
+    for (const lz of _ladderZones) {
+      const ldx = _camera.position.x - lz.x;
+      const ldz = _camera.position.z - lz.z;
+      const ldist = Math.sqrt(ldx * ldx + ldz * ldz);
+      const feetY = _camera.position.y - GROUND_Y;
+      if (ldist < lz.radius && feetY >= (lz.bottomY || 0) && feetY < lz.topY) {
+        _onLadder = true;
+        const CLIMB_SPEED = 0.06;
+        if (forward && !back)      _velY =  CLIMB_SPEED;
+        else if (back && !forward) _velY = -CLIMB_SPEED;
+        else                       _velY = 0;
+        _velX = 0;
+        _velZ = 0;
+        _camera.position.x = lz.x;
+        _camera.position.z = lz.z;
+        _onGround = false;
+        break;
+      }
     }
   }
 
@@ -1194,6 +1201,17 @@ function _physicsTick() {
     _onGround  = false;
     _jpActive  = false;
     _jumpGrace = JUMP_GRACE;
+    if (_onLadder) {
+      _ladderJumpGrace = 8;
+      const activeLz = _ladderZones.find(lz => {
+        const ldx = _camera.position.x - lz.x;
+        const ldz = _camera.position.z - lz.z;
+        return Math.sqrt(ldx*ldx + ldz*ldz) < lz.radius;
+      });
+      if (activeLz && activeLz.outerSign) {
+        _velX = activeLz.outerSign * 0.18;
+      }
+    }
   }
   if (!jumping) _jumpHeld = false;
   if (_jumpGrace > 0) _jumpGrace--;
