@@ -263,10 +263,49 @@ export function stripDevSuffix(name) {
 // separate span so it doesn't inherit the parent color. Any ".dev"
 // stored inside the name itself is stripped first — it's never supposed
 // to be part of the stored value, but legacy profiles may still have it.
+// MD24: relative luminance per WCAG (0 = black, 1 = white)
+function _relLuminance(hex) {
+  if (!hex || typeof hex !== 'string') return 0.5;
+  const m = hex.replace('#', '').match(/^([0-9a-f]{6})$/i);
+  if (!m) return 0.5;
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 0xff) / 255;
+  const g = ((n >> 8) & 0xff) / 255;
+  const b = (n & 0xff) / 255;
+  const lin = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function _mixHex(hex, target, pct) {
+  const m = hex.replace('#', '').match(/^([0-9a-f]{6})$/i);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
+  const tn = parseInt(target.replace('#', ''), 16);
+  const tr = (tn >> 16) & 0xff, tg = (tn >> 8) & 0xff, tb = tn & 0xff;
+  const mx = (a, t) => Math.round(a + (t - a) * pct);
+  const out = (mx(r, tr) << 16) | (mx(g, tg) << 8) | mx(b, tb);
+  return '#' + out.toString(16).padStart(6, '0');
+}
+
+// MD24: returns a display-safe color for the current theme.
+export function textContrastAdjust(hex) {
+  if (!hex) return hex;
+  const isDark = State?.theme === 'dark';
+  const L = _relLuminance(hex);
+  if (isDark) {
+    if (L < 0.20) return _mixHex(hex, '#ffffff', L < 0.05 ? 0.7 : 0.5);
+  } else {
+    if (L > 0.75) return _mixHex(hex, '#000000', L > 0.95 ? 0.6 : 0.4);
+  }
+  return hex;
+}
+
 export function renderUsername(name, hexColor, isAdmin = false, isDev = false) {
   const base = stripDevSuffix(name || 'anon');
   const safeName = escapeHtml(base);
-  const colorAttr = hexColor ? ` style="color:${escapeHtml(hexColor)}"` : '';
+  const adjusted = hexColor ? textContrastAdjust(hexColor) : '';
+  const colorAttr = adjusted ? ` style="color:${escapeHtml(adjusted)}"` : '';
   let html = `<span class="uname-main"${colorAttr}>${safeName}</span>`;
   if (isAdmin) html += '<span class="uname-dev-tag">.dev</span>';
   if (isDev) html += '<span class="nb-dev-badge" title="NodeBlast Developer">DEV</span>';

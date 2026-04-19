@@ -3137,6 +3137,16 @@ function initLogoPicker() {
     _applyBotClrVars();
     _updateVariantToggle();
     _repaintSwatches();
+    // MD24: re-render username text so contrast adjusts to new theme
+    if (_currentRoute?.page === 'feed') _repaintFeed();
+    if (State.user && State.profile) {
+      const name = State.profile.displayName || State.user.displayName || 'Account';
+      const hex = '#' + (State.profile.hexCode || '5aaa72');
+      const isAdmin = !!State.profile.isAdmin;
+      const unameHtml = renderUsername(name, hex, isAdmin);
+      const nameEl = document.getElementById('acct-name');
+      if (nameEl) nameEl.innerHTML = unameHtml;
+    }
   });
 
   let hideTimer = null;
