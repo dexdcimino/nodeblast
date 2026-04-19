@@ -886,6 +886,8 @@ function renderGrid(tiles, { showAdd = false, emptyMessage = '', container = nul
     onCreatorClick: handleCreatorClick,
     onReorder: showAdd ? handleReorder : null,
     onVoteClick: handleCatalystVote,
+    onPinClick: showAdd ? null : handlePinToggle,
+    isPinned: showAdd ? null : (catId) => _myTrackedCatIds.has(catId),
   });
 }
 
@@ -1001,6 +1003,8 @@ function _renderProfileView(user, catalysts, isOwn) {
     onCreatorClick: handleCreatorClick,
     onReorder: isOwn ? handleReorder : null,
     onVoteClick: handleCatalystVote,
+    onPinClick: isOwn ? null : handlePinToggle,
+    isPinned: isOwn ? null : (catId) => _myTrackedCatIds.has(catId),
   });
   // MD#33: restore collapsed state now that the grid has measured
   if (_wasCollapsed) {
@@ -2182,6 +2186,8 @@ function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
     onTileClick: handleTileClick,
     onCreatorClick: handleCreatorClick,
     onVoteClick: handleCatalystVote,
+    onPinClick: handlePinToggle,
+    isPinned: (catId) => _myTrackedCatIds.has(catId),
   });
 }
 
@@ -3679,6 +3685,8 @@ document.addEventListener('DOMContentLoaded', () => {
       onCreatorClick: handleCreatorClick,
       onReorder: _currentShowAdd ? handleReorder : null,
       onVoteClick: handleCatalystVote,
+      onPinClick: _currentShowAdd ? null : handlePinToggle,
+      isPinned: _currentShowAdd ? null : (catId) => _myTrackedCatIds.has(catId),
     });
     // MD10: re-fit community tiles on resize
     const communityList = document.getElementById('community-list');

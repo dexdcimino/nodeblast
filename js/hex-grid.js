@@ -399,6 +399,28 @@ function _renderNow(state) {
       // GAMES-01: system game border color
       if (tile._systemGame && tile._gameColor) el.style.borderColor = tile._gameColor;
       el.innerHTML = catalystTileHTML(tile, { showCreatorAvatar: !!state.showCreatorAvatar });
+
+      // MD11: pin button on renderHexGrid tiles (same as createCatalystTileElement)
+      if (state.onPinClick) {
+        const isPinned = state.isPinned?.(tile.id) ?? false;
+        const pinBtn = document.createElement('button');
+        pinBtn.type = 'button';
+        pinBtn.className = 'hex-pin-btn' + (isPinned ? ' pinned' : '');
+        pinBtn.setAttribute('data-pin-btn', '');
+        pinBtn.setAttribute('data-tip', isPinned ? 'Unpin from profile' : 'Pin to profile');
+        pinBtn.setAttribute('aria-label', isPinned ? 'Unpin' : 'Pin');
+        pinBtn.innerHTML = isPinned ? PIN_FILLED_ICON : PIN_ICON;
+        pinBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const nowPinned = !pinBtn.classList.contains('pinned');
+          pinBtn.classList.toggle('pinned', nowPinned);
+          pinBtn.innerHTML = nowPinned ? PIN_FILLED_ICON : PIN_ICON;
+          pinBtn.setAttribute('data-tip', nowPinned ? 'Unpin from profile' : 'Pin to profile');
+          state.onPinClick(tile, nowPinned);
+        });
+        el.appendChild(pinBtn);
+      }
+
       let _pd = null;
       el.addEventListener('pointerdown', (e) => {
         _pd = { x: e.clientX, y: e.clientY, t: Date.now() };
