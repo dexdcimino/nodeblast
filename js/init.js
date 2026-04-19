@@ -596,6 +596,8 @@ function showProfileBar(user, catalystCount, isOwn) {
               iconsEl.innerHTML = html;
               iconsEl.classList.toggle('visible', !!html);
             }
+            const _il2 = document.getElementById('acct-links-inline');
+            if (_il2) _il2.innerHTML = renderSocialIconsHTML(filtered, { extraClass: 'social-icons--sm' });
           } catch (err) {
             console.warn('[social] save failed:', err);
           }
@@ -2753,6 +2755,10 @@ function updateAuthUI(user, profile) {
     if (profile.hexCode) _profileCache.delete(lower + '#' + profile.hexCode.toLowerCase());
   }
 
+  // MD5: refresh the edit-panel inline social icons now that profile is loaded
+  const _acctInline = document.getElementById('acct-links-inline');
+  if (_acctInline) _acctInline.innerHTML = renderSocialIconsHTML(profile?.socialLinks || [], { extraClass: 'social-icons--sm' });
+
   // Always re-render on auth change. The boot block now defers the
   // first renderRoute call until this point, so the feed route has
   // never actually rendered yet — only a skeleton placeholder is on
@@ -3241,11 +3247,11 @@ document.addEventListener('DOMContentLoaded', () => {
     _acctLinksWrap.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:nowrap;';
     const _linkBtn = document.createElement('button');
     _linkBtn.type = 'button';
-    _linkBtn.style.cssText = 'background:none;border:1.5px solid var(--bdr);border-radius:8px;padding:6px;cursor:pointer;color:var(--tx3);display:flex;align-items:center;justify-content:center;transition:all var(--ease);flex-shrink:0;';
+    _linkBtn.style.cssText = 'background:none;border:1.5px solid var(--tx3);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--tx2);display:flex;align-items:center;gap:5px;justify-content:center;transition:all var(--ease);flex-shrink:0;font-size:12px;font-family:var(--fn);';
     _linkBtn.setAttribute('data-tip', 'Social Links');
-    _linkBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+    _linkBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Edit</span>';
     _linkBtn.addEventListener('mouseenter', () => { _linkBtn.style.borderColor = 'var(--clr-adj)'; _linkBtn.style.color = 'var(--tx)'; });
-    _linkBtn.addEventListener('mouseleave', () => { _linkBtn.style.borderColor = 'var(--bdr)'; _linkBtn.style.color = 'var(--tx3)'; });
+    _linkBtn.addEventListener('mouseleave', () => { _linkBtn.style.borderColor = 'var(--tx3)'; _linkBtn.style.color = 'var(--tx2)'; });
     const _inlineIcons = document.createElement('span');
     _inlineIcons.id = 'acct-links-inline';
     _inlineIcons.innerHTML = renderSocialIconsHTML(State.profile?.socialLinks || [], { extraClass: 'social-icons--sm' });
@@ -3267,7 +3273,8 @@ document.addEventListener('DOMContentLoaded', () => {
           State.profile.socialLinks = filtered;
           const iconsEl = document.getElementById('profile-bar-socials');
           if (iconsEl) { iconsEl.innerHTML = renderSocialIconsHTML(filtered); iconsEl.classList.toggle('visible', filtered.length > 0); }
-          _inlineIcons.innerHTML = renderSocialIconsHTML(filtered, { extraClass: 'social-icons--sm' });
+          const _il = document.getElementById('acct-links-inline');
+          if (_il) _il.innerHTML = renderSocialIconsHTML(filtered, { extraClass: 'social-icons--sm' });
         } catch (err) { console.warn('[social] save failed:', err); }
       });
     });
