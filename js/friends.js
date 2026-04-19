@@ -187,14 +187,20 @@ function _friendCardHTML(f) {
   `;
 }
 
+// MD28: refresh online count from _presenceState (not DOM)
+function _refreshOnlineCount() {
+  const countEl = document.getElementById('acct-friends-count');
+  if (!countEl) return;
+  let onCount = 0;
+  for (const f of _friends) {
+    if (_presenceState.get(f.uid) === 'online') onCount++;
+  }
+  countEl.textContent = onCount + ' on';
+}
+
 function _renderFriendsList() {
   const list = document.getElementById('acct-friends-list');
-  const countEl = document.getElementById('acct-friends-count');
-  if (countEl) {
-    const n = _friends.length;
-    const _onCount = list ? list.querySelectorAll('.friend-status.online').length : 0;
-    countEl.textContent = _onCount > 0 ? _onCount + ' on' : '0 on';
-  }
+  _refreshOnlineCount();
   if (!list) return;
   if (_friends.length === 0) {
     list.innerHTML = '<div class="friend-empty" style="text-align:center">No connections yet</div>';
@@ -232,6 +238,7 @@ function _applyPresenceDot(uid, presence) {
     dot.classList.remove('online', 'offline');
     dot.classList.add(presence === 'online' ? 'online' : 'offline');
   }
+  _refreshOnlineCount(); // MD28: update badge on every presence change
 }
 
 /* ══════════════════════════════════════════════════════════════
