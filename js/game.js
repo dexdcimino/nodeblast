@@ -6,7 +6,7 @@
 import State from './state.js';
 import { getActiveGun, getActiveSlot, setActiveSlot, setProjectileColor,
          getProjectileColor, initGunHUD, resetGuns, GUNS,
-         unlockSlot, isSlotUnlocked } from './guns.js';
+         setSlotGun } from './guns.js';
 import { initPlasma, updatePlasma, destroyPlasma } from './plasma.js';
 import { initEnemyNodes, updateEnemyNodes, damageEnemyNode,
          checkEnemyHit, destroyEnemyNodes } from './enemy-nodes.js';
@@ -1353,16 +1353,13 @@ function _physicsTick() {
       if (eRingFill) eRingFill.style.strokeDashoffset = RING_CIRC * (1 - prog);
 
       if (_eHoldTimer >= E_HOLD_TIME) {
-        const pu = _nearPickup;
-        const pickupSlotIndex = GUNS.findIndex(g => g.id === pu._currentGunId);
-        const currentSlot = getActiveSlot();
-        const currentGun  = getActiveGun();
-
-        unlockSlot(pickupSlotIndex);
-        setActiveSlot(pickupSlotIndex);
+        const pu           = _nearPickup;
+        const pickupGunId  = pu._currentGunId;
+        const currentSlot  = getActiveSlot();
+        const outgoingId   = setSlotGun(currentSlot, pickupGunId);
         playPickup();
 
-        const slotEl = document.getElementById('gun-slot-' + pickupSlotIndex);
+        const slotEl = document.getElementById('gun-slot-' + currentSlot);
         if (slotEl) {
           slotEl.classList.remove('unlock-flash');
           void slotEl.offsetWidth;
@@ -1373,14 +1370,19 @@ function _physicsTick() {
         if (pu.gunModel) {
           try { pu.gunModel.getChildMeshes().forEach(m => m.dispose()); pu.gunModel.dispose(); } catch {}
         }
-        pu.gunModel = _buildPickupGunModel(currentSlot);
-        pu.gunModel.position.set(pu.pos.x, pu.pos.y, pu.pos.z);
-        pu._currentGunId = currentGun.id;
-        pu.slot = currentSlot;
+        const outgoingIdx = GUNS.findIndex(g => g.id === outgoingId);
+        if (outgoingIdx >= 0) {
+          pu.gunModel = _buildPickupGunModel(outgoingIdx);
+          pu.gunModel.position.set(pu.pos.x, pu.pos.y, pu.pos.z);
+        }
+        pu._currentGunId = outgoingId;
 
-        const newGc = currentGun.color;
-        if (pu.glowRing?.material) pu.glowRing.material.emissiveColor = new B.Color3(newGc.r, newGc.g, newGc.b);
-        if (pu.pt) pu.pt.diffuse = new B.Color3(newGc.r, newGc.g, newGc.b);
+        const outgoingGun = GUNS.find(g => g.id === outgoingId);
+        if (outgoingGun) {
+          const gc = outgoingGun.color;
+          if (pu.glowRing?.material) pu.glowRing.material.emissiveColor = new B.Color3(gc.r, gc.g, gc.b);
+          if (pu.pt) pu.pt.diffuse = new B.Color3(gc.r, gc.g, gc.b);
+        }
 
         _eHeld      = true;
         _eHoldTimer = 0;
