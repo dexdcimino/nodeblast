@@ -1436,7 +1436,7 @@ function _physicsTick() {
   }
 
   // 1-4 key switching (only switch to unlocked slots)
-  for (let k = 1; k <= 6; k++) {
+  for (let k = 1; k <= 4; k++) {
     if (_keys['Digit' + k] && !_prevKeys['Digit' + k]) {
       setActiveSlot(k - 1);
       if(_scoped){_scoped=false;if(_camera)_camera.fov=1.22;const s=document.getElementById('play-scope-overlay');if(s)s.style.display='none';}

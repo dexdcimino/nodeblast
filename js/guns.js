@@ -55,35 +55,55 @@ export const GUNS = [
   },
 ];
 
-// ── Active gun state ──
-let _activeSlot      = 0;
+// ══════════════════════════════════════
+//  4-SLOT INVENTORY
+// ══════════════════════════════════════
+
+export const SLOT_COUNT = 4;
+const DEFAULT_LOADOUT = ['pistol', 'machinegun', 'plasma', 'nodeblaster'];
+
+let _slotGunIds = DEFAULT_LOADOUT.slice();
+let _activeSlot = 0;
 let _projectileColor = { r: 0.1, g: 1.0, b: 0.4 };
-// Tracks which slots are unlocked — pistol (0) always unlocked
-const _unlockedSlots = new Set([0, 1, 2, 3]);
 
-export function unlockSlot(slot) { _unlockedSlots.add(slot); _updateHUD(); }
-export function lockSlot(slot)   { if (slot === 0) return; _unlockedSlots.delete(slot); _updateHUD(); }
-export function isSlotUnlocked(slot) { return _unlockedSlots.has(slot); }
-export function getUnlockedSlots()   { return new Set(_unlockedSlots); }
+function _gunForSlot(i) {
+  const id = _slotGunIds[i];
+  return GUNS.find(g => g.id === id) || GUNS[0];
+}
 
-export function getActiveGun()       { return GUNS[_activeSlot]; }
+export function getActiveGun()       { return _gunForSlot(_activeSlot); }
 export function getActiveSlot()      { return _activeSlot; }
 export function getProjectileColor() { return _projectileColor; }
+export function getSlotGunIds()      { return _slotGunIds.slice(); }
+export function getGunIdAt(i)        { return _slotGunIds[i] || null; }
 
 export function setProjectileColor(r, g, b) {
   _projectileColor = { r, g, b };
   if (window._nbSetGunColor) window._nbSetGunColor(r, g, b);
-  if (window._nbRebuildGun) window._nbRebuildGun();
+  if (window._nbRebuildGun)  window._nbRebuildGun();
 }
 
 export function setActiveSlot(slot) {
-  if (slot < 0 || slot >= GUNS.length) return;
-  if (!_unlockedSlots.has(slot)) return;  // can't switch to locked slot
+  if (slot < 0 || slot >= SLOT_COUNT) return;
   _activeSlot = slot;
-  _projectileColor = { ...GUNS[slot].color };
+  _projectileColor = { ..._gunForSlot(slot).color };
   _updateHUD();
   if (window._nbRebuildGun) window._nbRebuildGun();
-  if (window._nbUnscope) window._nbUnscope();
+  if (window._nbUnscope)    window._nbUnscope();
+}
+
+export function setSlotGun(slotIdx, gunId) {
+  if (slotIdx < 0 || slotIdx >= SLOT_COUNT) return null;
+  if (!GUNS.find(g => g.id === gunId)) return null;
+  const previousId = _slotGunIds[slotIdx];
+  _slotGunIds[slotIdx] = gunId;
+  _rerenderSlot(slotIdx);
+  if (slotIdx === _activeSlot) {
+    _projectileColor = { ..._gunForSlot(slotIdx).color };
+    if (window._nbRebuildGun) window._nbRebuildGun();
+    if (window._nbUnscope)    window._nbUnscope();
+  }
+  return previousId;
 }
 
 // ── HUD ──
@@ -92,37 +112,52 @@ export function initGunHUD() {
   if (!wrap) return;
   wrap.innerHTML = '';
 
-  GUNS.forEach((gun, i) => {
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    const gun  = _gunForSlot(i);
     const slot = document.createElement('div');
-    slot.className  = 'gun-slot';
-    slot.id         = 'gun-slot-' + i;
+    slot.className    = 'gun-slot';
+    slot.id           = 'gun-slot-' + i;
     slot.dataset.slot = i;
-    slot.innerHTML  = `
+    slot.innerHTML    = `
       <div class="gun-slot-key">${i + 1}</div>
       <div class="gun-slot-icon">${gun.icon}</div>
       <div class="gun-slot-name">${gun.name}</div>
     `;
     slot.addEventListener('click', () => setActiveSlot(i));
     wrap.appendChild(slot);
-  });
+  }
 
+  _updateHUD();
+}
+
+function _rerenderSlot(i) {
+  const el = document.getElementById('gun-slot-' + i);
+  if (!el) return;
+  const gun = _gunForSlot(i);
+  el.innerHTML = `
+    <div class="gun-slot-key">${i + 1}</div>
+    <div class="gun-slot-icon">${gun.icon}</div>
+    <div class="gun-slot-name">${gun.name}</div>
+  `;
   _updateHUD();
 }
 
 function _updateHUD() {
   document.querySelectorAll('.gun-slot').forEach((el, i) => {
-    el.classList.toggle('active',   i === _activeSlot);
-    el.classList.toggle('locked',   !_unlockedSlots.has(i));
-    el.classList.toggle('unlocked',  _unlockedSlots.has(i));
+    el.classList.toggle('active', i === _activeSlot);
+    el.classList.remove('locked');
+    el.classList.add('unlocked');
   });
 }
 
 export function resetGuns() {
+  _slotGunIds      = DEFAULT_LOADOUT.slice();
   _activeSlot      = 0;
   _projectileColor = { r: 0.1, g: 1.0, b: 0.4 };
-  _unlockedSlots.clear();
-  _unlockedSlots.add(0);
-  _unlockedSlots.add(1);
-  _unlockedSlots.add(2);
-  _unlockedSlots.add(3);
 }
+
+// ── Back-compat shims ──
+export function unlockSlot(_slot)       { }
+export function lockSlot(_slot)         { }
+export function isSlotUnlocked(_slot)   { return _slot >= 0 && _slot < SLOT_COUNT; }
+export function getUnlockedSlots()      { return new Set([0, 1, 2, 3]); }
