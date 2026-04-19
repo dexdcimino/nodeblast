@@ -189,6 +189,32 @@ export function applyAccent(hex) {
 
 let _faviconBlobUrl = null;
 
+// MD22: relative luminance per WCAG (0 = black, 1 = white).
+function _relLuminance(hex) {
+  if (!hex || typeof hex !== 'string') return 0.5;
+  const m = hex.replace('#', '').match(/^([0-9a-f]{6})$/i);
+  if (!m) return 0.5;
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 0xff) / 255;
+  const g = ((n >> 8) & 0xff) / 255;
+  const b = (n & 0xff) / 255;
+  const lin = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function _needsFaviconBackground(color) {
+  const L = _relLuminance(color);
+  return L < 0.10 || L > 0.85;
+}
+
+function _wrapWithBackground(innerSvg) {
+  const inner = innerSvg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+  const BG = '#7A7A7A', PAD = 8, W = 256, H = 234.6, RX = 32;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-${PAD} -${PAD} ${W + PAD * 2} ${H + PAD * 2}">`
+    + `<rect x="-${PAD}" y="-${PAD}" width="${W + PAD * 2}" height="${H + PAD * 2}" rx="${RX}" fill="${BG}"/>`
+    + inner + `</svg>`;
+}
+
 export function buildMonoLogoSvg(color) {
   // Paths from assets/nodeblast_logo_mono.svg — filled left blob +
   // outlined right half + filled right circle.
@@ -214,7 +240,12 @@ export function buildLogoSvg(topColor, botColor) {
 
 export function applyFavicon(topColor, botColor, mode) {
   try {
-    const svg = mode === 'mono' ? buildMonoLogoSvg(topColor) : buildLogoSvg(topColor, botColor);
+    const innerSvg = mode === 'mono' ? buildMonoLogoSvg(topColor) : buildLogoSvg(topColor, botColor);
+    // MD22: add gray background when logo color would vanish on browser chrome
+    const needsBg = mode === 'mono'
+      ? _needsFaviconBackground(topColor)
+      : (_needsFaviconBackground(topColor) || _needsFaviconBackground(botColor));
+    const svg = needsBg ? _wrapWithBackground(innerSvg) : innerSvg;
     const blob = new Blob([svg], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     let link = document.querySelector('link[rel="icon"]');
