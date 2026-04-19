@@ -689,7 +689,12 @@ function _updateProjectiles(){
       const sp=prev.add(step.scale(s));const sx=sp.x,sy=sp.y,sz=sp.z;
       for(const b of _colBlocks){const m=0.1;if(sx>b.minX-m&&sx<b.maxX+m&&sz>b.minZ-m&&sz<b.maxZ+m&&sy<b.maxY+m&&sy>b.minY-m){hit=true;hitPos=sp.clone();hitBlock=b;break outer;}}
       const enemyIdx=checkEnemyHit(sp);
-      if(enemyIdx>=0){const sDmg=p._sniperDmg?100:20;damageEnemyNode(enemyIdx,sDmg);hit=true;hitPos=sp.clone();break outer;}
+      if(enemyIdx>=0){
+        const directDmg = p._sniperDmg ? 100 : (p._isRocket ? 80 : 20);
+        damageEnemyNode(enemyIdx, directDmg);
+        hit = true; hitPos = sp.clone();
+        break outer;
+      }
       // Remote player hit check
       for(const[rpId,rp] of _remotePlayers){
         if(!rp.root.isEnabled())continue;
@@ -720,8 +725,9 @@ function _updateProjectiles(){
         if (p._trail) try { p._trail.dispose(); } catch {}
         if (hit && hitPos) _spawnRocketExplosion(hitPos, p._color || getProjectileColor());
         if (hit && hitPos) {
-          const ROCKET_RADIUS = 10;
+          const ROCKET_RADIUS = 14;
           const ROCKET_DAMAGE = 40;
+          let _splashEnemyHits = 0;
           if (_camera) {
             const rdx = _camera.position.x - hitPos.x;
             const rdy = _camera.position.y - hitPos.y;
@@ -729,11 +735,20 @@ function _updateProjectiles(){
             if (Math.sqrt(rdx*rdx + rdy*rdy + rdz*rdz) < ROCKET_RADIUS) _onPlayerDamaged(ROCKET_DAMAGE);
           }
           if (window._nbEnemyPositions) {
-            window._nbEnemyPositions().forEach(e => {
+            const enemies = window._nbEnemyPositions();
+            enemies.forEach(e => {
               const edx = e.pos.x - hitPos.x;
               const edz = e.pos.z - hitPos.z;
-              if (Math.sqrt(edx*edx + edz*edz) < ROCKET_RADIUS) damageEnemyNode(e.index, ROCKET_DAMAGE);
+              const d   = Math.sqrt(edx*edx + edz*edz);
+              if (d < ROCKET_RADIUS) {
+                damageEnemyNode(e.index, ROCKET_DAMAGE);
+                _splashEnemyHits++;
+              }
             });
+            console.log('[rocket] splash at', hitPos.x.toFixed(1), hitPos.y.toFixed(1), hitPos.z.toFixed(1),
+              '— enemies tracked:', enemies.length, 'splashed:', _splashEnemyHits);
+          } else {
+            console.warn('[rocket] window._nbEnemyPositions unavailable — splash cannot reach enemies');
           }
           for (const [rpId, rp] of _remotePlayers) {
             if (!rp.root.isEnabled()) continue;
