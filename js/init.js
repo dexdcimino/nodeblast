@@ -1613,20 +1613,25 @@ const COMMUNITY_TILE_BASE_W = 180;
 const COMMUNITY_TILE_W = COMMUNITY_TILE_BASE_W;
 const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_BASE_W * 1.1547);
 function getCommunityTileSize(count, containerWidth) {
-  const availW = containerWidth || 600;
+  const availW = containerWidth || 500;
   const gap = 12;
-  const maxPerRow = 4;
-  const rows = Math.min(Math.ceil(count / maxPerRow), 3);
-  const tilesInRow = Math.min(count, maxPerRow);
-  const containerH = 228;
-  const rowH = (containerH - gap * (rows - 1)) / rows;
-  const wFromH = Math.floor(rowH / 1.1547);
-  const wFromW = tilesInRow > 0 ? Math.floor((availW - gap * (tilesInRow - 1)) / tilesInRow) : COMMUNITY_TILE_BASE_W;
-  let w = Math.min(wFromH, wFromW);
+  let perRow;
+  if (count <= 4) perRow = count;
+  else if (count <= 6) perRow = count;
+  else if (count <= 11) perRow = 6;
+  else perRow = 6;
+  let w = Math.floor((availW - gap * Math.max(perRow - 1, 0)) / Math.max(perRow, 1));
   w = Math.min(w, 200);
-  w = Math.max(w, 80);
-  const showCount = Math.min(count, maxPerRow * 3);
-  return { w, h: Math.round(w * 1.1547), tilesInRow: maxPerRow, rows, showCount };
+  w = Math.max(w, 60);
+  const rows = Math.ceil(count / perRow);
+  let h = Math.round(w * 1.1547);
+  const totalH = h + (rows - 1) * (h * 0.75 + gap);
+  if (totalH > 220 && rows > 1) {
+    const newH = Math.floor((220 - gap * (rows - 1)) / (1 + (rows - 1) * 0.75));
+    const newW = Math.floor(newH / 1.1547);
+    return { w: Math.max(newW, 60), h: newH, perRow, rows, showCount: Math.min(count, perRow * 3) };
+  }
+  return { w, h, perRow, rows, showCount: Math.min(count, perRow * rows) };
 }
 
 // NB-MD09: reflect the user's current creator-vote (or lack thereof)
@@ -1846,11 +1851,10 @@ function _buildCommunityCard(group) {
   // everywhere else in the community hub.
   const hideOwnPin = State.user && group.uid === State.user.uid;
   const isOwnCardForReorder = State.user && group.uid === State.user.uid;
-  const MAX_VISIBLE_TILES = 12;
+  const MAX_VISIBLE_TILES = 18;
   const sortedTiles = _sortCardTiles(group.catalysts);
-  const colW = Math.floor(window.innerWidth * 0.5);
-  const tilesAvailW = colW - 56 - 28;
-  const tileSize = getCommunityTileSize(sortedTiles.length, tilesAvailW);
+  const cardMaxW = Math.floor((window.innerWidth > 900 ? window.innerWidth * 0.5 : window.innerWidth) - 84);
+  const tileSize = getCommunityTileSize(sortedTiles.length, cardMaxW);
   const tilesToShow = sortedTiles.slice(0, tileSize.showCount);
   tilesToShow.forEach((cat) => {
     const tile = createCatalystTileElement(
