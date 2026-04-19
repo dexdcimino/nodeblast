@@ -560,10 +560,12 @@ export function openAccountMenu() {
     menu.classList.remove('mobile-sheet');
   }
   menu.classList.add('open');
+  document.body.classList.add('acct-menu-open');
   _resetMenuView();
 }
 export function closeAccountMenu() {
   document.getElementById('acct-menu')?.classList.remove('open');
+  document.body.classList.remove('acct-menu-open');
   closeColorPopup();
 }
 
