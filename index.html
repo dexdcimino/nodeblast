@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="css/style.css?v=153" />
+  <link rel="stylesheet" href="css/style.css?v=154" />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -397,14 +397,14 @@
       <div id="play-gun-hud"></div>
       <!-- Hold-E pickup ring -->
       <div id="play-e-ring-wrap">
-        <svg id="play-e-ring-svg" viewBox="0 0 52 52">
-          <circle id="play-e-ring-bg"   cx="26" cy="26" r="18" fill="rgba(0,0,0,0.5)" stroke-width="3"/>
-          <circle id="play-e-ring-fill" cx="26" cy="26" r="18" fill="none"             stroke-width="3"/>
-          <text   id="play-e-ring-key"  x="26"  y="26">E</text>
+        <svg id="play-e-ring-svg" viewBox="0 0 62 62">
+          <rect id="play-e-ring-bg"   x="4" y="4" width="54" height="54" rx="14" ry="14" fill="rgba(0,0,0,0.55)" stroke-width="3"/>
+          <rect id="play-e-ring-fill" x="4" y="4" width="54" height="54" rx="14" ry="14" fill="none"             stroke-width="3"/>
+          <text id="play-e-ring-key"  x="31" y="31">E</text>
         </svg>
         <div id="play-e-ring-label">Hold to equip</div>
       </div>
-      <div id="play-e-prompt" style="position:fixed;bottom:38%;left:50%;transform:translateX(-50%);color:#fff;font-family:Outfit,sans-serif;font-size:14px;opacity:0;transition:opacity 0.2s;pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:120;"></div>
+      <div id="play-e-prompt" style="position:fixed;bottom:38%;left:50%;transform:translateX(-50%);color:#fff;font-family:Outfit,sans-serif;font-size:16px;opacity:0;transition:opacity 0.2s;pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:120;text-align:center;line-height:1.3;"></div>
 
       <!-- Drop tip -->
       <div id="play-drop-tip" style="position:absolute;bottom:110px;left:50%;transform:translateX(-50%);font-family:'Outfit',sans-serif;font-size:11px;color:rgba(255,255,255,0.35);opacity:0;transition:opacity 0.2s;pointer-events:none;">[G] Drop gun</div>
@@ -1247,7 +1247,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=153"></script>
+  <script type="module" src="js/init.js?v=154"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

@@ -1338,12 +1338,12 @@ function _physicsTick() {
   const eRingWrap = document.getElementById('play-e-ring-wrap');
   const eRingFill = document.getElementById('play-e-ring-fill');
   const ePrompt   = document.getElementById('play-e-prompt');
-  const RING_CIRC = 113;
+  const RING_CIRC = 192;
 
   if (_nearPickup) {
     if (ePrompt) {
       const gunName = GUNS.find(g => g.id === _nearPickup._currentGunId)?.name || 'Weapon';
-      ePrompt.textContent = 'Hold E — swap for ' + gunName;
+      ePrompt.innerHTML = '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.65);">Hold E</div><div style="margin-top:3px;font-weight:600;">' + gunName + '</div>';
       ePrompt.style.opacity = '1';
     }
     if (_keys['KeyE'] && !_eHeld) {

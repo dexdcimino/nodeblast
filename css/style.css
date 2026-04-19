@@ -1637,31 +1637,31 @@ body.cat-modal-open{overflow:hidden;}
 
 #play-e-ring-label{
   font-family:'Outfit',sans-serif;
-  font-size:12px;
+  font-size:13px;
   color:rgba(255,255,255,0.6);
   letter-spacing:0.06em;
   text-transform:uppercase;
 }
 
-#play-e-ring-svg{width:52px;height:52px;}
+#play-e-ring-svg{width:62px;height:62px;}
 
 #play-e-ring-bg{stroke:rgba(255,255,255,0.1);}
 
 #play-e-ring-fill{
   stroke:#5aaa72;
-  stroke-dasharray:113; /* 2π × 18 */
-  stroke-dashoffset:113;
-  transform-origin:26px 26px;
+  stroke-dasharray:192;
+  stroke-dashoffset:192;
+  transform-origin:31px 31px;
   transform:rotate(-90deg);
   transition:stroke-dashoffset 0.05s linear;
-  filter:drop-shadow(0 0 4px #5aaa72);
+  filter:drop-shadow(0 0 5px #5aaa72);
 }
 
 #play-e-ring-key{
   font-family:'Outfit',sans-serif;
-  font-size:15px;
+  font-size:19px;
   font-weight:700;
-  fill:rgba(255,255,255,0.9);
+  fill:rgba(255,255,255,0.95);
   dominant-baseline:central;
   text-anchor:middle;
 }
