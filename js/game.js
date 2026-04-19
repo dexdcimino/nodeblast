@@ -218,17 +218,26 @@ function _killRemotePlayer(id){
 function _addCol(x,z,w,d,h,minY){_colBlocks.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2,maxY:h,minY:minY||0});}
 
 function _resolveCollision(nx,nz,cy){
-  const PR=0.45;let rx=nx,rz=nz;
+  const PR=0.45;
+  const STEP_UP_MAX = 0.35;
+  let rx=nx, rz=nz;
+  let stepY = null;
   for(const b of _colBlocks){
     const feetY=cy-GROUND_Y;
     if(feetY>=b.maxY-0.05)continue;
     if(feetY+GROUND_Y<b.minY)continue;
     if(!(rx>b.minX-PR&&rx<b.maxX+PR&&rz>b.minZ-PR&&rz<b.maxZ+PR))continue;
+    const lipHeight = b.maxY - feetY;
+    if (lipHeight > 0 && lipHeight <= STEP_UP_MAX && _onGround) {
+      const candidateY = b.maxY + GROUND_Y;
+      if (stepY === null || candidateY > stepY) stepY = candidateY;
+      continue;
+    }
     const pushes=[{a:'x',v:b.minX-PR-rx},{a:'x',v:b.maxX+PR-rx},{a:'z',v:b.minZ-PR-rz},{a:'z',v:b.maxZ+PR-rz}];
     const best=pushes.reduce((a,c)=>Math.abs(c.v)<Math.abs(a.v)?c:a);
     if(best.a==='x')rx+=best.v;else rz+=best.v;
   }
-  return{x:rx,z:rz};
+  return {x: rx, z: rz, stepY};
 }
 
 function _spawnGooSplat(pos,normal,color){
@@ -1275,6 +1284,10 @@ function _physicsTick() {
   );
   _camera.position.x = res.x;
   _camera.position.z = res.z;
+  if (res.stepY !== null && res.stepY !== undefined && res.stepY > _camera.position.y) {
+    _camera.position.y = res.stepY;
+    if (_velY < 0) _velY = 0;
+  }
 
   const BOUND = 118;
   _camera.position.x = Math.max(-BOUND, Math.min(BOUND, _camera.position.x));
