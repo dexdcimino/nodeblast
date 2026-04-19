@@ -35,6 +35,7 @@ function _tryLoadGLB(path, scene, onSuccess, onFallback) {
 let _engine=null,_scene=null,_camera=null,_canvas=null,_pointerLocked=false,_resizeHandler=null,_obsHandler=null;
 let _playerUsername='player',_playerHex='5aaa72';
 let _gunRoot=null,_muzzleOffset=null;
+let _gunBuildId=0;
 let _jetpackPS=null,_jetpackNode=null;
 
 const WALK_SPEED    = 0.09;
@@ -464,11 +465,20 @@ function _buildGun(){
   const B=window.BABYLON;const gun=getActiveGun();
   if(_gunRoot){try{_gunRoot.getChildMeshes().forEach(m=>m.dispose());_gunRoot.dispose();}catch{}_gunRoot=null;}
   _gunRoot=new B.TransformNode('gun_root',_scene);
+  const myBuildId = ++_gunBuildId;
+  const myRoot    = _gunRoot;
   const pc=getProjectileColor();
   const gunId=gun.id;
   const path='./games/Arena_1/models/nodeblast_gun_'+gunId+'.glb';
   _tryLoadGLB(path,_scene,
-    (meshes)=>{meshes.forEach(m=>{if(m.name==='__root__')return;m.parent=_gunRoot;});console.log('[assets] Gun GLB loaded:',gunId);},
+    (meshes)=>{
+      if (myBuildId !== _gunBuildId || myRoot.isDisposed?.() || !_scene) {
+        meshes.forEach(m => { try { m.dispose(); } catch {} });
+        return;
+      }
+      meshes.forEach(m => { if (m.name === '__root__') return; m.parent = myRoot; });
+      console.log('[assets] Gun GLB loaded:', gunId);
+    },
     ()=>{
       switch(gun.id){
         case 'pistol':default:{
