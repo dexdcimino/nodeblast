@@ -1018,24 +1018,40 @@ function _renderProfileView(user, catalysts, isOwn) {
     if (isOwn && _myTrackedCatalysts.length > 0) {
       const tilesWrap = document.createElement('div');
       tilesWrap.className = 'profile-col-tiles';
-      _myTrackedCatalysts.forEach((pinned) => {
-        const tile = createCatalystTileElement(
-          {
-            id: pinned.catId,
-            title: pinned.title,
-            thumbURL: pinned.thumbURL,
-            accentColor: pinned.accentColor,
-            status: pinned.status,
-            ownerName: pinned.ownerName,
-            ownerHex: pinned.ownerHex,
-            slug: pinned.slug,
-          },
-          { width: COMMUNITY_TILE_W, height: COMMUNITY_TILE_H, showPinButton: true, isPinned: true },
-          { onTileClick: handleTileClick, onPinClick: handlePinToggle, onVoteClick: handleCatalystVote }
-        );
-        tilesWrap.appendChild(tile);
-      });
+      // MD10: dynamically size pinned tiles to fit column width.
+      // Measure after appending the wrapper so clientWidth is accurate.
+      const _renderPinnedTiles = () => {
+        tilesWrap.innerHTML = '';
+        const colPad = 48; // 24px left + 24px right padding on column
+        const colW = (pinnedCol.clientWidth || 400) - colPad;
+        const count = _myTrackedCatalysts.length;
+        const tileGap = 16;
+        const maxPerRow = Math.max(1, Math.floor((colW + tileGap) / (80 + tileGap))); // min tile = 80
+        const perRow = Math.min(count, maxPerRow);
+        let tw = Math.floor((colW - tileGap * (perRow - 1)) / Math.max(perRow, 1));
+        tw = Math.min(tw, COMMUNITY_TILE_W);
+        tw = Math.max(tw, 80);
+        const th = Math.round(tw * 1.1547);
+        _myTrackedCatalysts.forEach((pinned) => {
+          const tile = createCatalystTileElement(
+            {
+              id: pinned.catId,
+              title: pinned.title,
+              thumbURL: pinned.thumbURL,
+              accentColor: pinned.accentColor,
+              status: pinned.status,
+              ownerName: pinned.ownerName,
+              ownerHex: pinned.ownerHex,
+              slug: pinned.slug,
+            },
+            { width: tw, height: th, showPinButton: true, isPinned: true },
+            { onTileClick: handleTileClick, onPinClick: handlePinToggle, onVoteClick: handleCatalystVote }
+          );
+          tilesWrap.appendChild(tile);
+        });
+      };
       pinnedCol.appendChild(tilesWrap);
+      requestAnimationFrame(_renderPinnedTiles);
     } else {
       const empty = document.createElement('div');
       empty.className = 'profile-col-empty';
@@ -1106,6 +1122,8 @@ function _renderProfileView(user, catalysts, isOwn) {
           }
           followingCol.appendChild(card);
         });
+        // MD10: fit tiles in the following column cards
+        requestAnimationFrame(() => _fitCommunityTiles(followingCol));
         if (followingCol.children.length <= 1) {
           const empty = document.createElement('div');
           empty.className = 'profile-col-empty';
@@ -1613,23 +1631,75 @@ const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_BASE_W * 1.1547);
 function getCommunityTileSize(count, containerWidth) {
   const availW = containerWidth || 500;
   const gap = 6;
-  let perRow;
-  if (count <= 4) perRow = count;
-  else if (count <= 6) perRow = count;
-  else if (count <= 11) perRow = 6;
-  else perRow = 6;
+  const MIN_TILE = 80;
+  const MAX_TILE = 200;
+  // Determine how many tiles fit per row without going below MIN_TILE.
+  // Start with all tiles on one row and reduce perRow until they fit.
+  let perRow = Math.min(count, 6);
+  while (perRow > 1) {
+    const w = Math.floor((availW - gap * (perRow + 1)) / perRow);
+    if (w >= MIN_TILE) break;
+    perRow--;
+  }
   let w = Math.floor((availW - gap * (perRow + 1)) / Math.max(perRow, 1));
-  w = Math.min(w, 200);
-  w = Math.max(w, 60);
+  w = Math.min(w, MAX_TILE);
+  w = Math.max(w, MIN_TILE);
   const rows = Math.ceil(count / perRow);
   let h = Math.round(w * 1.1547);
   const totalH = h + (rows - 1) * (h * 0.75 + gap);
   if (totalH > 220 && rows > 1) {
     const newH = Math.floor((220 - gap * (rows - 1)) / (1 + (rows - 1) * 0.75));
     const newW = Math.floor(newH / 1.1547);
-    return { w: Math.max(newW, 60), h: newH, perRow, rows, showCount: Math.min(count, perRow * 3) };
+    return { w: Math.max(newW, MIN_TILE), h: newH, perRow, rows, showCount: Math.min(count, perRow * 3) };
   }
   return { w, h, perRow, rows, showCount: Math.min(count, perRow * rows) };
+}
+
+// MD10: after cards are in the DOM, re-measure each card's available
+// body width and re-position tiles if they overflow. This corrects
+// for the pre-render cardMaxW estimate being wider than reality.
+function _fitCommunityTiles(list) {
+  if (!list) return;
+  list.querySelectorAll('.community-card:not(.collapsed):not(.pill)').forEach((card) => {
+    const body = card.querySelector('.community-tiles');
+    if (!body) return;
+    const tiles = body.querySelectorAll('.hex-tile');
+    if (tiles.length === 0) return;
+    // Measure the card's interior content width (card width minus padding)
+    const cardStyle = getComputedStyle(card);
+    const padL = parseFloat(cardStyle.paddingLeft) || 0;
+    const padR = parseFloat(cardStyle.paddingRight) || 0;
+    const availW = card.clientWidth - padL - padR;
+    if (availW <= 0) return;
+    // Check if body overflows
+    const bodyW = parseFloat(body.style.width) || body.scrollWidth;
+    if (bodyW <= availW + 2) return; // fits, no action needed
+    // Re-calculate tile size to fit
+    const tileSize = getCommunityTileSize(tiles.length, availW);
+    const gap = 6;
+    const hW = tileSize.w;
+    const hH = tileSize.h;
+    const stepX = hW + gap;
+    const stepY = hH * 0.75 + gap;
+    const perRow = tileSize.perRow;
+    const colsForRow = (r) => r % 2 === 0 ? perRow : Math.max(perRow - 1, 1);
+    let row = 0, col = 0, maxR = 0, maxB = 0;
+    tiles.forEach((tile) => {
+      const isOff = row % 2 === 1;
+      const left = gap + (isOff ? stepX / 2 : 0) + col * stepX;
+      const top = row * stepY;
+      tile.style.left = left + 'px';
+      tile.style.top = top + 'px';
+      tile.style.width = hW + 'px';
+      tile.style.height = hH + 'px';
+      if (left + hW > maxR) maxR = left + hW;
+      if (top + hH > maxB) maxB = top + hH;
+      col++;
+      if (col >= colsForRow(row)) { col = 0; row++; }
+    });
+    body.style.width = (maxR + gap) + 'px';
+    body.style.height = (maxB + gap) + 'px';
+  });
 }
 
 // NB-MD09: reflect the user's current creator-vote (or lack thereof)
@@ -2052,6 +2122,11 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   const ranked = _sortCreatorGroups(groups, _feedSortMode);
   ranked.forEach((g) => list.appendChild(_buildCommunityCard(g)));
 
+  // MD10: post-render fit — re-layout tiles in any card whose body
+  // overflows its card's content area. Uses rAF so the DOM has painted
+  // and clientWidth is accurate.
+  requestAnimationFrame(() => _fitCommunityTiles(list));
+
   // NB-MD09: pre-fetch the signed-in user's creator votes for every
   // visible creator so their buttons render in the active state. Runs
   // async after cards are in the DOM — no layout blocking.
@@ -2228,6 +2303,7 @@ async function renderFeaturedRoute() {
           } catch (e) { console.warn('[featured] catalyst fetch failed:', e); }
           const card = _buildCommunityCard(group);
           followingCol.appendChild(card);
+          requestAnimationFrame(() => _fitCommunityTiles(followingCol));
         } else {
           followingCol.appendChild(_buildSectionTitle('Alchemists', 'Search...', followingCol));
           const empty = document.createElement('div');
@@ -3604,6 +3680,9 @@ document.addEventListener('DOMContentLoaded', () => {
       onReorder: _currentShowAdd ? handleReorder : null,
       onVoteClick: handleCatalystVote,
     });
+    // MD10: re-fit community tiles on resize
+    const communityList = document.getElementById('community-list');
+    if (communityList) _fitCommunityTiles(communityList);
   });
   console.log('[BOOT] 20 - boot complete');
   // Hide loading screen — boot succeeded
