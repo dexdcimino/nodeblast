@@ -3670,7 +3670,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // the SVG or interferes with the initial paintLogo call, this catches
   // it. paintLogo is idempotent — calling it again with the same colors
   // is a no-op visually.
-  requestAnimationFrame(() => paintLogo(_logoTop, _logoBot));
+  requestAnimationFrame(() => paintLogo(_logoTop, _logoBot, _logoMode));
 
   window.addEventListener('resize', () => {
     // On profile routes, re-render the catalysts column; otherwise
