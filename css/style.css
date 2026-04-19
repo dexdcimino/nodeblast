@@ -786,7 +786,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-count-hex svg{display:block;}
 /* MD07: spacer that floats the right-side button cluster */
 .community-card-hdr-spacer{flex:1 1 auto;min-width:8px;}
-.community-card-share{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx2);cursor:pointer;padding:8px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease),background var(--ease);}
+.community-card-share{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:50%;color:var(--tx3);cursor:pointer;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease);}
 .community-card-share:hover{color:var(--tx);border-color:var(--clr-adj);background:var(--bg3);}
 .community-card-share svg{width:18px;height:18px;}
 
@@ -794,9 +794,11 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    the share button in the card header. Pill-shaped so it reads as
    an action, not a chip. The `.following` state flips to a filled
    green pill (the accent color) so the on/off state is obvious. */
-.community-card-follow{flex-shrink:0;background:none;border:2px solid var(--bdr);border-radius:20px;color:var(--tx3);font-family:var(--fn);font-size:14px;font-weight:700;cursor:pointer;padding:6px 14px;transition:background var(--ease),color var(--ease),border-color var(--ease);display:inline-flex;align-items:center;gap:4px;}
-.community-card-follow:hover{border-color:var(--tx3);color:var(--tx2);background:color-mix(in srgb,var(--tx3) 8%,transparent);}
+.community-card-follow{flex-shrink:0;background:none;border:2px solid var(--bdr);border-radius:50%;color:var(--tx3);cursor:pointer;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;transition:background var(--ease),color var(--ease),border-color var(--ease),transform .2s ease;font-size:0;line-height:0;}
+.community-card-follow:not(.following):hover{border-color:var(--tx3);color:var(--tx2);}
 .community-card-follow.following{background:var(--clr-adj);color:var(--clr-adj-on,#000);border-color:var(--clr-adj);}
+.community-card-follow.following svg{transform:rotate(45deg);fill:currentColor;}
+.community-card-follow:not(.following) svg{fill:none;}
 .community-card-follow.following:hover{background:color-mix(in srgb,var(--clr-adj) 80%,#000);border-color:var(--clr-adj);}
 .community-card-follow.icon-only{padding:6px;border-radius:50%;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;font-size:0;}
 .community-card-follow.icon-only svg{flex-shrink:0;}
@@ -805,7 +807,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-tiles{position:relative;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:flex-start;align-content:center;height:228px;padding:0 14px;overflow:hidden;}
 
 /* NB-MD05: collapse/expand button + collapsed card state */
-.community-card-collapse{flex-shrink:0;background:transparent;border:none;color:var(--tx3);cursor:pointer;padding:8px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;transition:color var(--ease),background var(--ease);}
+.community-card-collapse{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:50%;color:var(--tx3);cursor:pointer;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease);}
 .community-card-collapse:hover{color:var(--tx);background:rgba(255,255,255,0.07);}
 .community-card-collapse svg{width:18px;height:18px;}
 .community-card.collapsed .community-tiles > *:not(:first-child){display:none;}
@@ -831,17 +833,17 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card.pill .community-card-meta-group{gap:6px;}
 .community-card.pill .community-card-collapse{padding:4px;}
 .community-card.pill .community-card-collapse svg{width:14px;height:14px;}
-.community-card.pill .community-card-follow{padding:4px 10px;font-size:11px;border-radius:12px;}
+.community-card.pill .community-card-follow{width:26px;height:26px;padding:0;font-size:0;}
 .community-card.pill .community-card-follow.icon-only{width:26px;height:26px;padding:4px;}
 .community-card.pill .community-vote-pill{display:none;}
 #community-list .community-card.pill{flex-basis:auto;width:280px;max-width:280px;order:1000;}
 #community-list .community-card:not(.pill){order:0;}
 
 /* MD#1: absolute-positioned vote pills — bottom-left frost, bottom-right fire */
-.community-vote-pill{position:absolute;bottom:8px;display:inline-flex;align-items:center;padding:6px;border-radius:50%;border:2px solid var(--bdr);background:var(--bg3);font-size:20px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s,border-radius .2s,padding .2s;color:var(--tx2);line-height:1;z-index:3;}
+.community-vote-pill{position:absolute;bottom:8px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border-radius:50%;border:2px solid var(--bdr);background:var(--bg3);font-size:20px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s,border-radius .2s,padding .2s,width .2s,height .2s;color:var(--tx2);line-height:1;z-index:3;}
 .community-vote-pill.frost{left:12px;}
 .community-vote-pill.fire{right:12px;}
-.community-vote-pill.has-count{border-radius:9999px;}
+.community-vote-pill.has-count{width:auto;height:auto;padding:6px;border-radius:9999px;}
 .community-vote-pill.has-count.frost{padding:6px 12px 6px 6px;}
 .community-vote-pill.has-count.fire{padding:6px 6px 6px 12px;flex-direction:row-reverse;}
 .community-vote-pill:hover{border-color:var(--clr-adj);background:var(--bg4);}
