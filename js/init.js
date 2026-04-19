@@ -2223,10 +2223,12 @@ function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
     emptyMessage: emptyMessage || 'No catalysts yet.',
     container: 'honeycomb',
     getColsFn: (w) => {
-      if (w >= 1400) return 5;
-      if (w >= 1000) return 4;
-      if (w >= 700) return 3;
-      return 2;
+      if (w >= 1500) return 6;
+      if (w >= 1200) return 5;
+      if (w >= 900) return 4;
+      if (w >= 650) return 3;
+      if (w >= 400) return 2;
+      return 1;
     },
     gap: 16,
     showCreatorAvatar: true,
@@ -3720,28 +3722,35 @@ document.addEventListener('DOMContentLoaded', () => {
   // is a no-op visually.
   requestAnimationFrame(() => paintLogo(_logoTop, _logoBot, _logoMode));
 
-  // MD17: debounce resize/zoom via rAF to avoid stacking renders
+  // MD17/MD21: debounced, route-aware resize handler
   let _resizeRaf = null;
   window.addEventListener('resize', () => {
     if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
     _resizeRaf = requestAnimationFrame(() => {
       _resizeRaf = null;
-      // On profile routes, re-render the catalysts column; otherwise
-      // re-render the default #honeycomb grid.
-      const onProfile = !!_currentProfileView;
-      renderHexGrid({
-        tiles: _currentTiles,
-        showAdd: _currentShowAdd,
-        container: onProfile ? 'profile-col-catalysts' : null,
-        onTileClick: handleTileClick,
-        onAddClick: _handleAddCatalystClick,
-        onCreatorClick: handleCreatorClick,
-        onReorder: _currentShowAdd ? handleReorder : null,
-        onVoteClick: handleCatalystVote,
-        onPinClick: _currentShowAdd ? null : handlePinToggle,
-        isPinned: _currentShowAdd ? null : (catId) => _myTrackedCatIds.has(catId),
-      });
-      // MD10: re-fit community tiles on resize
+      // MD21: on the feed route, _repaintFeed dispatches to the correct
+      // render function (renderCatalystsFlow or renderCommunityHub) with
+      // the right getColsFn and snapshot data.
+      if (_currentRoute?.page === 'feed') {
+        _repaintFeed();
+        return;
+      }
+      // Profile views: re-render the catalysts column with current tiles
+      if (_currentProfileView) {
+        renderHexGrid({
+          tiles: _currentTiles,
+          showAdd: _currentShowAdd,
+          container: 'profile-col-catalysts',
+          onTileClick: handleTileClick,
+          onAddClick: _handleAddCatalystClick,
+          onCreatorClick: handleCreatorClick,
+          onReorder: _currentShowAdd ? handleReorder : null,
+          onVoteClick: handleCatalystVote,
+          onPinClick: _currentShowAdd ? null : handlePinToggle,
+          isPinned: _currentShowAdd ? null : (catId) => _myTrackedCatIds.has(catId),
+        });
+      }
+      // Non-feed routes with community-list visible (e.g. featured)
       const communityList = document.getElementById('community-list');
       if (communityList) _fitCommunityTiles(communityList);
     });
