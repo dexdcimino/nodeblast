@@ -157,7 +157,7 @@ function _friendCardHTML(f) {
   const presence = _presenceState.get(f.uid) || 'offline';
   const favClass = f.favorite ? 'active' : '';
   return `
-    <div class="friend-card" data-uid="${escapeHtml(f.uid)}" style="--friend-hex:${color}">
+    <div class="friend-card" data-uid="${escapeHtml(f.uid)}" style="--friend-hex:#${_readableHex(color)};--friend-hex-raw:${color}">
       <div class="friend-avatar" style="border-color:${color}">
         ${escapeHtml((name[0] || '?').toUpperCase())}
         <span class="friend-presence ${presence}" data-presence></span>

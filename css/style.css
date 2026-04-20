@@ -356,7 +356,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 #acct-friends-list .friend-empty{padding:10px 8px;font-size:15px;color:var(--tx3);text-align:center;}
 .friend-card{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;cursor:pointer;transition:background var(--ease);}
 .friend-card:hover{background:var(--bg3);}
-.friend-card .friend-avatar{width:32px;height:32px;border-radius:50%;border:2px solid var(--friend-hex,var(--clr-adj));background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:13px;font-weight:700;flex-shrink:0;position:relative;}
+.friend-card .friend-avatar{width:32px;height:32px;border-radius:50%;border:2px solid var(--friend-hex-raw,var(--friend-hex,var(--clr-adj)));background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--tx);font-size:13px;font-weight:700;flex-shrink:0;position:relative;}
 /* MD15: presence dot — sits on the bottom-right of the avatar.
    Green when the friend's presence doc is 'online' within the
    2-minute staleness window; gray otherwise. */
