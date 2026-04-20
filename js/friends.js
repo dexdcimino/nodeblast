@@ -382,9 +382,12 @@ function _pushRequestNotif(requestId, req) {
 async function _beatSelfPresence() {
   if (!State.user) return;
   try {
+    // MD-B4: dual-field write so DexNote (reads lastBeat) and NB
+    // (reads lastChanged) both recognize this user as online.
+    const ts = serverTimestamp();
     await setDoc(
       doc(db, 'users', State.user.uid, 'presence', 'current'),
-      { state: 'online', lastChanged: serverTimestamp() },
+      { state: 'online', lastChanged: ts, lastBeat: ts },
       { merge: true },
     );
   } catch (err) {
@@ -409,9 +412,11 @@ function _stopSelfPresence() {
 function _markSelfOfflineBestEffort() {
   if (!State.user) return;
   try {
+    // MD-B4: dual-field — see _beatSelfPresence comment.
+    const ts = serverTimestamp();
     setDoc(
       doc(db, 'users', State.user.uid, 'presence', 'current'),
-      { state: 'offline', lastChanged: serverTimestamp() },
+      { state: 'offline', lastChanged: ts, lastBeat: ts },
       { merge: true },
     );
   } catch {}
@@ -436,10 +441,11 @@ function _syncPresenceSubscriptions() {
       doc(db, 'users', uid, 'presence', 'current'),
       (snap) => {
         const data = snap.data();
-        // Stale check: if lastChanged > 2min ago, treat as offline.
+        // MD-B4: accept either lastChanged (NB) or lastBeat (dex).
+        // Stale check: treat as offline if > 2min old.
         let presence = 'offline';
         if (data?.state === 'online') {
-          const ts = data.lastChanged?.toMillis?.() ?? 0;
+          const ts = (data.lastChanged?.toMillis?.() ?? data.lastBeat?.toMillis?.() ?? 0);
           if (ts > 0 && Date.now() - ts < 2 * 60 * 1000) presence = 'online';
         }
         _applyPresenceDot(uid, presence);
