@@ -8,7 +8,7 @@ import { toast } from './ui-events.js';
 import {
   fetchQuestions, subscribeQuestionCounts, castVote,
   getMyVotes, postQuestion, fetchComments, postComment,
-  subscribeComments, seedNodeSplitQuestions,
+  subscribeComments, seedNodeSplitQuestions, seedNodeSplitQuestionsBatch2,
 } from './nodesplit-data.js';
 
 let _open = false;
@@ -358,6 +358,9 @@ export async function openNodeSplit(title) {
   document.addEventListener('keydown', _escHandler, true);
 
   await seedNodeSplitQuestions();
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    await seedNodeSplitQuestionsBatch2();
+  }
   await _loadFeed();
 }
 
