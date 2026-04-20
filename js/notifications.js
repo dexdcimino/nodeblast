@@ -162,6 +162,10 @@ export function initNotifications() {
   // Toggle menu on bell click; close on outside click.
   btn?.addEventListener('click', (e) => {
     e.stopPropagation();
+    // MD-B3: mutex — opening notif closes quick tips
+    if (!menu?.classList.contains('open')) {
+      document.getElementById('help-panel')?.classList.remove('open');
+    }
     menu?.classList.toggle('open');
   });
   document.addEventListener('click', (e) => {
@@ -204,6 +208,8 @@ export function initHelpPanel() {
   let hideTimer = null;
   const show = () => {
     clearTimeout(hideTimer); hideTimer = null;
+    // MD-B3: mutex — opening tips closes notifications
+    document.getElementById('notif-menu')?.classList.remove('open');
     panel.classList.add('open');
   };
   const hide = () => {
