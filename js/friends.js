@@ -323,6 +323,7 @@ function _removeFriendReqNotif(requestId) {
       }
     });
   } catch (e) { /* noop */ }
+  try { window._nbSyncNotifBadge?.(); } catch {} // MD-BUG15-nb
 }
 
 // MD-B2: clamp hex brightness into a readable band for notification popups
@@ -1022,6 +1023,7 @@ export function initFriends() {
       e.stopPropagation();
       acceptFriendRequest(fa.getAttribute('data-fr-accept'));
       fa.closest('.notif-item')?.remove();
+      try { window._nbSyncNotifBadge?.(); } catch {} // MD-BUG15-nb
       return;
     }
     const fd = e.target.closest('[data-fr-decline]');
@@ -1029,6 +1031,7 @@ export function initFriends() {
       e.stopPropagation();
       declineFriendRequest(fd.getAttribute('data-fr-decline'));
       fd.closest('.notif-item')?.remove();
+      try { window._nbSyncNotifBadge?.(); } catch {} // MD-BUG15-nb
       return;
     }
     const sa = e.target.closest('[data-si-accept]');

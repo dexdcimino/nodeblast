@@ -108,6 +108,7 @@ function _dismissSuper() {
   setTimeout(() => {
     container.style.display = 'none';
     _superActive = false;
+    _syncBadge(); // MD-BUG15-nb: keep badge in sync after overlay dismissal
     if (_superQueue.length) {
       const next = _superQueue.shift();
       setTimeout(() => _showSuper(next), 150);
@@ -197,6 +198,11 @@ export function initNotifications() {
   // can drop notifications without importing anything.
   window._nbAddNotif = _addNotif;
   window._nbShowSuperNotif = _showSuperPublic;
+  window._nbSyncNotifBadge = _syncBadge; // MD-BUG15-nb: cross-module badge sync
+
+  // MD-BUG15-nb: safety-net — any removal path that forgets to call
+  // _syncBadge self-heals within 2 seconds.
+  setInterval(() => { try { _syncBadge(); } catch {} }, 2000);
 }
 
 /* ── Quick Tips hover panel ── */
