@@ -326,7 +326,9 @@ function _pushRequestNotif(requestId, req) {
   // INFRA-MD01: canonical-first, legacy fallback
   const fromName = req.fromDisplayName || req.fromUsername || 'Someone';
   const fromHex = _noHash(req.fromHexCode || req.fromHex || '5aaa72');
-  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#${fromHex}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3.5"/><path d="M2 21c0-3.5 3-6.5 7-6.5s7 3 7 6.5"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>`;
+  // MD-B1: waving hand emoji — parity with dex friend-request popup
+  const icon = `<span style="font-size:28px;line-height:1;">\u{1F44B}</span>`;
+  const iconLarge = `<span style="font-size:48px;line-height:1;">\u{1F44B}</span>`;
   window._nbAddNotif({
     text: `<b>${escapeHtml(fromName)}</b> wants to be friends <span style="color:#${escapeHtml(fromHex)}">#${escapeHtml(fromHex)}</span>
            <div class="notif-actions">
@@ -339,7 +341,7 @@ function _pushRequestNotif(requestId, req) {
   // MD23: super overlay for immediate visibility
   if (typeof window._nbShowSuperNotif === 'function') {
     window._nbShowSuperNotif({
-      icon,
+      icon: iconLarge,
       title: fromName,
       subtitle: 'wants to be friends',
       body: `<span style="color:#${escapeHtml(fromHex)}">#${escapeHtml(fromHex)}</span>`,
