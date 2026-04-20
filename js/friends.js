@@ -287,9 +287,14 @@ function _startRequestsSub(uid) {
     ),
     (snap) => {
       snap.docChanges().forEach((change) => {
+        const id = change.doc.id;
+        // MD-R3-nb: clear stale popup when request leaves 'pending'
+        if (change.type === 'modified' || change.type === 'removed') {
+          _removeFriendReqNotif(id);
+          return;
+        }
         if (change.type !== 'added') return;
         const req = change.doc.data() || {};
-        const id = change.doc.id;
         if (_seenRequestIds.has(id)) return;
         _seenRequestIds.add(id);
         _pushRequestNotif(id, req);
@@ -301,6 +306,19 @@ function _startRequestsSub(uid) {
 
 function _stopRequestsSub() {
   if (_requestsUnsub) { try { _requestsUnsub(); } catch {} _requestsUnsub = null; }
+}
+
+// MD-R3-nb: remove bell-list notif for a request that left 'pending'
+function _removeFriendReqNotif(requestId) {
+  if (!requestId) return;
+  try {
+    document.querySelectorAll('.notif-item').forEach((n) => {
+      if (n.querySelector(`[data-fr-accept="${requestId}"]`) ||
+          n.querySelector(`[data-fr-decline="${requestId}"]`)) {
+        n.remove();
+      }
+    });
+  } catch (e) { /* noop */ }
 }
 
 function _pushRequestNotif(requestId, req) {
