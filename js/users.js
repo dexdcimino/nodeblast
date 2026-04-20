@@ -20,7 +20,9 @@ import {
 const db = getFirestore(app);
 
 export function normalizeUsername(name) {
-  return (name || '').toLowerCase().trim();
+  // MD-B7: strip trailing .dev admin badge so pasted handles from
+  // admin profile chips resolve to the correct userLookup key.
+  return (name || '').toLowerCase().trim().replace(/\.dev$/i, '');
 }
 
 // Build the canonical userLookup document key: "name#hex" (both lowercase).
