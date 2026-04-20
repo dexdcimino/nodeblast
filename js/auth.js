@@ -348,7 +348,7 @@ export async function saveProfile(updates) {
 
   // Clamp bio length + trim, in case a caller forgot.
   if (typeof updates.bio === 'string') {
-    updates.bio = updates.bio.slice(0, 150).trim();
+    updates.bio = updates.bio.slice(0, 280).trim();
   }
   // Sanitize socialLinks so the stored array is always well-formed:
   // drops missing URLs, caps at 8 entries, re-detects platform if omitted.

@@ -411,7 +411,7 @@ function _updateBioCount() {
   const input = document.getElementById('acct-bio-input');
   const count = document.getElementById('acct-bio-count');
   if (!input || !count) return;
-  count.textContent = (input.value || '').length + '/150';
+  count.textContent = (input.value || '').length + '/280';
 }
 
 // Working set of social links while the edit panel is open. Each
@@ -647,7 +647,7 @@ export function initAccountMenu(handlers) {
     // MD30: safety-net strip on save in case the live handler missed
     const name = document.getElementById('acct-username-input').value.replace(/ /g, '_').trim();
     const hex = document.getElementById('acct-edit-hex-input').value.replace('#', '').toLowerCase();
-    const bio = (document.getElementById('acct-bio-input')?.value || '').trim().slice(0, 150);
+    const bio = (document.getElementById('acct-bio-input')?.value || '').trim().slice(0, 280);
     const socialLinks = _collectLinks();
     if (!/^[0-9a-f]{6}$/.test(hex)) { toast('Invalid hex color'); return; }
     try {
