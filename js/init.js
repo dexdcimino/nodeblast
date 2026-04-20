@@ -3393,22 +3393,17 @@ document.addEventListener('DOMContentLoaded', () => {
   initNotifications();
   initSocialModal();
 
-  // MD#50: replace dropdown link editor with a button that opens the social modal
-  const _acctLinksWrap = document.getElementById('acct-links-wrap');
-  if (_acctLinksWrap) {
-    _acctLinksWrap.innerHTML = '';
-    _acctLinksWrap.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:nowrap;';
-    const _linkBtn = document.createElement('button');
-    _linkBtn.type = 'button';
-    _linkBtn.style.cssText = 'background:none;border:1.5px solid var(--tx3);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--tx2);display:flex;align-items:center;gap:5px;justify-content:center;transition:all var(--ease);flex-shrink:0;font-size:12px;font-family:var(--fn);';
-    _linkBtn.setAttribute('data-tip', 'Social Links');
-    _linkBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Edit</span>';
-    _linkBtn.addEventListener('mouseenter', () => { _linkBtn.style.borderColor = 'var(--clr-adj)'; _linkBtn.style.color = 'var(--tx)'; });
-    _linkBtn.addEventListener('mouseleave', () => { _linkBtn.style.borderColor = 'var(--tx3)'; _linkBtn.style.color = 'var(--tx2)'; });
-    const _inlineIcons = document.createElement('span');
-    _inlineIcons.id = 'acct-links-inline';
-    _inlineIcons.innerHTML = renderSocialIconsHTML(State.profile?.socialLinks || [], { extraClass: 'social-icons--sm' });
-    _linkBtn.addEventListener('click', async (e) => {
+  // NB-MD#3: Static HTML in index.html now has the final button + inline
+  // structure — no DOM rebuild needed at boot. Just wire the click handler
+  // to the pre-existing #acct-links-btn and paint existing icons into the
+  // pre-existing #acct-links-inline span.
+  const _acctLinksBtn = document.getElementById('acct-links-btn');
+  const _acctLinksInline = document.getElementById('acct-links-inline');
+  if (_acctLinksInline) {
+    _acctLinksInline.innerHTML = renderSocialIconsHTML(State.profile?.socialLinks || [], { extraClass: 'social-icons--sm' });
+  }
+  if (_acctLinksBtn) {
+    _acctLinksBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
       let existing = [];
       try {
@@ -3431,8 +3426,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) { console.warn('[social] save failed:', err); }
       });
     });
-    _acctLinksWrap.appendChild(_linkBtn);
-    _acctLinksWrap.appendChild(_inlineIcons);
   }
   console.log('[BOOT] 16 - initHelpPanel');
   initHelpPanel();

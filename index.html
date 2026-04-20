@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="css/style.css?v=166" />
+  <link rel="stylesheet" href="css/style.css?v=167" />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -514,15 +514,16 @@
             <div class="acct-emoji-panel-grid" id="acct-emoji-panel-grid"></div>
           </div>
         </div>
-        <div class="acct-edit-field acct-edit-links-row">
-          <label class="acct-edit-label">Links:</label>
-          <div id="acct-links-wrap">
-            <div id="acct-links-list"><!-- populated by ui-events.js --></div>
-            <button type="button" id="acct-links-add-btn" class="acct-links-add-btn">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Link
-            </button>
-          </div>
+        <!-- NB-MD#3: Links row — button replaces the "Links:" label,
+             existing links render as inline monochrome icons to the right.
+             Opens social-modal on click. Static HTML now matches runtime
+             state so there's no boot-time DOM rebuild or flash. -->
+        <div class="acct-edit-field acct-edit-links-row" id="acct-links-wrap">
+          <button type="button" id="acct-links-btn" class="acct-links-btn" data-tip="Social Links">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span>Links</span>
+          </button>
+          <span id="acct-links-inline"></span>
         </div>
         <div id="acct-edit-actions">
           <button id="acct-edit-cancel-btn">Cancel</button>
@@ -1247,7 +1248,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=166"></script>
+  <script type="module" src="js/init.js?v=167"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

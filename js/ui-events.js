@@ -414,9 +414,12 @@ function _updateBioCount() {
   count.textContent = (input.value || '').length + '/280';
 }
 
-// Working set of social links while the edit panel is open. Each
-// entry: { platform, url }. Reset on every panel open so Cancel
-// doesn't mutate the source data.
+// NB-MD#3: dead code — replaced by #acct-links-btn + social-modal.
+// _editingLinks / _renderLinksList / _collectLinks all drove the old
+// dropdown-style editor whose DOM targets (#acct-links-list, #acct-links-add-btn)
+// no longer exist. Persistence now runs through social-modal's onSave
+// in init.js.
+/*
 let _editingLinks = [];
 
 function _renderLinksList() {
@@ -428,7 +431,6 @@ function _renderLinksList() {
     const row = document.createElement('div');
     row.className = 'acct-link-row';
     row.dataset.idx = String(idx);
-    // Platform dropdown
     const select = document.createElement('select');
     select.className = 'acct-link-platform';
     SOCIAL_PLATFORMS.forEach((p) => {
@@ -442,7 +444,6 @@ function _renderLinksList() {
       _editingLinks[idx].platform = select.value;
     });
     row.appendChild(select);
-    // URL input
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'acct-link-url';
@@ -452,11 +453,6 @@ function _renderLinksList() {
     input.value = link.url || '';
     input.addEventListener('input', () => {
       _editingLinks[idx].url = input.value;
-      // Auto-detect platform on paste/typing — but only if the user
-      // hasn't explicitly picked a non-detected platform yet. We check
-      // by comparing the select's current value against what detect
-      // would say about the old URL; if they match, the dropdown is
-      // "tracking" and we keep updating it.
       const detected = detectPlatform(input.value);
       if (detected && detected !== 'website') {
         select.value = detected;
@@ -464,7 +460,6 @@ function _renderLinksList() {
       }
     });
     row.appendChild(input);
-    // Remove button
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'acct-link-remove';
@@ -480,13 +475,12 @@ function _renderLinksList() {
   if (addBtn) addBtn.disabled = _editingLinks.length >= MAX_SOCIAL_LINKS;
 }
 
-// Read-only view of the current editing list. Exported so the save
-// handler can capture it into the onSaveProfile payload.
 function _collectLinks() {
   return _editingLinks
     .map((l) => ({ platform: l.platform || detectPlatform(l.url), url: (l.url || '').trim() }))
     .filter((l) => l.url);
 }
+*/
 
 function _openEditPanel() {
   const p = document.getElementById('acct-edit-panel');
@@ -509,12 +503,8 @@ function _openEditPanel() {
     bioIn.style.height = '';
     bioIn.value = State.profile?.bio || '';
   }
-  // Seed the working social links list from State. Clone objects so
-  // the editing loop can mutate them without touching State.profile.
-  _editingLinks = Array.isArray(State.profile?.socialLinks)
-    ? State.profile.socialLinks.map((l) => ({ ...l }))
-    : [];
-  _renderLinksList();
+  // NB-MD#3: social links are edited via the social-modal (launched
+  // from #acct-links-btn, wired in init.js). No per-panel seeding needed.
   _updateEditColorPreview();
   _updateBioCount();
 }
@@ -648,10 +638,12 @@ export function initAccountMenu(handlers) {
     const name = document.getElementById('acct-username-input').value.replace(/ /g, '_').trim();
     const hex = document.getElementById('acct-edit-hex-input').value.replace('#', '').toLowerCase();
     const bio = (document.getElementById('acct-bio-input')?.value || '').trim().slice(0, 280);
-    const socialLinks = _collectLinks();
+    // NB-MD#3: socialLinks are now saved by the social-modal's onSave
+    // callback (wired in init.js). The edit-panel save path no longer
+    // handles link persistence — leave the field out of `updates`.
     if (!/^[0-9a-f]{6}$/.test(hex)) { toast('Invalid hex color'); return; }
     try {
-      await onSaveProfile?.({ displayName: name || 'anon', hexCode: hex, bio, socialLinks });
+      await onSaveProfile?.({ displayName: name || 'anon', hexCode: hex, bio });
       _closeEditPanel();
       toast('Profile saved');
     } catch (err) {
@@ -660,16 +652,7 @@ export function initAccountMenu(handlers) {
   });
   // Live character counter for the bio textarea
   document.getElementById('acct-bio-input')?.addEventListener('input', _updateBioCount);
-  // Add Link button — appends a fresh row to the working set.
-  document.getElementById('acct-links-add-btn')?.addEventListener('click', () => {
-    if (_editingLinks.length >= MAX_SOCIAL_LINKS) return;
-    _editingLinks.push({ platform: 'website', url: '' });
-    _renderLinksList();
-    // Focus the new input so the user can start typing immediately.
-    const rows = document.querySelectorAll('#acct-links-list .acct-link-row');
-    const lastRow = rows[rows.length - 1];
-    lastRow?.querySelector('.acct-link-url')?.focus();
-  });
+  // NB-MD#3: #acct-links-add-btn removed — social-modal handles add flow.
   // Enter in username input → save
   document.getElementById('acct-username-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); document.getElementById('acct-edit-save-btn')?.click(); }

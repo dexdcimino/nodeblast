@@ -289,7 +289,16 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    Link button sits at the bottom. */
 .acct-edit-links-row{align-items:flex-start;}
 .acct-edit-links-row .acct-edit-label{margin-top:6px;}
-#acct-links-wrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+/* NB-MD#3: Links row with inline button + icons. Static HTML now owns
+   the structure; CSS below ports the former inline styles from init.js. */
+#acct-links-wrap{min-width:0;}
+.acct-edit-links-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+.acct-links-btn{display:inline-flex;align-items:center;gap:5px;justify-content:center;background:none;border:1.5px solid var(--tx3);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--tx2);font-family:var(--fn);font-size:12px;flex-shrink:0;transition:border-color var(--ease),color var(--ease);}
+.acct-links-btn:hover{border-color:var(--clr-adj);color:var(--tx);}
+#acct-links-inline{display:inline-flex;align-items:center;min-width:0;flex:1;}
+#acct-links-inline:empty{display:none;}
+/* NB-MD#3: dead rules — elements removed (dropdown-style link editor) */
+/*
 #acct-links-list{display:flex;flex-direction:column;gap:6px;}
 #acct-links-list:empty{display:none;}
 .acct-link-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
@@ -303,6 +312,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .acct-links-add-btn{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px dashed var(--bdr);border-radius:8px;color:var(--tx2);font-family:var(--fn);font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;transition:all var(--ease);}
 .acct-links-add-btn:hover{color:var(--tx);border-color:var(--clr-adj);border-style:solid;}
 .acct-links-add-btn[disabled]{opacity:.5;cursor:not-allowed;}
+*/
 
 /* Shared social icon row — renders on the profile bar and on
    community-card headers. Size is controlled by the modifier class
