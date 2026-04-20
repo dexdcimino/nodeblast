@@ -321,6 +321,24 @@ function _removeFriendReqNotif(requestId) {
   } catch (e) { /* noop */ }
 }
 
+// MD-B2: clamp hex brightness into a readable band for notification popups
+function _readableHex(hex) {
+  const raw = (hex || '').replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(raw)) return '5aaa72';
+  const r = parseInt(raw.slice(0, 2), 16);
+  const g = parseInt(raw.slice(2, 4), 16);
+  const b = parseInt(raw.slice(4, 6), 16);
+  const v = Math.max(r, g, b) / 255;
+  if (v >= 0.30 && v <= 0.85) return raw;
+  const target = v < 0.30 ? 0.55 : 0.70;
+  const scale = v === 0 ? 1 : target / v;
+  const rr = Math.round(Math.max(0, Math.min(255, r * scale)));
+  const gg = Math.round(Math.max(0, Math.min(255, g * scale)));
+  const bb = Math.round(Math.max(0, Math.min(255, b * scale)));
+  if (rr === 0 && gg === 0 && bb === 0) return '808080';
+  return rr.toString(16).padStart(2, '0') + gg.toString(16).padStart(2, '0') + bb.toString(16).padStart(2, '0');
+}
+
 function _pushRequestNotif(requestId, req) {
   if (typeof window._nbAddNotif !== 'function') return;
   // INFRA-MD01: canonical-first, legacy fallback
@@ -330,7 +348,7 @@ function _pushRequestNotif(requestId, req) {
   const icon = `<span style="font-size:28px;line-height:1;">\u{1F44B}</span>`;
   const iconLarge = `<span style="font-size:48px;line-height:1;">\u{1F44B}</span>`;
   window._nbAddNotif({
-    text: `<b>${escapeHtml(fromName)}</b> wants to be friends <span style="color:#${escapeHtml(fromHex)}">#${escapeHtml(fromHex)}</span>
+    text: `<b>${escapeHtml(fromName)}</b> wants to be friends <span style="color:#${escapeHtml(_readableHex(fromHex))}">#${escapeHtml(fromHex).toUpperCase()}</span>
            <div class="notif-actions">
              <button class="notif-btn-primary" data-fr-accept="${escapeHtml(requestId)}">Accept</button>
              <button class="notif-btn-secondary" data-fr-decline="${escapeHtml(requestId)}">Decline</button>
@@ -344,7 +362,7 @@ function _pushRequestNotif(requestId, req) {
       icon: iconLarge,
       title: fromName,
       subtitle: 'wants to be friends',
-      body: `<span style="color:#${escapeHtml(fromHex)}">#${escapeHtml(fromHex)}</span>`,
+      body: `<span style="color:#${escapeHtml(_readableHex(fromHex))}">#${escapeHtml(fromHex).toUpperCase()}</span>`,
       actions: [
         { label: 'Accept', onClick: () => acceptFriendRequest(requestId) },
         { label: 'Decline', onClick: () => declineFriendRequest(requestId) },
