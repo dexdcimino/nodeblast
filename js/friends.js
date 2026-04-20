@@ -276,19 +276,21 @@ function _stopFriendsSub() {
 function _startRequestsSub(uid) {
   _stopRequestsSub();
   _seenRequestIds = new Set();
-  // MD16: match DexNote's _listenForFriendRequests — filter pending
-  // server-side via where() so an accepted/declined request removes
-  // itself from the listener view instead of lingering as a modified
-  // doc we have to filter client-side.
+  // MD-B5 DIAG: log listener attach with uid for cross-app comparison
+  console.log('[NB friend-req] attaching listener for uid:', uid);
   _requestsUnsub = onSnapshot(
     query(
       collection(db, 'users', uid, 'friend_requests'),
       where('status', '==', 'pending'),
     ),
     (snap) => {
+      console.log('[NB friend-req] snapshot fired. changes:',
+        snap.docChanges().length, 'docs in view:', snap.size);
       snap.docChanges().forEach((change) => {
         const id = change.doc.id;
-        // MD-R3-nb: clear stale popup when request leaves 'pending'
+        const _d = change.doc.data() || {};
+        console.log('[NB friend-req]', change.type, 'docId:', id,
+          'fromUid:', _d.fromUid, 'status:', _d.status);
         if (change.type === 'modified' || change.type === 'removed') {
           _removeFriendReqNotif(id);
           return;
@@ -300,7 +302,9 @@ function _startRequestsSub(uid) {
         _pushRequestNotif(id, req);
       });
     },
-    (err) => console.warn('[friends] requests sub error:', err),
+    (err) => {
+      console.error('[NB friend-req] onSnapshot error:', err.code, err.message, err);
+    },
   );
 }
 
