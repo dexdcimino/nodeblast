@@ -187,8 +187,6 @@ export function applyAccent(hex) {
 //  blob is revoked to avoid leaking object URLs.
 // ══════════════════════════════════════════════════════════════
 
-let _faviconBlobUrl = null;
-
 // MD22: relative luminance per WCAG (0 = black, 1 = white).
 function _relLuminance(hex) {
   if (!hex || typeof hex !== 'string') return 0.5;
@@ -246,19 +244,42 @@ export function applyFavicon(topColor, botColor, mode) {
       ? _needsFaviconBackground(topColor)
       : (_needsFaviconBackground(topColor) || _needsFaviconBackground(botColor));
     const svg = needsBg ? _wrapWithBackground(innerSvg) : innerSvg;
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    let link = document.querySelector('link[rel="icon"]');
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      link.type = 'image/svg+xml';
-      document.head.appendChild(link);
-    }
+
+    // MD#5: Use a data URL instead of a blob URL. Chrome treats each
+    // unique data URL string as a new resource and is more likely to
+    // refresh the bookmark favicon. Blob URLs (blob:https://…/uuid)
+    // look like the same resource to Chrome's bookmark cache even when
+    // the underlying bytes change.
+    //
+    // unescape(encodeURIComponent(...)) is a tiny shim so btoa() handles
+    // any non-ASCII safely (the SVG path data is ASCII today, but future
+    // edits shouldn't silently break on Unicode).
+    const b64 = btoa(unescape(encodeURIComponent(svg)));
+    const url = 'data:image/svg+xml;base64,' + b64;
+
+    // MD#5: Remove the existing <link rel="icon"> and insert a fresh
+    // one. Mutating .href on the same element often does not invalidate
+    // Chrome's bookmark favicon cache; swapping the element itself is
+    // the strongest signal we can give the browser to re-fetch. This
+    // also drops the old static <link href="assets/nodeblast_logo_v2.svg">
+    // set in index.html on first paint.
+    const existing = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+    existing.forEach(el => el.parentNode && el.parentNode.removeChild(el));
+
+    const link = document.createElement('link');
+    link.rel = 'icon';
     link.type = 'image/svg+xml';
     link.href = url;
-    if (_faviconBlobUrl) URL.revokeObjectURL(_faviconBlobUrl);
-    _faviconBlobUrl = url;
+    document.head.appendChild(link);
+
+    // Also append a second <link rel="shortcut icon"> — some older
+    // Chrome paths check this one for the bookmark bar. Harmless on
+    // modern browsers that ignore the shortcut alias.
+    const altLink = document.createElement('link');
+    altLink.rel = 'shortcut icon';
+    altLink.type = 'image/svg+xml';
+    altLink.href = url;
+    document.head.appendChild(altLink);
   } catch (err) {
     console.warn('[theme] applyFavicon failed:', err);
   }
