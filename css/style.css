@@ -309,8 +309,15 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .acct-edit-links-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
 .acct-links-btn{display:inline-flex;align-items:center;gap:5px;justify-content:center;background:none;border:1.5px solid var(--tx3);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--tx2);font-family:var(--fn);font-size:12px;flex-shrink:0;transition:border-color var(--ease),color var(--ease);}
 .acct-links-btn:hover{border-color:var(--clr-adj);color:var(--tx);}
-#acct-links-inline{display:inline-flex;align-items:center;min-width:0;flex:1;}
+#acct-links-inline{display:inline-flex;align-items:center;min-width:0;flex:1;gap:6px;}
 #acct-links-inline:empty{display:none;}
+/* MD#4: size inline social icons inside the drop-down Links row to
+   match the canvas profile pill — 26×26 container with 13×13 svg.
+   Scoped to #acct-links-inline so other .social-icons instances
+   (hub cards, tiles, etc.) are unaffected. */
+#acct-links-inline .social-icons{gap:6px;flex-wrap:nowrap;}
+#acct-links-inline .social-icons .social-icon{width:26px;height:26px;border-width:1.5px;}
+#acct-links-inline .social-icons .social-icon svg{width:13px;height:13px;}
 /* NB-MD#3: dead rules — elements removed (dropdown-style link editor) */
 /*
 #acct-links-list{display:flex;flex-direction:column;gap:6px;}

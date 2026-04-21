@@ -601,7 +601,7 @@ function showProfileBar(user, catalystCount, isOwn) {
               iconsEl.classList.toggle('visible', !!html);
             }
             const _il2 = document.getElementById('acct-links-inline');
-            if (_il2) _il2.innerHTML = renderSocialIconsHTML(filtered, { extraClass: 'social-icons--sm' });
+            if (_il2) _il2.innerHTML = renderSocialIconsHTML(filtered);
           } catch (err) {
             console.warn('[social] save failed:', err);
           }
@@ -776,6 +776,13 @@ function _updateProfileBarCountHex(count, word) {
 
 function openAccountMenuFromPill() {
   document.getElementById('acct-btn')?.click();
+  // MD#4: repaint the inline social icons in the Links row every time
+  // the drop-down opens — catches the case where profile.socialLinks
+  // finished loading after the initial boot-time paint.
+  try {
+    const _liveIl = document.getElementById('acct-links-inline');
+    if (_liveIl) _liveIl.innerHTML = renderSocialIconsHTML(State.profile?.socialLinks || []);
+  } catch {}
 }
 
 function show404() {
@@ -2896,7 +2903,7 @@ function updateAuthUI(user, profile) {
 
   // MD5: refresh the edit-panel inline social icons now that profile is loaded
   const _acctInline = document.getElementById('acct-links-inline');
-  if (_acctInline) _acctInline.innerHTML = renderSocialIconsHTML(profile?.socialLinks || [], { extraClass: 'social-icons--sm' });
+  if (_acctInline) _acctInline.innerHTML = renderSocialIconsHTML(profile?.socialLinks || []);
 
   // Always re-render on auth change. The boot block now defers the
   // first renderRoute call until this point, so the feed route has
@@ -3397,7 +3404,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const _acctLinksBtn = document.getElementById('acct-links-btn');
   const _acctLinksInline = document.getElementById('acct-links-inline');
   if (_acctLinksInline) {
-    _acctLinksInline.innerHTML = renderSocialIconsHTML(State.profile?.socialLinks || [], { extraClass: 'social-icons--sm' });
+    _acctLinksInline.innerHTML = renderSocialIconsHTML(State.profile?.socialLinks || []);
   }
   if (_acctLinksBtn) {
     _acctLinksBtn.addEventListener('click', async (e) => {
@@ -3419,7 +3426,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const iconsEl = document.getElementById('profile-bar-socials');
           if (iconsEl) { iconsEl.innerHTML = renderSocialIconsHTML(filtered); iconsEl.classList.toggle('visible', filtered.length > 0); }
           const _il = document.getElementById('acct-links-inline');
-          if (_il) _il.innerHTML = renderSocialIconsHTML(filtered, { extraClass: 'social-icons--sm' });
+          if (_il) _il.innerHTML = renderSocialIconsHTML(filtered);
         } catch (err) { console.warn('[social] save failed:', err); }
       });
     });
