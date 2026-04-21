@@ -903,12 +903,12 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* ══════════════════════════════════════
    HEX GRID (NodeBlast)
 ══════════════════════════════════════ */
-#grid{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;overflow:auto;background:var(--bg);padding:0 clamp(20px,6vw,120px);scrollbar-gutter:stable;}
+#grid{position:fixed;top:var(--hdr);left:0;right:0;bottom:0;overflow:auto;background:var(--bg);padding:0 clamp(24px,7.2vw,144px);scrollbar-gutter:stable;}
 @supports not (scrollbar-gutter: stable) {
   #grid{overflow-y:scroll;}
 }
 #grid.with-filter{top:calc(var(--hdr) + 56px);}
-#honeycomb{position:relative;width:100%;min-height:200px;opacity:1;transition:opacity 150ms ease;}
+#honeycomb{position:relative;width:100%;min-height:200px;margin-top:24px;opacity:1;transition:opacity 150ms ease;}
 
 /* NB-MD04: Profile tabs strip — My Catalysts / Pinned / Following */
 #profile-tabs{display:flex;gap:4px;padding:8px 0 0;border-bottom:1px solid var(--bdr);margin-bottom:12px;justify-content:center;}
