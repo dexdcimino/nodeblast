@@ -2223,9 +2223,9 @@ function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
     emptyMessage: emptyMessage || 'No catalysts yet.',
     container: 'honeycomb',
     getColsFn: (w) => {
-      if (w >= 1500) return 6;
-      if (w >= 1200) return 5;
-      if (w >= 900) return 4;
+      if (w >= 1500) return 5;
+      if (w >= 1200) return 4;
+      if (w >= 900) return 3;
       if (w >= 650) return 3;
       if (w >= 400) return 2;
       return 1;
