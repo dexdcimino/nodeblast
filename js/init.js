@@ -614,18 +614,13 @@ function showProfileBar(user, catalystCount, isOwn) {
 
   if (isOwn) {
     _viewingOther = null;
-    actionBtn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-    actionBtn.setAttribute('data-tip', 'Edit Profile');
-    actionBtn.className = 'icon-btn';
-    actionBtn.disabled = false;
-    actionBtn.classList.remove('is-friend');
-    actionBtn.onclick = () => {
-      openAccountMenuFromPill();
-      setTimeout(() => {
-        const editBtn = document.getElementById('acct-edit-btn');
-        if (editBtn) editBtn.click();
-      }, 150);
-    };
+    // MD#1: Edit Profile button removed from own-profile pill — users edit
+    // from the account drop-down or from the pill click itself. Hide the
+    // shared #profile-bar-action element; it's still reused for the
+    // "Add Friend" / "✓ Friends" button on other users' profiles.
+    actionBtn.style.display = 'none';
+    actionBtn.onclick = null;
+    actionBtn.removeAttribute('data-tip');
   } else {
     // Not our own profile — the action button becomes "Add Friend" /
     // "✓ Friends" so people can connect directly from a profile page.
@@ -706,6 +701,8 @@ function showProfileBar(user, catalystCount, isOwn) {
 function _applyFriendButton(user) {
   const actionBtn = document.getElementById('profile-bar-action');
   if (!actionBtn || !user) return;
+  // MD#1: clear any display:none left by the own-profile branch
+  actionBtn.style.display = '';
   // Reset to text-style button for friend actions (icon is own-profile only).
   actionBtn.className = 'cat-btn';
   actionBtn.removeAttribute('data-tip');
