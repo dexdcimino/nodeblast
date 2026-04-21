@@ -117,6 +117,20 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* Light mode: lighter header to match DexNote's text-box feel */
 [data-theme="light"] #hdr{background:var(--bg4);border-bottom-color:var(--bdr);box-shadow:0 2px 8px rgba(0,0,0,.06);}
 [data-theme="light"] #profile-bar{background:var(--bg4);border-color:var(--bdr);}
+/* MD#3: catalyst counter uses a fixed neutral color instead of --clr-adj
+   so it doesn't recolor with the logo palette. Dark mode uses the page
+   text color; light mode uses a dark neutral for the stroke so the
+   hexagon outline stays readable against the pill background. */
+:root{
+  --cat-count-fill: var(--tx2);
+  --cat-count-stroke: var(--tx2);
+  --cat-count-text: var(--tx);
+}
+[data-theme="light"]{
+  --cat-count-fill: #3a3a3a;
+  --cat-count-stroke: #1f1f1f;
+  --cat-count-text: #1f1f1f;
+}
 #profile-bar-count-hex{flex-shrink:0;cursor:default;display:flex;align-items:center;justify-content:center;}
 #profile-bar-count-hex svg{display:block;}
 #hdr-left{display:flex;align-items:center;gap:14px;min-width:0;height:100%;}
