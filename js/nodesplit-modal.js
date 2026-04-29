@@ -4,7 +4,7 @@
 // ══════════════════════════════════════
 
 import State from './state.js';
-import { toast } from './ui-events.js';
+import { toast, safeHex } from './ui-events.js';
 import {
   fetchQuestions, subscribeQuestionCounts, castVote,
   getMyVotes, postQuestion, fetchComments, postComment,
@@ -168,7 +168,10 @@ function _openComments(qId) {
   _commentUnsub = subscribeComments(qId, (comments) => {
     if (!list) return;
     if (comments.length === 0) { list.innerHTML = '<div style="color:#555;text-align:center;padding:24px">No comments yet</div>'; return; }
-    list.innerHTML = comments.map(c => `<div class="ns-comment-item"><div class="ns-comment-author" style="color:#${_e(c.authorHex || '5aaa72')}">@${_e(c.authorName || 'anon')}</div><div class="ns-comment-text">${_e(c.text)}</div></div>`).join('');
+    list.innerHTML = comments.map(c => {
+      const _authorHex = c.authorHex ? (c.authorHex.startsWith('#') ? c.authorHex : '#' + c.authorHex) : '#5aaa72';
+      return `<div class="ns-comment-item"><div class="ns-comment-author" style="color:${safeHex(_authorHex)}">@${_e(c.authorName || 'anon')}</div><div class="ns-comment-text">${_e(c.text)}</div></div>`;
+    }).join('');
     list.scrollTop = list.scrollHeight;
   });
   // Update rail count

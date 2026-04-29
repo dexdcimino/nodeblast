@@ -26,7 +26,7 @@ import {
 import State from './state.js';
 import { uploadCatalystThumb, deleteCatalystThumb } from './storage.js';
 import { openColorPopup, closeColorPopup } from './color.js';
-import { toast, showModal, renderUsername, escapeHtml } from './ui-events.js';
+import { toast, showModal, renderUsername, escapeHtml, safeHex } from './ui-events.js';
 import { navigate, buildUserSlug } from './router.js';
 import { searchUsers } from './users.js';
 import { openDM } from './friends.js';
@@ -1057,7 +1057,7 @@ async function _runCollabSearch(prefix) {
     const row = document.createElement('div');
     row.className = 'cat-collab-result';
     row.innerHTML = `
-      <div class="cat-collab-result-avatar" style="border-color:#${escapeHtml(hex)}">${avatarInner}</div>
+      <div class="cat-collab-result-avatar" style="border-color:${safeHex(hex.startsWith('#') ? hex : '#' + hex)}">${avatarInner}</div>
       <div class="cat-collab-result-body">
         <span class="cat-collab-result-name">${escapeHtml(name)}</span>
         <span class="cat-collab-result-hex">#${escapeHtml(hex)}</span>
@@ -1707,7 +1707,10 @@ async function _paintCatalystDetail(catalyst) {
   if (statusEl) {
     const labelMap = { live: 'Live', early: 'Early', placeholder: 'WIP' };
     // MD05: live dot now picks up the catalyst's accent color.
-    const colorMap = { live: accent, early: '#E8853A', placeholder: 'var(--tx3)' };
+    // MD#1-NB (this batch): accent comes from catalyst.accentColor (remote).
+    // safeHex rejects CSS-injection payloads. var(--tx3) is intentionally
+    // outside the safeHex check — it's a hardcoded var ref, not a hex.
+    const colorMap = { live: safeHex(accent), early: '#E8853A', placeholder: 'var(--tx3)' };
     statusEl.dataset.status = status;
     statusEl.innerHTML = `<span class="cat-status-dot" style="background:${colorMap[status]}"></span>${labelMap[status]}`;
     statusEl.classList.add('visible');

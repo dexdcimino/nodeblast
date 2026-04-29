@@ -56,7 +56,7 @@ import {
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js';
 import State from './state.js';
-import { toast, renderUsername, escapeHtml, showModal } from './ui-events.js';
+import { toast, renderUsername, escapeHtml, showModal, safeHex } from './ui-events.js';
 import { navigate, buildUserSlug } from './router.js';
 import { userLookupKey } from './users.js';
 
@@ -157,8 +157,8 @@ function _friendCardHTML(f) {
   const presence = _presenceState.get(f.uid) || 'offline';
   const favClass = f.favorite ? 'active' : '';
   return `
-    <div class="friend-card" data-uid="${escapeHtml(f.uid)}" style="--friend-hex:#${_readableHex(color)};--friend-hex-raw:${color}">
-      <div class="friend-avatar" style="border-color:${color}">
+    <div class="friend-card" data-uid="${escapeHtml(f.uid)}" style="--friend-hex:#${_readableHex(color)};--friend-hex-raw:${safeHex(color)}">
+      <div class="friend-avatar" style="border-color:${safeHex(color)}">
         ${escapeHtml((name[0] || '?').toUpperCase())}
         <span class="friend-presence ${presence}" data-presence></span>
       </div>
@@ -897,7 +897,7 @@ function _pushSessionInviteNotif(inviteId, inv) {
   const sessName = inv.sessionName || 'Session';
   const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="${sessColor}" stroke="${sessColor}" stroke-width="1.5"><circle cx="12" cy="12" r="9"/></svg>`;
   window._nbAddNotif({
-    text: `<b>${escapeHtml(fromName)}</b> invited you to <span style="color:${escapeHtml(sessColor)}">${escapeHtml(sessName)}</span>
+    text: `<b>${escapeHtml(fromName)}</b> invited you to <span style="color:${safeHex(sessColor)}">${escapeHtml(sessName)}</span>
            <div class="notif-actions">
              <button class="notif-btn-primary" data-si-accept="${escapeHtml(inviteId)}" data-si-sess="${escapeHtml(inv.sessionId || '')}">Open on DexNote</button>
              <button class="notif-btn-secondary" data-si-decline="${escapeHtml(inviteId)}">Decline</button>

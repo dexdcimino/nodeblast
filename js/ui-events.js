@@ -250,6 +250,27 @@ export function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
+// MD#1-NB (this batch): strict hex-color validator for any user-controlled
+// color value that gets injected into inline style="..." attributes.
+// HTML escaping (escapeHtml) does NOT cover CSS context — a remote-
+// controlled string like "red;background:url(...)" would slip through
+// unmodified. This validator only returns the input when it matches the
+// strict hex shape; otherwise it returns the safe default.
+//
+// Accepted: #RGB, #RGBA, #RRGGBB, #RRGGBBAA (case-insensitive)
+// Rejected: anything else (named colors, rgb(), CSS expressions, etc.)
+const _SAFE_HEX_RE = /^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+export function safeHex(input, fallback = '#7B8A9C') {
+  if (typeof input !== 'string') return fallback;
+  // Accept inputs without a leading # (callers often store '5aaa72'-style
+  // values without the prefix). Re-prepend it for the regex check, then
+  // return whatever shape the caller passed in (with # if they had it,
+  // without if they didn't) — preserves existing template literals like
+  // `color:#${safeHex(hex)}` that already prepend the # themselves.
+  const withHash = input.startsWith('#') ? input : '#' + input;
+  return _SAFE_HEX_RE.test(withHash) ? input : fallback.replace(/^#/, input.startsWith('#') ? '#' : '');
+}
+
 // Strip any ".dev" suffix from a display name. ".dev" is an automatic
 // admin badge now — never part of the stored username — so this is
 // applied defensively wherever we read a legacy value that still has
