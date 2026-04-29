@@ -4,6 +4,7 @@
 // ══════════════════════════════════════════════════════
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app-check.js";
 
 const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 
@@ -28,4 +29,18 @@ const devConfig = {
 };
 
 const app = initializeApp(isLocal ? devConfig : prodConfig);
+
+// MD#2 (this batch): App Check — same key for prod + dev (key's
+// domain list includes localhost). Wrapped in try so a misconfigured
+// key doesn't crash the app at boot.
+const APP_CHECK_SITE_KEY = '6LddPtAsAAAAAPGgcIk2fFFxt_HL9BtqLFQE9dwB';
+try {
+  initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
+    isTokenAutoRefreshEnabled: true
+  });
+} catch (e) {
+  console.warn('[app-check] init failed:', e);
+}
+
 export { app, isLocal };
