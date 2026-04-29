@@ -151,6 +151,28 @@ function safeDomain(url) {
   }
 }
 
+// MD-LOCK-HASH (this batch): hash a plaintext lock password to a hex
+// SHA-256 string before Firestore write. Lock passwords were stored
+// plaintext historically; new writes hash. Unlock attempts hash the
+// attempt and compare against either the stored hash (new format,
+// 64 hex chars) or the stored plaintext (legacy, anything else).
+async function _hashLockPassword(plaintext) {
+  if (!plaintext) return '';
+  const buf = new TextEncoder().encode(String(plaintext));
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// MD-LOCK-HASH: legacy detection — a real SHA-256 hex string is exactly
+// 64 chars of [0-9a-f]. Anything else is treated as a legacy plaintext
+// password and compared directly. Once the owner re-saves the catalyst,
+// it gets stored as a hash going forward.
+function _isHashedLockPassword(s) {
+  return typeof s === 'string' && /^[0-9a-f]{64}$/.test(s);
+}
+
 /* ══════════════════════════════════════
    CRUD
 ══════════════════════════════════════ */
@@ -568,7 +590,15 @@ export async function createCatalyst(data, file) {
     // security note in MD23. Empty string when locking is off so the
     // doc shape stays stable.
     isLocked: !!data.isLocked && !!data.lockPassword,
-    lockPassword: data.isLocked && data.lockPassword ? data.lockPassword : '',
+    // MD-LOCK-HASH: hash before write. Empty when locking is off.
+    // Guarded against double-hash for the case where the save handler
+    // forwarded an already-hashed value (user kept lock on without
+    // typing a new password).
+    lockPassword: data.isLocked && data.lockPassword
+      ? (_isHashedLockPassword(data.lockPassword)
+          ? data.lockPassword
+          : await _hashLockPassword(data.lockPassword))
+      : '',
     // MD28: solo/co-dev + developer count. devCount defaults to 1
     // for solo and 1+collabs for co when the caller doesn't pass it.
     devMode: data.devMode === 'co' ? 'co' : 'solo',
@@ -628,7 +658,11 @@ export async function updateCatalyst(id, data, file) {
   if (typeof data.isLocked === 'boolean') {
     const pw = (data.lockPassword || '').toString();
     updates.isLocked = data.isLocked && !!pw;
-    updates.lockPassword = data.isLocked && pw ? pw : '';
+    // MD-LOCK-HASH: hash before write, with double-hash guard for an
+    // already-hashed value forwarded by the save handler.
+    updates.lockPassword = data.isLocked && pw
+      ? (_isHashedLockPassword(pw) ? pw : await _hashLockPassword(pw))
+      : '';
   }
 
   // MD28: solo/co-dev + developer count.
@@ -744,6 +778,11 @@ let _type = DEFAULT_TYPE;
 // NOT included (it's implicit). Reset on every modal open.
 let _editingCollabs = [];
 let _collabSearchT = null;
+// MD-LOCK-HASH: stashes the existing catalyst's stored lockPassword
+// value (hash or legacy plaintext) when the edit modal opens, so the
+// save handler can preserve it across re-saves where the user keeps
+// the lock toggle on but doesn't type a new password.
+let _editingLockExisting = '';
 
 function _setPills(containerId, value) {
   document.querySelectorAll(`#${containerId} .cat-pill`).forEach((b) => {
@@ -1141,7 +1180,19 @@ export function openCatalystModal(existing = null) {
   const lockedNow = !!existing?.isLocked && !!existing?.lockPassword;
   _applyLockState(lockedNow);
   const pwInput = document.getElementById('cat-lock-password');
-  if (pwInput) pwInput.value = existing?.lockPassword || '';
+  // MD-LOCK-HASH: don't pre-fill the input with a hashed value (user
+  // would see 64 hex chars). Empty input means "keep existing lock if
+  // toggle stays on, else clear." Save logic re-hashes only when the
+  // user types a fresh password.
+  if (pwInput) {
+    pwInput.value = (existing?.lockPassword && !_isHashedLockPassword(existing.lockPassword))
+      ? existing.lockPassword
+      : '';
+  }
+  // MD-LOCK-HASH: stash the existing stored value (hash or legacy
+  // plaintext) so the save handler can preserve it when the user
+  // re-saves without typing a new password.
+  _editingLockExisting = existing?.lockPassword || '';
 
   document.getElementById('cat-submit-btn').textContent = existing ? 'Save Changes' : 'Create Catalyst';
   document.getElementById('cat-delete-btn').style.display = existing ? 'inline-flex' : 'none';
@@ -1216,6 +1267,7 @@ export function closeCatalystModal() {
   _editingId = null;
   _pendingFile = null;
   _editingCollabs = [];
+  _editingLockExisting = '';
   _hideCollabResults();
   clearTimeout(_collabSearchT);
 }
@@ -1453,7 +1505,16 @@ export function initCatalystModal(onSaved) {
     // lock on save (handled in createCatalyst/updateCatalyst).
     const lockToggleBtn = document.getElementById('cat-lock-toggle');
     const isLocked = lockToggleBtn?.getAttribute('aria-pressed') === 'true';
-    const lockPassword = document.getElementById('cat-lock-password')?.value?.trim() || '';
+    const lockPasswordInput = document.getElementById('cat-lock-password')?.value?.trim() || '';
+    // MD-LOCK-HASH: keep the existing hash when the user re-saves with
+    // the lock on but didn't type a new password. Without this branch,
+    // they'd have to retype the password every save. Only the hashed
+    // form is preserved — a legacy plaintext value gets re-hashed on
+    // first re-save by createCatalyst/updateCatalyst.
+    const existingHash = (_editingLockExisting && _isHashedLockPassword(_editingLockExisting))
+      ? _editingLockExisting
+      : '';
+    const lockPassword = lockPasswordInput || existingHash;
     if (isLocked && !lockPassword) {
       toast('Enter a password or turn the lock off');
       return;
@@ -1622,13 +1683,22 @@ export function closeUnlockModal() {
   _unlockSuccess = null;
 }
 
-function _attemptUnlock() {
+async function _attemptUnlock() {
   if (!_unlockTarget) return;
   const input = document.getElementById('unlock-modal-input');
   const err = document.getElementById('unlock-modal-error');
   const attempt = (input?.value || '').trim();
-  const expected = (_unlockTarget.lockPassword || '').trim();
-  if (attempt && attempt === expected) {
+  const stored = (_unlockTarget.lockPassword || '').trim();
+  // MD-LOCK-HASH: stored value is either a hash (new) or plaintext
+  // (legacy). Hash the attempt and compare against the hash branch;
+  // fall back to direct plaintext compare for legacy locks.
+  const attemptHash = attempt ? await _hashLockPassword(attempt) : '';
+  const matched = attempt && stored && (
+    _isHashedLockPassword(stored)
+      ? attemptHash === stored
+      : attempt === stored
+  );
+  if (matched) {
     const cb = _unlockSuccess;
     closeUnlockModal();
     try { cb?.(); } catch (e) { console.warn('[unlock] success callback threw:', e); }
