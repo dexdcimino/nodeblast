@@ -3235,6 +3235,14 @@ function initSigninModal() {
       if (el) el.textContent = err?.message || 'Sign-in failed';
     }
   });
+  document.getElementById('signin-modal-discord')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try { await signIn('discord'); closeSigninModal(); }
+    catch (err) {
+      const el = document.getElementById('signin-modal-error');
+      if (el) el.textContent = err?.message || 'Sign-in failed';
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -3495,6 +3503,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('github-signin-btn')?.addEventListener('click', (e) => {
     e.stopPropagation();
     signIn('github');
+  });
+  document.getElementById('discord-signin-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    signIn('discord');
   });
 
   console.log('[BOOT] 18 - paintGuestProfilePill');

@@ -3,6 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   GithubAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   signOut as fbSignOut,
   onAuthStateChanged,
@@ -286,9 +287,16 @@ function startProfileSubs(user, providerId) {
 }
 
 export async function signIn(providerName = 'google') {
-  const provider = providerName === 'github'
-    ? new GithubAuthProvider()
-    : new GoogleAuthProvider();
+  let provider;
+  if (providerName === 'github') {
+    provider = new GithubAuthProvider();
+  } else if (providerName === 'discord') {
+    provider = new OAuthProvider('oidc.discord');
+    provider.addScope('identify');
+    provider.addScope('email');
+  } else {
+    provider = new GoogleAuthProvider();
+  }
   setSigningIn(true);
   try {
     await signInWithPopup(auth, provider);
