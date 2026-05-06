@@ -1863,6 +1863,25 @@ function _buildCommunityCard(group) {
   }
   function setCardState(el, state, btn) {
     el.classList.remove('collapsed', 'pill');
+    // NB-COLLAPSE-FIX: clear stale inline styles set by _fitCommunityTiles
+    // before entering collapsed/pill. Without this, .community-tiles keeps
+    // its expanded inline width (e.g. 600px) and `left:50%` on the first
+    // tile resolves to the middle of that wide phantom container — the
+    // tile then sits outside the now-narrow card. Expanded state is fine
+    // because the ResizeObserver re-runs _fitCommunityTiles and rewrites
+    // these styles to fit the expanded card width.
+    if (state !== 'expanded') {
+      const tilesBody = el.querySelector('.community-tiles');
+      if (tilesBody) {
+        tilesBody.style.width = '';
+        tilesBody.style.height = '';
+      }
+      const firstTile = el.querySelector('.community-tiles > .hex-tile');
+      if (firstTile) {
+        firstTile.style.left = '';
+        firstTile.style.top = '';
+      }
+    }
     if (state === 'collapsed') {
       el.classList.add('collapsed');
       el.dataset.count = '1';
