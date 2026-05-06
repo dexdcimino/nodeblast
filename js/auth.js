@@ -23,10 +23,13 @@ import { setSigningIn, stripDevSuffix } from './ui-events.js';
 import { sanitizeSocialLinks } from './social.js';
 import { propagateProfileToFriends } from './friends.js';
 
-// Hardcoded admin emails. Firestore isAdmin field is the source of
-// truth, but any user whose auth email is in this list gets isAdmin
-// automatically on sign-in and the field is backfilled to their doc.
-const ADMIN_EMAILS = new Set(['dexdcimino@gmail.com', 'admin@nodeblast.dev']);
+// PRIVACY-MD01: UID-based admin allowlist. Mirrors firestore.rules.
+// Email-based detection was removed because email is no longer stored
+// in Firestore (privacy fix — users/{uid} is public-readable).
+const ADMIN_UIDS = new Set([
+  'y6sLULTTnFc6B1f9qmjMCl3WUix1',  // Dex (primary)
+  '3RlnflogEiYQ6mfuSOr4ZyIlCAj1',  // NodeBlast official admin
+]);
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -86,7 +89,7 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     stripHash(topData?.hexCode) ||      // CANONICAL cross-site field
     null;
   const photoURL = topData?.photoURL || user.photoURL || '';
-  const emailIsAdmin = !!(user?.email && ADMIN_EMAILS.has(user.email.toLowerCase()));
+  const uidIsAdmin = !!(user?.uid && ADMIN_UIDS.has(user.uid));
   // Bio: DexNote subdoc wins, top-level doc is the fallback. Either
   // undefined → empty string so the UI can treat "no bio" uniformly.
   const bio = (prefsData?.bio ?? topData?.bio ?? '').toString();
@@ -101,7 +104,7 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     photoURL,
     provider,
     usernameLower: normalizeUsername(displayName),
-    isAdmin: !!topData?.isAdmin || emailIsAdmin,
+    isAdmin: !!topData?.isAdmin || uidIsAdmin,
     logoTopColor: topData?.logoTopColor || null,
     logoBotColor: topData?.logoBotColor || null,
     logoMode: topData?.logoMode || 'dual',
