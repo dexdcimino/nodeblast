@@ -35,6 +35,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const readyCallbacks = [];
+const profileLightCallbacks = [];
 let authResolved = false;
 let _profileUnsubTop = null;
 let _profileUnsubPrefs = null;
@@ -42,6 +43,15 @@ let _profileUnsubPrefs = null;
 function fireReady() {
   readyCallbacks.forEach((cb) => {
     try { cb(State.user, State.profile); } catch (e) { console.error('[auth] ready callback threw:', e); }
+  });
+}
+
+// LIVE-SYNC-MD: lighter-weight broadcast for bio/socialLinks/etc. updates
+// that don't need the full auth-UI repaint. Called from reapply() on every
+// profile snapshot so subscribers can refresh just the bits they own.
+function fireProfileLight() {
+  profileLightCallbacks.forEach((cb) => {
+    try { cb(State.profile); } catch (e) { console.error('[auth] profile-light callback threw:', e); }
   });
 }
 
@@ -275,6 +285,10 @@ function startProfileSubs(user, providerId) {
       prev.usernameLower !== next.usernameLower;
     State.profile = { ...prev, ...next };
     if (changed) fireReady();
+    // LIVE-SYNC-MD: always fire the light callback — bio/socialLinks
+    // changes don't trigger `changed` above, but UI bound to those
+    // fields still needs to know to repaint.
+    fireProfileLight();
   }
 
   _profileUnsubTop = onSnapshot(
@@ -411,6 +425,10 @@ export async function saveProfile(updates) {
     if (hexActuallyChanged) patch.hexColor = '#' + updates.hexCode;
     propagateProfileToFriends(patch).catch(() => {});
   }
+}
+
+export function onProfileLightUpdate(cb) {
+  profileLightCallbacks.push(cb);
 }
 
 export function onAuthReady(cb) {

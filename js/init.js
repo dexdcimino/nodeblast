@@ -1,5 +1,5 @@
 import State from './state.js';
-import { signIn, signOut, onAuthReady, saveProfile, saveLogoColors } from './auth.js';
+import { signIn, signOut, onAuthReady, onProfileLightUpdate, saveProfile, saveLogoColors } from './auth.js';
 import {
   applyTheme,
   applyPalette,
@@ -497,6 +497,13 @@ function showProfileBar(user, catalystCount, isOwn) {
             const sel = window.getSelection();
             sel.removeAllRanges();
             sel.addRange(range);
+          }
+          // LIVE-SYNC-MD: mirror canvas pill bio → dropdown textarea
+          // on every keystroke. Persistence still happens on blur.
+          const _acctBio = document.getElementById('acct-bio-input');
+          if (_acctBio && document.activeElement !== _acctBio) {
+            const v = (bioEl.textContent || '').slice(0, MAX_BIO);
+            if (_acctBio.value !== v) _acctBio.value = v;
           }
         });
         bioEl.addEventListener('blur', async () => {
@@ -3752,6 +3759,40 @@ document.addEventListener('DOMContentLoaded', () => {
   // error and render an empty state. updateAuthUI fires renderRoute()
   // once auth resolves — that's the first real render.
   onAuthReady(updateAuthUI);
+
+  // LIVE-SYNC-MD: repaint bio + social icons + acct-bio-input whenever
+  // any profile snapshot arrives (initial load, cross-tab, cross-site
+  // from DexNote). Cheap and idempotent — only DOM writes, no fetches.
+  onProfileLightUpdate((profile) => {
+    if (!profile) return;
+    // 1) Profile pill bio (canvas)
+    const bioEl = document.getElementById('profile-bio');
+    if (bioEl && document.activeElement !== bioEl) {
+      const next = profile.bio || '';
+      if (bioEl.textContent !== next) bioEl.textContent = next;
+    }
+    // 2) Edit-panel bio textarea
+    const acctBioInput = document.getElementById('acct-bio-input');
+    if (acctBioInput && document.activeElement !== acctBioInput) {
+      const next = profile.bio || '';
+      if (acctBioInput.value !== next) acctBioInput.value = next;
+    }
+    // 3) Profile pill social icons
+    const profileSocials = document.getElementById('profile-bar-socials');
+    if (profileSocials) {
+      const html = renderSocialIconsHTML(profile.socialLinks || []);
+      if (profileSocials.innerHTML !== html) {
+        profileSocials.innerHTML = html;
+        profileSocials.classList.toggle('visible', (profile.socialLinks || []).length > 0);
+      }
+    }
+    // 4) Edit-panel inline icons next to "Links" button
+    const acctLinksInline = document.getElementById('acct-links-inline');
+    if (acctLinksInline) {
+      const html = renderSocialIconsHTML(profile.socialLinks || []);
+      if (acctLinksInline.innerHTML !== html) acctLinksInline.innerHTML = html;
+    }
+  });
 
   // MD8 defensive: re-apply the logo paint after the next animation
   // frame. If anything in the boot block (theme/palette/etc.) re-mounts

@@ -673,6 +673,15 @@ export function initAccountMenu(handlers) {
   });
   // Live character counter for the bio textarea
   document.getElementById('acct-bio-input')?.addEventListener('input', _updateBioCount);
+  // LIVE-SYNC-MD: mirror dropdown bio → canvas pill bio on every keystroke.
+  // Persistence still happens on Save-button click; this is preview-only.
+  document.getElementById('acct-bio-input')?.addEventListener('input', (e) => {
+    const bioEl = document.getElementById('profile-bio');
+    if (bioEl && document.activeElement !== bioEl) {
+      const v = (e.target.value || '').slice(0, 280);
+      if (bioEl.textContent !== v) bioEl.textContent = v;
+    }
+  });
   // NB-MD#3: #acct-links-add-btn removed — social-modal handles add flow.
   // Enter in username input → save
   document.getElementById('acct-username-input')?.addEventListener('keydown', (e) => {

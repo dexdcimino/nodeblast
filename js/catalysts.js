@@ -1586,7 +1586,11 @@ export function initCatalystModal(onSaved) {
           await deleteCatalyst(id);
           toast('Catalyst deleted');
           closeCatalystModal();
-          onSaved?.();
+          // LIVE-SYNC-MD: do NOT call onSaved?.() here. The
+          // subscribeUserCatalysts listener (running for both the
+          // account-panel mini grid AND the profile route's main grid)
+          // already fires when the doc disappears, removing the tile
+          // smoothly without tearing down the route.
         } catch (err) {
           toast('Delete failed');
         }
