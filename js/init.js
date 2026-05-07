@@ -3417,12 +3417,19 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('[BOOT] 13 - initRouter');
   initRouter(renderRoute);
 
-  // MD#48: welcome modal — once per account, once per guest session.
-  // (Replaces the MD#47 toast. Uses a v2-suffixed key so users who saw
-  // the old toast still see the new modal once.)
-  const welcomeKey = State.user?.uid ? 'nb-welcomed-v2-' + State.user.uid : 'nb-welcomed-v2-guest';
-  if (!localStorage.getItem(welcomeKey)) {
-    try { localStorage.setItem(welcomeKey, '1'); } catch {}
+  // MD#48: welcome modal.
+  //  - Signed-in users: shown once per account (per-uid localStorage flag).
+  //  - Guests / signed-out: shown on every page load. No flag persisted.
+  //    The intent is that any signed-out visitor (returning lurker, person
+  //    who just signed out, fresh visitor) sees the intro until they have
+  //    an account.
+  const isSignedIn = !!State.user?.uid;
+  const welcomeKey = isSignedIn ? 'nb-welcomed-v2-' + State.user.uid : null;
+  const shouldShowWelcome = !isSignedIn || !localStorage.getItem(welcomeKey);
+  if (shouldShowWelcome) {
+    if (welcomeKey) {
+      try { localStorage.setItem(welcomeKey, '1'); } catch {}
+    }
     setTimeout(() => {
       const modal = document.getElementById('welcome-modal');
       if (!modal) return;

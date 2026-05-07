@@ -1157,7 +1157,7 @@ body.cat-modal-open{overflow:hidden;}
    the two modals can be open in sequence without clashing. */
 #welcome-modal{display:none;position:fixed;inset:0;z-index:25600;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;}
 #welcome-modal.open{display:flex;}
-#welcome-modal-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:18px;padding:32px 32px 24px;width:100%;max-width:460px;box-shadow:0 28px 80px rgba(0,0,0,.6);position:relative;animation:fadeup .25s ease both;text-align:center;}
+#welcome-modal-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:18px;padding:32px 32px 24px;width:100%;max-width:420px;box-shadow:0 28px 80px rgba(0,0,0,.6);position:relative;animation:fadeup .25s ease both;text-align:center;}
 #welcome-modal-close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--tx3);padding:4px;display:flex;align-items:center;transition:color var(--ease);}
 #welcome-modal-close:hover{color:var(--tx);}
 #welcome-modal-icon{font-size:44px;line-height:1;margin-bottom:12px;}
