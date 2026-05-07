@@ -3417,12 +3417,28 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('[BOOT] 13 - initRouter');
   initRouter(renderRoute);
 
-  // MD#47: welcome notification — once per account, once per guest session.
-  const welcomeKey = State.user?.uid ? 'nb-welcomed-' + State.user.uid : 'nb-welcomed-guest';
+  // MD#48: welcome modal — once per account, once per guest session.
+  // (Replaces the MD#47 toast. Uses a v2-suffixed key so users who saw
+  // the old toast still see the new modal once.)
+  const welcomeKey = State.user?.uid ? 'nb-welcomed-v2-' + State.user.uid : 'nb-welcomed-v2-guest';
   if (!localStorage.getItem(welcomeKey)) {
     try { localStorage.setItem(welcomeKey, '1'); } catch {}
     setTimeout(() => {
-      toast("Welcome to nodeblast! 🎉 Explore what others have built, share your own creations, and push boundaries.");
+      const modal = document.getElementById('welcome-modal');
+      if (!modal) return;
+      modal.classList.add('open');
+      const close = () => modal.classList.remove('open');
+      document.getElementById('welcome-modal-close')?.addEventListener('click', close, { once: true });
+      document.getElementById('welcome-modal-cta')?.addEventListener('click', close, { once: true });
+      // Click-outside-to-close on the overlay (but not on the card itself)
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+      }, { once: true });
+      // Escape key closes
+      const onKey = (e) => {
+        if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+      };
+      document.addEventListener('keydown', onKey);
     }, 1500);
   }
   console.log('[BOOT] 14 - initSearch');
