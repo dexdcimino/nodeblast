@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="css/style.css?v=182" />
+  <link rel="stylesheet" href="css/style.css?v=183" />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -254,20 +254,27 @@
        point (the header pill, an auth-gated button like "create a
        catalyst", etc.). Backdrop dismisses it; Escape does too.
        ══════════════════════════════════════ -->
-  <!-- Welcome modal (first-time visitor / guest / new account). MD#48. -->
+  <!-- Welcome modal (multi-page tour). MD#48. Shown to first-time signed-in
+       users (once per account) and to every signed-out visit. Pages array
+       lives in init.js. Card dimensions match the DexNote welcome modal. -->
   <div id="welcome-modal">
     <div id="welcome-modal-card">
-      <button id="welcome-modal-close" data-tip="Close">
+      <button id="welcome-modal-close" data-tip="Close" aria-label="Close">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
-      <div id="welcome-modal-icon">🧪</div>
-      <div id="welcome-modal-title">Welcome to NodeBlast</div>
-      <div id="welcome-modal-sub">From dex</div>
-      <div id="welcome-modal-body">
-        <p>Hey! I'm <b>dex</b> 👋 I'm a creator, gamer, artist, and developer who loves building things.</p>
-        <p>AI just kicked the doors wide open for everyone making stuff — that's what NodeBlast is built around, but it's a home for any kind of creation.</p>
-        <p>Every project lives as a <b>catalyst</b>. Explore what other alchemists are concocting, then share your own.</p>
-        <p class="welcome-modal-ps">PS &mdash; also check out <a href="https://dexnote.dev" target="_blank" rel="noopener">📓 dexnote.dev</a>, my collaborative notepad PWA.</p>
+      <div id="welcome-modal-icon"></div>
+      <div id="welcome-modal-title"></div>
+      <div id="welcome-modal-sub"></div>
+      <div id="welcome-modal-body"></div>
+      <div id="welcome-modal-pag-label">Pages</div>
+      <div id="welcome-modal-pag">
+        <button id="welcome-modal-prev" aria-label="Previous">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div id="welcome-modal-dots"></div>
+        <button id="welcome-modal-next" aria-label="Next">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
       <button id="welcome-modal-cta">Got it &mdash; let's go!</button>
     </div>
@@ -1275,7 +1282,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=183"></script>
+  <script type="module" src="js/init.js?v=184"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

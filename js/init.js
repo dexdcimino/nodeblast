@@ -3417,12 +3417,10 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('[BOOT] 13 - initRouter');
   initRouter(renderRoute);
 
-  // MD#48: welcome modal.
-  //  - Signed-in users: shown once per account (per-uid localStorage flag).
-  //  - Guests / signed-out: shown on every page load. No flag persisted.
-  //    The intent is that any signed-out visitor (returning lurker, person
-  //    who just signed out, fresh visitor) sees the intro until they have
-  //    an account.
+  // MD#48: welcome modal — multi-page tour.
+  //  - Signed-in users: shown ONCE per account (per-uid localStorage flag).
+  //  - Guests / signed-out visitors: shown on EVERY page load (no flag).
+  //    Sign-out → next reload they're a guest again → modal returns.
   const isSignedIn = !!State.user?.uid;
   const welcomeKey = isSignedIn ? 'nb-welcomed-v2-' + State.user.uid : null;
   const shouldShowWelcome = !isSignedIn || !localStorage.getItem(welcomeKey);
@@ -3430,23 +3428,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (welcomeKey) {
       try { localStorage.setItem(welcomeKey, '1'); } catch {}
     }
-    setTimeout(() => {
-      const modal = document.getElementById('welcome-modal');
-      if (!modal) return;
-      modal.classList.add('open');
-      const close = () => modal.classList.remove('open');
-      document.getElementById('welcome-modal-close')?.addEventListener('click', close, { once: true });
-      document.getElementById('welcome-modal-cta')?.addEventListener('click', close, { once: true });
-      // Click-outside-to-close on the overlay (but not on the card itself)
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) close();
-      }, { once: true });
-      // Escape key closes
-      const onKey = (e) => {
-        if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
-      };
-      document.addEventListener('keydown', onKey);
-    }, 1500);
+    setTimeout(() => { _openWelcomeModal(); }, 1500);
   }
   console.log('[BOOT] 14 - initSearch');
   initSearch();
@@ -3918,3 +3900,132 @@ window._deleteTestProfiles = async function() {
   }
   console.log('[seed] All test profiles deleted. Refresh the page.');
 };
+
+/* ── MD#48: welcome modal pages + render logic ──────────────────────── */
+
+const WELCOME_PAGES = [
+  {
+    icon: '🧪',
+    title: 'Welcome to NodeBlast',
+    sub: 'From dex',
+    body: () => `
+      <p>Hey! I'm <b>dex</b> 👋 I'm a creator, gamer, artist, and developer who loves building things.</p>
+      <p>AI just kicked the doors wide open for everyone making stuff — that's what NodeBlast is built around, but it's a home for any kind of creation.</p>
+      <p>Every project lives as a <b>catalyst</b>. Explore what other alchemists are concocting, then share your own.</p>
+      <p class="welcome-modal-ps">PS &mdash; also check out <a href="https://dexnote.dev" target="_blank" rel="noopener">📓 dexnote.dev</a>, my collaborative notepad PWA.</p>
+    `,
+  },
+  {
+    icon: '🧪',
+    title: "What's a catalyst?",
+    sub: 'Your project, on display',
+    body: () => `
+      <p>A <b>catalyst</b> is anything you've built — a website, app, game, tool, AI agent, art piece, anything.</p>
+      <div class="welcome-cat-card">
+        <svg width="64" height="74" viewBox="0 0 100 116" style="flex-shrink:0;" aria-hidden="true">
+          <polygon points="50,2 96,28 96,88 50,114 4,88 4,28" fill="#5ec5ff" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+          <text x="50" y="60" text-anchor="middle" fill="#0d2b3d" font-size="13" font-weight="700" font-family="inherit">DexNote</text>
+          <text x="50" y="80" text-anchor="middle" fill="#0d2b3d" font-size="11" font-family="inherit" opacity="0.7">📓</text>
+        </svg>
+        <div class="welcome-cat-card-info">
+          <div class="name">DexNote</div>
+          <div>A collaborative notepad PWA</div>
+          <div class="votes">🔥 24 &middot; ❄ 3</div>
+        </div>
+      </div>
+      <p class="welcome-modal-ps">Hover, click in, watch it react. Other alchemists vote 🔥 or ❄, leave comments, follow your work.</p>
+    `,
+  },
+  {
+    icon: '⚗',
+    title: 'Explore & share',
+    sub: 'Built with other alchemists',
+    body: () => `
+      <p>Every creator on NodeBlast is an <b>alchemist</b> — and the whole front page is a feed of what they're concocting.</p>
+      <div class="welcome-hex-row" aria-hidden="true">
+        <svg width="56" height="64" viewBox="0 0 100 116"><polygon points="50,2 96,28 96,88 50,114 4,88 4,28" fill="#7F77DD" opacity="0.85"/></svg>
+        <svg width="56" height="64" viewBox="0 0 100 116"><polygon points="50,2 96,28 96,88 50,114 4,88 4,28" fill="#5ec5ff" opacity="0.85"/></svg>
+        <svg width="56" height="64" viewBox="0 0 100 116"><polygon points="50,2 96,28 96,88 50,114 4,88 4,28" fill="#E8853A" opacity="0.85"/></svg>
+        <svg width="56" height="64" viewBox="0 0 100 116"><polygon points="50,2 96,28 96,88 50,114 4,88 4,28" fill="#8bc34a" opacity="0.85"/></svg>
+      </div>
+      <p>Sign in, drop your <b>catalyst</b>, and you're on the board. Pin favorites, follow makers you like, browse by hottest 🔥.</p>
+      <p class="welcome-modal-ps">No agenda. Just a place to share what you make and see what other people are dreaming up.</p>
+    `,
+  },
+];
+
+let _welcomeCur = 0;
+let _welcomeKeyHandler = null;
+let _welcomeOutsideHandler = null;
+
+function _renderWelcome() {
+  const p = WELCOME_PAGES[_welcomeCur];
+  if (!p) return;
+  const iconEl = document.getElementById('welcome-modal-icon');
+  const titleEl = document.getElementById('welcome-modal-title');
+  const subEl = document.getElementById('welcome-modal-sub');
+  const bodyEl = document.getElementById('welcome-modal-body');
+  const dotsEl = document.getElementById('welcome-modal-dots');
+  const prev = document.getElementById('welcome-modal-prev');
+  const next = document.getElementById('welcome-modal-next');
+  if (iconEl) iconEl.textContent = p.icon;
+  if (titleEl) titleEl.textContent = p.title;
+  if (subEl) subEl.textContent = p.sub;
+  if (bodyEl) bodyEl.innerHTML = p.body();
+  if (dotsEl) {
+    dotsEl.innerHTML = WELCOME_PAGES.map((_, i) =>
+      `<span class="dot${i === _welcomeCur ? ' on' : ''}" data-dot="${i}"></span>`
+    ).join('');
+    dotsEl.querySelectorAll('.dot').forEach((d) => {
+      d.addEventListener('click', () => {
+        _welcomeCur = parseInt(d.dataset.dot, 10) || 0;
+        _renderWelcome();
+      });
+    });
+  }
+  if (prev) prev.disabled = _welcomeCur === 0;
+  if (next) next.disabled = _welcomeCur === WELCOME_PAGES.length - 1;
+}
+
+function _openWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  if (!modal) return;
+  _welcomeCur = 0;
+  _renderWelcome();
+  modal.classList.add('open');
+
+  const close = () => _closeWelcomeModal();
+
+  document.getElementById('welcome-modal-close')?.addEventListener('click', close, { once: true });
+  document.getElementById('welcome-modal-cta')?.addEventListener('click', close, { once: true });
+  document.getElementById('welcome-modal-prev')?.addEventListener('click', () => {
+    if (_welcomeCur > 0) { _welcomeCur--; _renderWelcome(); }
+  });
+  document.getElementById('welcome-modal-next')?.addEventListener('click', () => {
+    if (_welcomeCur < WELCOME_PAGES.length - 1) { _welcomeCur++; _renderWelcome(); }
+  });
+
+  _welcomeOutsideHandler = (e) => { if (e.target === modal) close(); };
+  modal.addEventListener('click', _welcomeOutsideHandler);
+
+  _welcomeKeyHandler = (e) => {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft' && _welcomeCur > 0) { _welcomeCur--; _renderWelcome(); }
+    else if (e.key === 'ArrowRight' && _welcomeCur < WELCOME_PAGES.length - 1) { _welcomeCur++; _renderWelcome(); }
+  };
+  document.addEventListener('keydown', _welcomeKeyHandler);
+}
+
+function _closeWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  if (_welcomeOutsideHandler) {
+    modal.removeEventListener('click', _welcomeOutsideHandler);
+    _welcomeOutsideHandler = null;
+  }
+  if (_welcomeKeyHandler) {
+    document.removeEventListener('keydown', _welcomeKeyHandler);
+    _welcomeKeyHandler = null;
+  }
+}
