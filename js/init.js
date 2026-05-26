@@ -479,7 +479,7 @@ function showProfileBar(user, catalystCount, isOwn) {
   if (bioEl) {
     bioEl.textContent = user.bio || '';
     bioEl.style.display = 'block';
-    const MAX_BIO = 200;
+    const MAX_BIO = 280;
     if (isOwn) {
       bioEl.contentEditable = 'true';
       bioEl.classList.add('editable');
@@ -510,12 +510,12 @@ function showProfileBar(user, catalystCount, isOwn) {
           const newBio = (bioEl.textContent || '').trim().slice(0, MAX_BIO);
           if (newBio !== (State.profile?.bio || '')) {
             try {
-              const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
-              const db = getFirestore();
-              await setDoc(doc(db, 'users', State.user.uid), { bio: newBio, updatedAt: serverTimestamp() }, { merge: true });
-              State.profile.bio = newBio;
+              // Route through saveProfile so bio mirror-writes to BOTH the
+              // top-level doc AND the DexNote prefs subdoc. The old direct
+              // setDoc wrote top-level only and left DexNote out of sync.
+              await saveProfile({ bio: newBio });
               const _acctBioInput = document.getElementById('acct-bio-input');
-              if (_acctBioInput) _acctBioInput.value = newBio;
+              if (_acctBioInput) _acctBioInput.value = State.profile.bio || newBio;
             } catch (err) { console.warn('[bio] save failed:', err); }
           }
         });
