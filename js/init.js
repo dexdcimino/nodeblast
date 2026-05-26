@@ -519,7 +519,21 @@ function showProfileBar(user, catalystCount, isOwn) {
             } catch (err) { console.warn('[bio] save failed:', err); }
           }
         });
-        bioEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); bioEl.blur(); } });
+        bioEl.addEventListener('keydown', (e) => {
+          // Enter inserts a newline (allow up to ~3 lines). Shift+Enter
+          // also fine. Escape commits + exits. Cmd/Ctrl+Enter commits too.
+          if (e.key === 'Escape' || ((e.metaKey || e.ctrlKey) && e.key === 'Enter')) {
+            e.preventDefault();
+            bioEl.blur();
+            return;
+          }
+          if (e.key === 'Enter') {
+            // Cap at 3 visual lines: block a 4th newline.
+            const lineCount = (bioEl.textContent || '').split('\n').length;
+            if (lineCount >= 3) { e.preventDefault(); return; }
+            // Let the browser insert the newline natively (no preventDefault).
+          }
+        });
       }
     } else {
       bioEl.contentEditable = 'false';
