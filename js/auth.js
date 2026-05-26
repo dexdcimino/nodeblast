@@ -103,10 +103,14 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
   // Bio: DexNote subdoc wins, top-level doc is the fallback. Either
   // undefined → empty string so the UI can treat "no bio" uniformly.
   const bio = (prefsData?.bio ?? topData?.bio ?? '').toString();
-  // Social links: same priority (prefs subdoc wins). sanitizeSocialLinks
-  // drops malformed entries + hard-caps the list so downstream code
-  // never has to defend against garbage.
-  const socialLinksRaw = prefsData?.socialLinks ?? topData?.socialLinks ?? [];
+  // Social links: prefs subdoc wins ONLY when it actually has entries.
+  // Using `??` here was a bug — a stale/empty `socialLinks: []` left in
+  // the prefs subdoc would shadow real links written to the top-level
+  // doc, so links saved in NodeBlast (top-level) never rendered. Prefer
+  // whichever doc has a non-empty array; fall back to [] if both empty.
+  const _prefsLinks = Array.isArray(prefsData?.socialLinks) ? prefsData.socialLinks : [];
+  const _topLinks = Array.isArray(topData?.socialLinks) ? topData.socialLinks : [];
+  const socialLinksRaw = _prefsLinks.length ? _prefsLinks : _topLinks;
   const socialLinks = sanitizeSocialLinks(socialLinksRaw);
   return {
     displayName,
