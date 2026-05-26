@@ -593,22 +593,19 @@ function showProfileBar(user, catalystCount, isOwn) {
         }
         openSocialModal(existingLinks, async (links) => {
           try {
-            const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
-            const db = getFirestore();
-            const filtered = links.filter(l => l.url?.trim());
-            await setDoc(doc(db, 'users', State.user.uid), {
-              socialLinks: filtered.map(l => ({ url: l.url, active: true })),
-              updatedAt: serverTimestamp(),
-            }, { merge: true });
-            State.profile.socialLinks = filtered;
+            const filtered = links.filter(l => l.url?.trim()).map(l => ({ url: l.url, active: true }));
+            // Route through saveProfile so socialLinks mirror-write to BOTH
+            // the top-level doc AND the prefs subdoc (DexNote sync).
+            await saveProfile({ socialLinks: filtered });
+            const saved = State.profile.socialLinks || filtered;
             const iconsEl = document.getElementById('profile-bar-socials');
             if (iconsEl) {
-              const html = renderSocialIconsHTML(State.profile.socialLinks);
+              const html = renderSocialIconsHTML(saved);
               iconsEl.innerHTML = html;
               iconsEl.classList.toggle('visible', !!html);
             }
             const _il2 = document.getElementById('acct-links-inline');
-            if (_il2) _il2.innerHTML = renderSocialIconsHTML(filtered);
+            if (_il2) _il2.innerHTML = renderSocialIconsHTML(saved);
           } catch (err) {
             console.warn('[social] save failed:', err);
           }
@@ -3457,15 +3454,15 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch { existing = (State.profile?.socialLinks || []).map(l => ({ url: l.url || '', active: true })); }
       openSocialModal(existing, async (links) => {
         try {
-          const { doc, setDoc, getFirestore, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
-          const db = getFirestore();
-          const filtered = links.filter(l => l.url);
-          await setDoc(doc(db, 'users', State.user.uid), { socialLinks: filtered, updatedAt: serverTimestamp() }, { merge: true });
-          State.profile.socialLinks = filtered;
+          const filtered = links.filter(l => l.url).map(l => ({ url: l.url, active: true }));
+          // Route through saveProfile so socialLinks mirror-write to BOTH
+          // the top-level doc AND the prefs subdoc (DexNote sync).
+          await saveProfile({ socialLinks: filtered });
+          const saved = State.profile.socialLinks || filtered;
           const iconsEl = document.getElementById('profile-bar-socials');
-          if (iconsEl) { iconsEl.innerHTML = renderSocialIconsHTML(filtered); iconsEl.classList.toggle('visible', filtered.length > 0); }
+          if (iconsEl) { iconsEl.innerHTML = renderSocialIconsHTML(saved); iconsEl.classList.toggle('visible', saved.length > 0); }
           const _il = document.getElementById('acct-links-inline');
-          if (_il) _il.innerHTML = renderSocialIconsHTML(filtered);
+          if (_il) _il.innerHTML = renderSocialIconsHTML(saved);
         } catch (err) { console.warn('[social] save failed:', err); }
       });
     });
