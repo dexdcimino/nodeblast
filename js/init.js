@@ -2881,6 +2881,11 @@ function updateAuthUI(user, profile) {
   // customColorSlots, the snapshot callback re-fires updateAuthUI
   // so this push runs automatically and the picker stays in sync.
   // Null = never seeded → leave whatever localStorage had.
+  // MD#7: if this account already acknowledged the palette on another
+  // device, seed the local flag + dismiss any forced-open hint now.
+  if (profile?.logoAck === true && !_logoAcknowledged()) {
+    _ackLogoPalette();
+  }
   if (profile?.customColorSlots) {
     syncSlotsFromFirestore(profile.customColorSlots);
   }
@@ -2975,6 +2980,8 @@ const LOGO_ACK_KEY = 'nb-logo-acknowledged';
 function _logoAcknowledged() { try { return localStorage.getItem(LOGO_ACK_KEY) === '1'; } catch { return false; } }
 function _ackLogoPalette() {
   try { localStorage.setItem(LOGO_ACK_KEY, '1'); } catch {}
+  // Persist for signed-in users so other devices don't re-prompt.
+  if (State.user) saveLogoColors({ logoAck: true });
   const picker = document.getElementById('logo-picker');
   if (picker) {
     picker.classList.remove('open', 'force-open');

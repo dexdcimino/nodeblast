@@ -122,6 +122,7 @@ function mergeProfileDocs(topData, prefsData, user, providerId) {
     logoTopColor: topData?.logoTopColor || null,
     logoBotColor: topData?.logoBotColor || null,
     logoMode: topData?.logoMode || 'dual',
+    logoAck: topData?.logoAck === true,
     bio,
     socialLinks,
     // MD18: tracked (pinned/followed) privacy flag. Default false
@@ -249,6 +250,7 @@ export async function saveLogoColors(updates) {
   if (updates.logoTopColor) patch.logoTopColor = updates.logoTopColor;
   if (updates.logoBotColor) patch.logoBotColor = updates.logoBotColor;
   if (updates.logoMode) patch.logoMode = updates.logoMode;
+  if (updates.logoAck === true) patch.logoAck = true;
   if (Object.keys(patch).length === 0) return;
   try {
     await setDoc(doc(db, 'users', State.user.uid), {
