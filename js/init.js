@@ -2971,6 +2971,16 @@ function updateAuthUI(user, profile) {
 const LOGO_TOP_KEY = 'nb-logo-top-color';
 const LOGO_BOT_KEY = 'nb-logo-bot-color';
 const LOGO_MODE_KEY = 'nb-logo-mode';
+const LOGO_ACK_KEY = 'nb-logo-acknowledged';
+function _logoAcknowledged() { try { return localStorage.getItem(LOGO_ACK_KEY) === '1'; } catch { return false; } }
+function _ackLogoPalette() {
+  try { localStorage.setItem(LOGO_ACK_KEY, '1'); } catch {}
+  const picker = document.getElementById('logo-picker');
+  if (picker) {
+    picker.classList.remove('open', 'force-open');
+    picker.querySelector('.logo-picker-hint')?.remove();
+  }
+}
 
 let _logoTop = DEFAULT_LOGO_TOP;
 let _logoBot = DEFAULT_LOGO_BOT;
@@ -3093,6 +3103,7 @@ function _buildVariantToggle(picker) {
     const newMode = _logoMode === 'dual' ? 'mono' : 'dual';
     setLogoColors(_logoTop, _logoBot, newMode);
     if (State.user) saveLogoColors({ logoTopColor: _logoTop, logoBotColor: _logoBot, logoMode: newMode });
+    _ackLogoPalette();
   });
 }
 
@@ -3224,7 +3235,28 @@ function initLogoPicker() {
     }
     setLogoColors(nextTop, nextBot, _logoMode);
     if (State.user) saveLogoColors({ logoTopColor: nextTop, logoBotColor: nextBot, logoMode: _logoMode });
+    _ackLogoPalette();
   });
+
+  // First-run affordance: auto-open the palette every visit until the
+  // user makes a choice or dismisses the hint. Hovering away does NOT
+  // acknowledge — it'll reappear next visit until a real choice is made.
+  if (!_logoAcknowledged()) {
+    if (!picker.querySelector('.logo-picker-hint')) {
+      const hint = document.createElement('div');
+      hint.className = 'logo-picker-hint';
+      hint.innerHTML = '<span>Pick your logo colors</span><button type="button" class="logo-picker-hint-x" aria-label="Dismiss">Got it</button>';
+      picker.appendChild(hint);
+      hint.querySelector('.logo-picker-hint-x')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _ackLogoPalette();
+      });
+    }
+    picker.classList.add('open', 'force-open');
+    const dropForce = () => { picker.classList.remove('force-open'); };
+    logoEl.addEventListener('mouseleave', dropForce, { once: true });
+    picker.addEventListener('mouseleave', dropForce, { once: true });
+  }
 }
 
 /* ══════════════════════════════════════
