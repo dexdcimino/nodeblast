@@ -2983,10 +2983,7 @@ function _ackLogoPalette() {
   // Persist for signed-in users so other devices don't re-prompt.
   if (State.user) saveLogoColors({ logoAck: true });
   const picker = document.getElementById('logo-picker');
-  if (picker) {
-    picker.classList.remove('open', 'force-open');
-    picker.querySelector('.logo-picker-hint')?.remove();
-  }
+  if (picker) picker.classList.remove('open');
 }
 
 let _logoTop = DEFAULT_LOGO_TOP;
@@ -3246,23 +3243,12 @@ function initLogoPicker() {
   });
 
   // First-run affordance: auto-open the palette every visit until the
-  // user makes a choice or dismisses the hint. Hovering away does NOT
-  // acknowledge — it'll reappear next visit until a real choice is made.
+  // user makes a choice. Uses the same `.open` class as hover so the
+  // panel renders identically. Hovering away closes it (existing hide()),
+  // but since the ack flag isn't set, it reopens next visit until the
+  // user actually picks a color or toggles the logo style.
   if (!_logoAcknowledged()) {
-    if (!picker.querySelector('.logo-picker-hint')) {
-      const hint = document.createElement('div');
-      hint.className = 'logo-picker-hint';
-      hint.innerHTML = '<span>Pick your logo colors</span><button type="button" class="logo-picker-hint-x" aria-label="Dismiss">Got it</button>';
-      picker.appendChild(hint);
-      hint.querySelector('.logo-picker-hint-x')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        _ackLogoPalette();
-      });
-    }
-    picker.classList.add('open', 'force-open');
-    const dropForce = () => { picker.classList.remove('force-open'); };
-    logoEl.addEventListener('mouseleave', dropForce, { once: true });
-    picker.addEventListener('mouseleave', dropForce, { once: true });
+    show();
   }
 }
 
