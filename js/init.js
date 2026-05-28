@@ -2979,11 +2979,11 @@ const LOGO_MODE_KEY = 'nb-logo-mode';
 const LOGO_ACK_KEY = 'nb-logo-acknowledged';
 function _logoAcknowledged() { try { return localStorage.getItem(LOGO_ACK_KEY) === '1'; } catch { return false; } }
 function _ackLogoPalette() {
+  // Mark acknowledged so the palette won't AUTO-OPEN on future visits.
+  // Does NOT close the panel — the user may want to try other colors or
+  // toggle the logo. The existing hover hide() closes it on mouseleave.
   try { localStorage.setItem(LOGO_ACK_KEY, '1'); } catch {}
-  // Persist for signed-in users so other devices don't re-prompt.
   if (State.user) saveLogoColors({ logoAck: true });
-  const picker = document.getElementById('logo-picker');
-  if (picker) picker.classList.remove('open');
 }
 
 let _logoTop = DEFAULT_LOGO_TOP;
