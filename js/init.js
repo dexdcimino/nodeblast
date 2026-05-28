@@ -2881,10 +2881,13 @@ function updateAuthUI(user, profile) {
   // customColorSlots, the snapshot callback re-fires updateAuthUI
   // so this push runs automatically and the picker stays in sync.
   // Null = never seeded → leave whatever localStorage had.
-  // MD#7: if this account already acknowledged the palette on another
-  // device, seed the local flag + dismiss any forced-open hint now.
-  if (profile?.logoAck === true && !_logoAcknowledged()) {
-    _ackLogoPalette();
+  // MD#10: once auth resolves, if this signed-in account already
+  // acknowledged (on any device), close the auto-opened palette now.
+  // Guests never reach this branch, so their palette stays open.
+  if (profile?.logoAck === true) {
+    try { localStorage.setItem(LOGO_ACK_KEY, '1'); } catch {}
+    const _picker = document.getElementById('logo-picker');
+    if (_picker) _picker.classList.remove('open');
   }
   if (profile?.customColorSlots) {
     syncSlotsFromFirestore(profile.customColorSlots);
@@ -2977,13 +2980,19 @@ const LOGO_TOP_KEY = 'nb-logo-top-color';
 const LOGO_BOT_KEY = 'nb-logo-bot-color';
 const LOGO_MODE_KEY = 'nb-logo-mode';
 const LOGO_ACK_KEY = 'nb-logo-acknowledged';
-function _logoAcknowledged() { try { return localStorage.getItem(LOGO_ACK_KEY) === '1'; } catch { return false; } }
+// Acknowledgement ONLY applies to signed-in users. Guests/signed-out
+// always see the palette on every load, so they're never "acknowledged".
+function _logoAcknowledged() {
+  if (!State.user) return false;                       // guest → always show
+  if (State.profile?.logoAck === true) return true;    // account already acked
+  try { return localStorage.getItem(LOGO_ACK_KEY) === '1'; } catch { return false; }
+}
 function _ackLogoPalette() {
-  // Mark acknowledged so the palette won't AUTO-OPEN on future visits.
-  // Does NOT close the panel — the user may want to try other colors or
-  // toggle the logo. The existing hover hide() closes it on mouseleave.
+  // Acknowledgement only matters for signed-in users. Guests are never
+  // remembered — the palette must re-open for them on every visit.
+  if (!State.user) return;
   try { localStorage.setItem(LOGO_ACK_KEY, '1'); } catch {}
-  if (State.user) saveLogoColors({ logoAck: true });
+  saveLogoColors({ logoAck: true });
 }
 
 let _logoTop = DEFAULT_LOGO_TOP;
