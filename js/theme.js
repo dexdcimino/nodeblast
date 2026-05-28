@@ -33,8 +33,8 @@ export const LOGO_PALETTE = [
   { hex: '#ffffff', name: 'White' },             // 10
 ];
 
-export const DEFAULT_LOGO_TOP = '#2DD881';   // Blast Green
-export const DEFAULT_LOGO_BOT = '#2979FF';   // Volt Blue
+export const DEFAULT_LOGO_TOP = '#2979FF';   // Volt Blue
+export const DEFAULT_LOGO_BOT = '#F0114C';   // Rich Red
 
 let _transTimer = null;
 let _currentAccent = null;

@@ -173,8 +173,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    padding/height — no CSS property can measure ink position, so a
    layout-based fix will drift whenever the font or size changes. */
 #hdr-brand{font-size:30px;font-weight:800;letter-spacing:-0.6px;line-height:1;cursor:pointer;display:flex;align-items:center;height:100%;transform:translateY(2px);}
-#hdr-brand #brand-node{color:#7ac74f;}
-#hdr-brand #brand-blast{color:#127596;}
+#hdr-brand #brand-node{color:#2979FF;}
+#hdr-brand #brand-blast{color:#F0114C;}
 [data-theme="light"][data-accent-white] #hdr-logo svg,[data-theme="light"][data-accent-white] #hdr-brand{filter:drop-shadow(0 0 4px rgba(0,0,0,0.35));}
 
 .hdr-sep{width:1px;height:22px;background:var(--bdr);margin:0 4px;flex-shrink:0;}
