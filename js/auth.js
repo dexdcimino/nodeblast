@@ -337,6 +337,13 @@ export async function signIn(providerName = 'google') {
 }
 
 export async function signOut() {
+  // MD#11: if user called signOut() without going through the UI button
+  // (e.g. session expired, programmatic sign-out), still reset to defaults.
+  // The UI button path in init.js already does this — this is the safety net.
+  try { localStorage.removeItem('nb-logo-top-color'); } catch {}
+  try { localStorage.removeItem('nb-logo-bot-color'); } catch {}
+  try { localStorage.removeItem('nb-logo-mode'); } catch {}
+  try { localStorage.removeItem('nb-logo-acknowledged'); } catch {}
   teardownProfileSubs();
   await fbSignOut(auth);
 }

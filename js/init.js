@@ -3171,26 +3171,13 @@ function initLogoPicker() {
   picker.appendChild(colsWrap);
   _buildVariantToggle(picker);
 
-  // Initial paint — respect any cached values the user picked on a
-  // previous visit, else fall back to the defaults. If the saved
-  // color no longer exists in the current palette (e.g. we swapped
-  // out accent colors in a code update), auto-migrate to the default
-  // so users don't keep orphaned colors.
-  const paletteSet = new Set(LOGO_PALETTE.map((c) => c.hex.toLowerCase()));
-  const rawTop = localStorage.getItem(LOGO_TOP_KEY);
-  const rawBot = localStorage.getItem(LOGO_BOT_KEY);
-  const topValid = rawTop && paletteSet.has(rawTop.toLowerCase());
-  const botValid = rawBot && paletteSet.has(rawBot.toLowerCase());
-  const initialTop = topValid ? rawTop : DEFAULT_LOGO_TOP;
-  const initialBot = botValid ? rawBot : DEFAULT_LOGO_BOT;
-  // Persist the migration so it only runs once per palette change.
-  if (rawTop && !topValid) {
-    try { localStorage.setItem(LOGO_TOP_KEY, initialTop); } catch {}
-  }
-  if (rawBot && !botValid) {
-    try { localStorage.setItem(LOGO_BOT_KEY, initialBot); } catch {}
-  }
-  const savedMode = localStorage.getItem(LOGO_MODE_KEY) || 'dual';
+  // MD#11: ALWAYS boot from defaults. If this is a signed-in user, their
+  // saved colors will paint on top once the profile resolves (handled in
+  // updateAuthUI). Guests stay on defaults forever — which is the point.
+  // Old localStorage values are deliberately ignored at boot.
+  const initialTop = DEFAULT_LOGO_TOP;
+  const initialBot = DEFAULT_LOGO_BOT;
+  const savedMode = 'dual';
   setLogoColors(initialTop, initialBot, savedMode);
 
   // Re-paint the logo whenever the theme toggles so the light-mode
@@ -3388,6 +3375,13 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmLabel: 'Sign out',
         danger: true,
         onConfirm: async () => {
+          // MD#11: clear cached logo colors so the guest state shows
+          // defaults immediately on this and the next page load.
+          try { localStorage.removeItem(LOGO_TOP_KEY); } catch {}
+          try { localStorage.removeItem(LOGO_BOT_KEY); } catch {}
+          try { localStorage.removeItem(LOGO_MODE_KEY); } catch {}
+          try { localStorage.removeItem(LOGO_ACK_KEY); } catch {}
+          setLogoColors(DEFAULT_LOGO_TOP, DEFAULT_LOGO_BOT, 'dual');
           await signOut();
           // MD13: land the user on the public community feed after
           // sign-out instead of a profile page they can no longer edit.
