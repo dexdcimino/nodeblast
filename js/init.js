@@ -3460,15 +3460,14 @@ document.addEventListener('DOMContentLoaded', () => {
   //  - Signed-in users: shown ONCE per account (per-uid localStorage flag).
   //  - Guests / signed-out visitors: shown on EVERY page load (no flag).
   //    Sign-out → next reload they're a guest again → modal returns.
-  const isSignedIn = !!State.user?.uid;
-  const welcomeKey = isSignedIn ? 'nb-welcomed-v2-' + State.user.uid : null;
-  const shouldShowWelcome = !isSignedIn || !localStorage.getItem(welcomeKey);
-  if (shouldShowWelcome) {
-    if (welcomeKey) {
-      try { localStorage.setItem(welcomeKey, '1'); } catch {}
-    }
-    setTimeout(() => { _openWelcomeModal(); }, 1500);
-  }
+  // MD#12: welcome modal shows for GUESTS ONLY. Signed-in users never see
+  // it (not on refresh, not on sign-in). Because auth may not have resolved
+  // at this point in boot, we re-check after a short delay and only open if
+  // STILL not signed in — this prevents the modal flashing for signed-in
+  // users mid-load, which was the "shows every refresh" bug.
+  setTimeout(() => {
+    if (!State.user?.uid) _openWelcomeModal();
+  }, 1500);
   console.log('[BOOT] 14 - initSearch');
   initSearch();
   console.log('[BOOT] 15 - initNotifications');
@@ -3954,6 +3953,8 @@ const WELCOME_PAGES = [
       <p class="welcome-modal-ps">PS &mdash; also check out <a href="https://dexnote.dev" target="_blank" rel="noopener">📓 dexnote.dev</a>, my collaborative notepad PWA.</p>
     `,
   },
+  /* MD#12: pages 2 & 3 disabled for now — single-page welcome modal.
+     Uncomment this block to restore the multi-page tour.
   {
     icon: '🧪',
     title: "What's a catalyst?",
@@ -3991,6 +3992,7 @@ const WELCOME_PAGES = [
       <p class="welcome-modal-ps">No agenda. Just a place to share what you make and see what other people are dreaming up.</p>
     `,
   },
+  */
 ];
 
 let _welcomeCur = 0;
@@ -4024,6 +4026,12 @@ function _renderWelcome() {
   }
   if (prev) prev.disabled = _welcomeCur === 0;
   if (next) next.disabled = _welcomeCur === WELCOME_PAGES.length - 1;
+  // MD#12: single-page welcome — hide the whole pagination row (label,
+  // dots, chevrons). Remove these two lines to restore multi-page nav.
+  const _pagRow = document.getElementById('welcome-modal-pag');
+  if (_pagRow) _pagRow.style.display = 'none';
+  const _pagLabel = document.getElementById('welcome-modal-pag-label');
+  if (_pagLabel) _pagLabel.style.display = 'none';
 }
 
 function _openWelcomeModal() {

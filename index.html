@@ -266,6 +266,8 @@
       <div id="welcome-modal-title"></div>
       <div id="welcome-modal-sub"></div>
       <div id="welcome-modal-body"></div>
+      <!-- MD#12: pagination disabled for single-page welcome modal.
+           Uncomment to restore dots + prev/next chevrons.
       <div id="welcome-modal-pag-label">Pages</div>
       <div id="welcome-modal-pag">
         <button id="welcome-modal-prev" aria-label="Previous">
@@ -276,6 +278,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
+      -->
       <button id="welcome-modal-cta">Got it &mdash; let's go!</button>
     </div>
   </div>
@@ -1282,7 +1285,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=193"></script>
+  <script type="module" src="js/init.js?v=194"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
