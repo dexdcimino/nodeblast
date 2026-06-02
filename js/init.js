@@ -3460,14 +3460,20 @@ document.addEventListener('DOMContentLoaded', () => {
   //  - Signed-in users: shown ONCE per account (per-uid localStorage flag).
   //  - Guests / signed-out visitors: shown on EVERY page load (no flag).
   //    Sign-out → next reload they're a guest again → modal returns.
-  // MD#12: welcome modal shows for GUESTS ONLY. Signed-in users never see
-  // it (not on refresh, not on sign-in). Because auth may not have resolved
-  // at this point in boot, we re-check after a short delay and only open if
-  // STILL not signed in — this prevents the modal flashing for signed-in
-  // users mid-load, which was the "shows every refresh" bug.
-  setTimeout(() => {
-    if (!State.user?.uid) _openWelcomeModal();
-  }, 1500);
+  // MD#14: welcome modal shows for GUESTS ONLY. Gate on the real auth-
+  // resolved signal (onAuthReady) instead of a timer — a fixed delay
+  // raced auth and fired the modal for signed-in users on slow loads.
+  // onAuthReady fires once auth has definitively resolved: `user` is the
+  // signed-in user, or null for a true guest. Only open when null.
+  onAuthReady((user) => {
+    if (!user) {
+      // Small delay so it doesn't pop the instant the page paints.
+      setTimeout(() => {
+        // Re-check in case the user signed in during the delay.
+        if (!State.user?.uid) _openWelcomeModal();
+      }, 800);
+    }
+  });
   console.log('[BOOT] 14 - initSearch');
   initSearch();
   console.log('[BOOT] 15 - initNotifications');
