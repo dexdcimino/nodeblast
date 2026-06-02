@@ -289,9 +289,7 @@ function addTileHTML() {
   `;
 }
 
-function skeletonHTML() {
-  return `<div class="hex-skeleton-inner"></div>`;
-}
+// MD#13: skeletonHTML removed — no longer rendering shimmer placeholders.
 
 // ══════════════════════════════════════════════════════════════
 //  Drag-to-reorder state
@@ -344,13 +342,12 @@ function _renderNow(state) {
 
   const COLS = (state.getColsFn || getCols)(containerW);
 
-  // Loading: render N skeleton placeholders matching current column count
+  // MD#13: skeleton placeholders removed. While loading, render nothing
+  // (blank canvas) instead of the shimmering hex grid. The rotating-logo
+  // #loading-screen covers the initial page load; mid-session reloads
+  // briefly show an empty canvas until real tiles paint. This is intended.
   if (state.loading) {
-    const skeletonCount = Math.max(3, COLS + Math.max(0, COLS - 1));
-    _renderTiles(honey, containerW, COLS, skeletonCount, state.gap, (i, el) => {
-      el.classList.add('hex-skeleton');
-      el.innerHTML = skeletonHTML();
-    });
+    honey.innerHTML = '';
     return;
   }
 

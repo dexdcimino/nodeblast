@@ -1091,10 +1091,6 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* WIP tiles render normally — no pulse, no extra dimming. The
    "WIP" status badge in the top-right is enough signal. */
 
-.hex-tile.hex-skeleton{cursor:default;pointer-events:none;}
-.hex-tile.hex-skeleton::before{display:none;}
-.hex-skeleton-inner{position:absolute;inset:0;background:linear-gradient(100deg,var(--bg3) 40%,var(--bg4) 50%,var(--bg3) 60%);background-size:200% 100%;animation:hex-shimmer 1.4s ease-in-out infinite;}
-@keyframes hex-shimmer{0%{background-position:180% 0;}100%{background-position:-80% 0;}}
 
 .hex-tile.add-tile{background:transparent;border:none;transition:transform .2s ease;}
 .hex-tile.add-tile::before{display:none;}
