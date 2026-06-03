@@ -2435,6 +2435,8 @@ async function renderFeedRoute() {
     console.log('[feed] subscription fired', { count: catalysts?.length ?? 0 });
     _currentFeedSnapshot = catalysts || [];
     _repaintFeed();
+    // MD#15: content is now on screen — hide the logo loader (idempotent).
+    if (window._hideLoadingScreen) window._hideLoadingScreen();
     // MD#46: restore scroll on first paint when returning from a profile
     if (_feedFirstPaint && _savedScrollY > 0) {
       _feedFirstPaint = false;
@@ -2740,6 +2742,13 @@ async function renderRoute({ force = false } = {}) {
     if (honey) honey.style.opacity = '1';
     // NB-MD11: refresh Invite-to-game button states since /play toggled.
     applyInviteButtonStates();
+    // MD#15: for non-feed routes (profile, catalyst, etc.) the feed paint
+    // callback never fires, so hide the loader once this route has rendered.
+    // The feed route hides it itself on first data paint, so skip here to
+    // avoid hiding before feed tiles arrive.
+    if (route.page !== 'feed' && window._hideLoadingScreen) {
+      window._hideLoadingScreen();
+    }
   }
 }
 
@@ -3320,6 +3329,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (err) err.style.display = 'block';
     }
   }, 6000);
+  // MD#15: single idempotent loader-hide. Called when real content has
+  // painted (feed first paint) or when a non-feed route finishes. Safe to
+  // call multiple times — only acts once.
+  let _loaderHidden = false;
+  window._hideLoadingScreen = function _hideLoadingScreen() {
+    if (_loaderHidden) return;
+    _loaderHidden = true;
+    const ls = document.getElementById('loading-screen');
+    if (ls) {
+      ls.classList.add('hidden');
+      ls.addEventListener('transitionend', () => { ls.style.display = 'none'; }, { once: true });
+    }
+  };
   try {
   // Palette first, accent second — applyPalette writes --clr, so the
   // logo accent must be applied *after* it to end up as the effective
@@ -3884,12 +3906,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   console.log('[BOOT] 20 - boot complete');
-  // Hide loading screen — boot succeeded
-  const ls = document.getElementById('loading-screen');
-  if (ls) {
-    ls.classList.add('hidden');
-    ls.addEventListener('transitionend', () => { ls.style.display = 'none'; }, { once: true });
-  }
+  // MD#15: do NOT hide the loader here — boot finishing does not mean
+  // content has painted. The feed's first paint (renderFeedRoute) hides
+  // it once real tiles are on screen. Non-feed routes hide it via the
+  // fallback in renderRoute. The 6s timeout remains a last-resort backstop.
   } catch (err) {
     console.error('[BOOT] Fatal error during initialization:', err);
     // Keep loading screen visible + show error message after 5s
