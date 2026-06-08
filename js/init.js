@@ -4076,7 +4076,13 @@ function _openWelcomeModal() {
     if (_welcomeCur < WELCOME_PAGES.length - 1) { _welcomeCur++; _renderWelcome(); }
   });
 
-  _welcomeOutsideHandler = (e) => { if (e.target === modal) close(); };
+  // MD#17: close on any click that isn't inside the card. The old strict
+  // `e.target === modal` check only matched clicks on the exact backdrop
+  // node, which failed when clicks landed on a child/wrapper. Using
+  // closest('#welcome-modal-card') reliably detects "outside the card".
+  _welcomeOutsideHandler = (e) => {
+    if (!e.target.closest('#welcome-modal-card')) close();
+  };
   modal.addEventListener('click', _welcomeOutsideHandler);
 
   _welcomeKeyHandler = (e) => {
