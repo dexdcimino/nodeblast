@@ -3885,20 +3885,18 @@ document.addEventListener('DOMContentLoaded', () => {
         _repaintFeed();
         return;
       }
-      // Profile views: re-render the catalysts column with current tiles
+      // MD#16: re-render the profile via the SAME path the initial render
+      // uses (_renderProfileView). The old inline renderHexGrid call here
+      // targeted the wrong container (profile-col-catalysts) with the wrong
+      // column fn (getCols/4-max instead of getEmbeddedCols) and default gap,
+      // which made the grid overflow on resize. _renderProfileView uses the
+      // correct container (profile-bar-catalysts), getEmbeddedCols, gap:24.
       if (_currentProfileView) {
-        renderHexGrid({
-          tiles: _currentTiles,
-          showAdd: _currentShowAdd,
-          container: 'profile-col-catalysts',
-          onTileClick: handleTileClick,
-          onAddClick: _handleAddCatalystClick,
-          onCreatorClick: handleCreatorClick,
-          onReorder: _currentShowAdd ? handleReorder : null,
-          onVoteClick: handleCatalystVote,
-          onPinClick: _currentShowAdd ? null : handlePinToggle,
-          isPinned: _currentShowAdd ? null : (catId) => _myTrackedCatIds.has(catId),
-        });
+        _renderProfileView(
+          _currentProfileView.user,
+          _currentProfileView.catalysts,
+          _currentProfileView.isOwn
+        );
       }
       // Non-feed routes with community-list visible (e.g. featured)
       const communityList = document.getElementById('community-list');
