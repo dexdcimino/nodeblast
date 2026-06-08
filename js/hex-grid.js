@@ -337,7 +337,14 @@ function _renderNow(state) {
   honey.innerHTML = '';
   honey.classList.remove('reordering');
 
-  const containerW = honey.clientWidth;
+  // MD#1: guard against grid-track blowout. When this grid is embedded as a
+  // grid-column:1/-1 item inside #profile-bar, a parent track that refuses to
+  // shrink can inflate this element's clientWidth far beyond the visible bar,
+  // pushing tiles off-screen at narrow / half-width windows. Clamp the working
+  // width to the parent's real (non-inflating) client width.
+  let containerW = honey.clientWidth;
+  const parentW = honey.parentElement ? honey.parentElement.clientWidth : 0;
+  if (parentW > 0 && containerW > parentW) containerW = parentW;
   if (containerW <= 0) return;
 
   const COLS = (state.getColsFn || getCols)(containerW);
