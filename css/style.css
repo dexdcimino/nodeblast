@@ -989,9 +989,8 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .hex-tile.hex-tile-flow{position:relative;flex-shrink:0;}
 /* Background image is the hero — bump default opacity so the thumb
    is clearly the star of the tile. The hover brightness bump stays. */
-.hex-tile::before{content:'';position:absolute;inset:0;background-image:var(--thumb,none);background-size:cover;background-position:center;opacity:1;transition:filter .25s ease;}
-.hex-tile:hover::before{filter:brightness(1.05);}
-.hex-tile:hover{transform:scale(1.12);z-index:10;filter:brightness(1.05);transition:transform .5s cubic-bezier(.34,1.56,.64,1), filter .3s ease;}
+.hex-tile::before{content:'';position:absolute;inset:0;background-image:var(--thumb,none);background-size:cover;background-position:center;opacity:1;filter:none;transition:filter .25s ease;}
+.hex-tile:hover{transform:scale(1.12);z-index:10;transition:transform .5s cubic-bezier(.34,1.56,.64,1);}
 .hex-tile-flow:hover{transform:scale(1.06);z-index:100;}
 
 /* MD21+MD26: faded yin-yang placeholder shown on no-thumb catalyst
