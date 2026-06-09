@@ -795,7 +795,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 ══════════════════════════════════════ */
 /* Toggled by init.js: .feed-mode on #grid means show the community
    list and hide #honeycomb; no class means the opposite. */
-#community-list{display:none;flex-direction:row;flex-wrap:wrap;gap:16px;padding:24px 0 48px;align-items:flex-start;box-sizing:border-box;}
+#community-list{display:none;flex-direction:row;flex-wrap:wrap;gap:16px;padding:24px 0 48px;align-items:stretch;box-sizing:border-box;}
 #grid.feed-mode #community-list{display:flex;}
 #grid.feed-mode.alchemists-mode #honeycomb{display:none;}
 

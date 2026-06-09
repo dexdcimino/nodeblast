@@ -2123,76 +2123,7 @@ function _buildCommunityCard(group) {
   body.style.height = (_hMaxB + _hGap) + 'px';
   body.style.width = (_hMaxR + _hGap) + 'px';
 
-  // NB-MD09 / MD#1 / MD#12: creator-level vote pills — absolute-positioned
-  // inside the body. Render for all cards (including own); own-card pills
-  // are read-only (click is toast-gated).
-  const isOwnCardForVote = State.user && group.uid === State.user.uid;
-  {
-    const frostPill = document.createElement('button');
-    frostPill.type = 'button';
-    frostPill.className = 'community-vote-pill frost';
-    frostPill.dataset.voteType = 'frost';
-    frostPill.dataset.creatorUid = group.uid;
-    frostPill.setAttribute('data-tip', 'Poop');
-    const frostCount = group.frostVoteCount || 0;
-    if (frostCount > 0) frostPill.classList.add('has-count');
-    frostPill.innerHTML = `💩${frostCount > 0 ? `<span class="community-vote-count">${_formatVoteCount(frostCount)}</span>` : ''}`;
-    card.appendChild(frostPill);
-
-    const firePill = document.createElement('button');
-    firePill.type = 'button';
-    firePill.className = 'community-vote-pill fire';
-    firePill.dataset.voteType = 'fire';
-    firePill.dataset.creatorUid = group.uid;
-    firePill.setAttribute('data-tip', 'Fire');
-    const fireCount = group.fireVoteCount || 0;
-    if (fireCount > 0) firePill.classList.add('has-count');
-    firePill.innerHTML = `🔥${fireCount > 0 ? `<span class="community-vote-count">${_formatVoteCount(fireCount)}</span>` : ''}`;
-    card.appendChild(firePill);
-
-    [firePill, frostPill].forEach((btn) => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (!State.user) { toast('Sign in to vote'); openSigninModal(); return; }
-        const voteType = btn.dataset.voteType;
-        const sibling = btn === firePill ? frostPill : firePill;
-        const wasActive = btn.classList.contains('active');
-        const sibWasActive = sibling.classList.contains('active');
-        btn.classList.toggle('active', !wasActive);
-        sibling.classList.remove('active');
-        let countEl = btn.querySelector('.community-vote-count');
-        const sibCountEl = sibling.querySelector('.community-vote-count');
-        const n = countEl ? (parseInt(countEl.textContent, 10) || 0) : 0;
-        const sibN = sibCountEl ? (parseInt(sibCountEl.textContent, 10) || 0) : 0;
-        if (wasActive) {
-          if (countEl) {
-            const next = Math.max(0, n - 1);
-            if (next === 0) countEl.remove();
-            else countEl.textContent = String(next);
-          }
-        } else {
-          if (!countEl) {
-            countEl = document.createElement('span');
-            countEl.className = 'community-vote-count';
-            btn.appendChild(countEl);
-          }
-          countEl.textContent = String(n + 1);
-        }
-        if (sibWasActive && sibCountEl) {
-          const nextSib = Math.max(0, sibN - 1);
-          if (nextSib === 0) sibCountEl.remove();
-          else sibCountEl.textContent = String(nextSib);
-        }
-        // Update has-count class for pill/circle shape
-        [btn, sibling].forEach((pill) => {
-          const ce = pill.querySelector('.community-vote-count');
-          pill.classList.toggle('has-count', !!(ce && parseInt(ce.textContent) > 0));
-        });
-        const result = await voteCreator(group.uid, voteType);
-        if (result !== null) _updateCreatorVoteUI(group.uid, result.type);
-      });
-    });
-  }
+  // MD#8: creator-level fire/poop vote pills removed from alchemist cards.
 
   card.appendChild(body);
 
