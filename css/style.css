@@ -913,6 +913,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* MD08: SVG pin button — percentage-positioned so it stays inside the
    hex clip-path at any tile size; frosted bg + colored glow when pinned. */
 .hex-pin-btn{position:absolute;top:31.2%;right:10%;transform:translate(50%,-50%);width:18cqi;height:18cqi;border-radius:50%;border:none;background:rgba(0,0,0,0.8);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:background var(--ease),color var(--ease),transform var(--ease),box-shadow var(--ease);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.hex-delete-btn{position:absolute;top:25%;right:8%;width:clamp(20px,14cqi,32px);height:clamp(20px,14cqi,32px);border-radius:50%;border:1.5px solid rgba(255,255,255,0.85);background:rgba(8,10,14,0.5);color:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:6;padding:0;transition:border-color .15s ease,color .15s ease,transform .15s ease,background .15s ease;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
+.hex-delete-btn:hover{border-color:#ff4d4f;color:#ff4d4f;transform:scale(1.08);}
+.hex-delete-btn svg{width:56%;height:56%;}
+.hex-tile.mini-hex-tile .hex-delete-btn{display:none;}
 .hex-pin-btn:hover{background:rgba(0,0,0,0.85);transform:translate(50%,-50%) scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,0.45);}
 .hex-pin-btn.pinned{background:var(--clr-adj);color:var(--clr-adj-on,#000);box-shadow:0 2px 8px color-mix(in srgb,var(--clr-adj) 50%,transparent);}
 .hex-pin-btn.pinned:hover{background:color-mix(in srgb,var(--clr-adj) 85%,#000);transform:translate(50%,-50%) scale(1.1);}

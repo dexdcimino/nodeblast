@@ -419,6 +419,23 @@ function _renderNow(state) {
         el.appendChild(pinBtn);
       }
 
+      // MD#6: delete button (own-profile tiles only). stopPropagation keeps the
+      // tile's detail-modal click from firing too.
+      if (state.onDeleteClick) {
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'hex-delete-btn';
+        delBtn.setAttribute('data-del-btn', '');
+        delBtn.setAttribute('data-tip', 'Delete');
+        delBtn.setAttribute('aria-label', 'Delete catalyst');
+        delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          state.onDeleteClick(tile);
+        });
+        el.appendChild(delBtn);
+      }
+
       let _pd = null;
       el.addEventListener('pointerdown', (e) => {
         _pd = { x: e.clientX, y: e.clientY, t: Date.now() };
@@ -427,6 +444,7 @@ function _renderNow(state) {
         if (_suppressNextClick) { _suppressNextClick = false; return; }
         if (e.target.closest('[data-pin-btn]')) return;
         if (e.target.closest('[data-vote-btn]')) return;
+        if (e.target.closest('[data-del-btn]')) return;
         // MD#8: only activate on a tap — suppress if moved >8px or held >300ms.
         if (_pd) {
           const dx = Math.abs(e.clientX - _pd.x);

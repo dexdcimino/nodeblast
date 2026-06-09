@@ -42,6 +42,7 @@ import {
   listCatalystBackups,
   restoreCatalystBackup,
   voteCatalyst,
+  deleteCatalyst,
 } from './catalysts.js';
 import { getUserByUsernameHex } from './users.js';
 import { initRouter, navigate, getRoute, setPageTitle, buildUserSlug } from './router.js';
@@ -982,6 +983,27 @@ function _buildSectionTitle(titleText, searchPlaceholder, parentCol) {
   return row;
 }
 
+// MD#6: tile corner-delete → confirm dialog → delete. Reuses the same
+// showModal confirm UI as the edit modal's delete button.
+function handleDeleteCatalyst(cat) {
+  if (!cat?.id) return;
+  const safeTitle = cat.title ? `"${escapeHtml(cat.title)}"` : 'this catalyst';
+  showModal({
+    title: 'Delete catalyst?',
+    msg: `Are you sure you want to delete ${safeTitle}? This cannot be undone.`,
+    confirmLabel: 'Delete',
+    danger: true,
+    onConfirm: async () => {
+      try {
+        await deleteCatalyst(cat.id);
+        toast('Catalyst deleted');
+      } catch (err) {
+        toast('Delete failed');
+      }
+    },
+  });
+}
+
 function _renderProfileView(user, catalysts, isOwn) {
   // MD20: short-circuit if nothing visible has changed. Prevents layout
   // reflow (and pinned-column scrollbar flash) on Firestore snapshot
@@ -1039,6 +1061,7 @@ function _renderProfileView(user, catalysts, isOwn) {
     onAddClick: isOwn ? _handleAddCatalystClick : undefined,
     onCreatorClick: handleCreatorClick,
     onReorder: isOwn ? handleReorder : null,
+    onDeleteClick: isOwn ? handleDeleteCatalyst : undefined,
     onVoteClick: handleCatalystVote,
     onPinClick: isOwn ? null : handlePinToggle,
     isPinned: isOwn ? null : (catId) => _myTrackedCatIds.has(catId),
