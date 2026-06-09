@@ -220,12 +220,9 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     ? `<div class="hex-collab-badge">${PEOPLE_MINI_SVG}<span>${collabCount}</span></div>`
     : '';
 
-  // MD8: vote badges — always rendered as buttons (circle default, pill on hover).
-  // `frost` is the internal vote type; UI shows it as poop.
-  const fireCount = cat.fireCount || 0;
-  const poopCount = cat.frostCount || 0;
-  const fireHTML = `<button type="button" class="hex-vote hex-vote-fire" data-vote-btn data-vote-type="fire" data-catalyst-id="${cat.id || ''}" aria-label="Fire vote, ${fireCount}"><span class="hex-vote-emoji">🔥</span><span class="hex-vote-count">${fireCount || ''}</span></button>`;
-  const poopHTML = `<button type="button" class="hex-vote hex-vote-poop" data-vote-btn data-vote-type="frost" data-catalyst-id="${cat.id || ''}" aria-label="Poop vote, ${poopCount}"><span class="hex-vote-emoji">💩</span><span class="hex-vote-count">${poopCount || ''}</span></button>`;
+  // MD#3: 🔥/💩 vote buttons removed from tiles. Voting now lives only in the
+  // per-catalyst detail modal (#cat-vote-fire / #cat-vote-frost, wired in
+  // catalysts.js _renderVoteButtons). Tiles stay clean.
 
   // Layers, top → bottom:
   //   .hex-placeholder    — faded logo watermark (no-thumb tiles only)
@@ -242,8 +239,6 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     ${statusBadgeHTML(status)}
     ${gameStatusHTML}
     ${collabHTML}
-    ${fireHTML}
-    ${poopHTML}
     <div class="hex-fade"></div>
     ${lockHTML}
     <div class="hex-info">
