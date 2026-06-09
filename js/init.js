@@ -3892,11 +3892,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // which made the grid overflow on resize. _renderProfileView uses the
       // correct container (profile-bar-catalysts), getEmbeddedCols, gap:24.
       if (_currentProfileView) {
-        _renderProfileView(
-          _currentProfileView.user,
-          _currentProfileView.catalysts,
-          _currentProfileView.isOwn
-        );
+        // MD#2: re-lay-out the embedded catalyst grid at the new width.
+        // Call renderHexGrid() directly (re-uses stored grid state +
+        // re-measures the container) instead of _renderProfileView, which
+        // short-circuits on an unchanged viewKey (MD20 dedupe). On resize the
+        // user/catalysts are identical, so _renderProfileView returned BEFORE
+        // calling renderHexGrid and the tiles never re-flowed — that was the
+        // whole bug.
+        renderHexGrid();
       }
       // Non-feed routes with community-list visible (e.g. featured)
       const communityList = document.getElementById('community-list');
