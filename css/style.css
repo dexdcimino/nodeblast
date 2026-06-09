@@ -1037,12 +1037,13 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 /* Title + hover domain — anchored to the bottom of the hex inside the
    narrowing bottom quadrant. Padding-bottom keeps the text above the
    bottom point; padding-x keeps it inside the hex where it narrows. */
-.hex-info{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;text-align:center;width:68%;pointer-events:none;gap:3px;}
-.hex-title{font-size:clamp(13px,1.4vw,20px);font-weight:800;color:#fff;line-height:1.15;letter-spacing:-0.01em;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;text-shadow:0 1px 4px rgba(0,0,0,0.65);}
-.hex-domain{display:inline-flex;align-items:center;gap:5px;font-size:clamp(10px,0.9vw,13px);color:rgba(255,255,255,0.85);pointer-events:none;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:0;transform:translateY(2px);transition:opacity .22s ease,transform .22s ease;text-shadow:0 1px 3px rgba(0,0,0,0.65);}
+.hex-info{position:absolute;left:50%;top:auto;bottom:24%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;text-align:center;width:fit-content;max-width:74%;pointer-events:none;gap:2px;padding:3px 11px;border-radius:11px;background:transparent;transition:background .2s ease;box-sizing:border-box;}
+.hex-title{font-size:clamp(13px,1.4vw,20px);font-weight:800;color:#fff;line-height:1.18;letter-spacing:-0.01em;max-width:100%;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 1px rgba(0,0,0,1),0 0 3px rgba(0,0,0,0.95),0 0 5px rgba(0,0,0,0.7),0 1px 2px rgba(0,0,0,0.9);}
+.hex-domain{display:inline-flex;align-items:center;gap:5px;font-size:clamp(10px,0.9vw,13px);color:rgba(255,255,255,0.9);pointer-events:none;cursor:pointer;max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:0;transform:translateY(2px);transition:opacity .22s ease,transform .22s ease;text-shadow:0 0 1px rgba(0,0,0,1),0 0 3px rgba(0,0,0,0.9),0 1px 2px rgba(0,0,0,0.85);}
 .hex-domain span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .hex-domain:hover{color:#fff;text-decoration:underline;}
 .hex-tile:hover .hex-domain{opacity:1;pointer-events:auto;transform:translateY(0);}
+.hex-tile:hover .hex-info{background:rgba(8,10,14,0.5);}
 .hex-globe-mini{width:12px;height:12px;flex-shrink:0;opacity:0.9;}
 
 /* Creator avatar — top center, community tiles only (renders only when
