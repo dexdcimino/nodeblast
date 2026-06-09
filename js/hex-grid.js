@@ -242,8 +242,7 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
     <div class="hex-fade"></div>
     ${lockHTML}
     <div class="hex-info">
-      <div class="hex-title">${title}</div>
-      ${domain ? `<div class="hex-domain" data-url-link>${GLOBE_MINI_SVG}<span>${escapeHtml(domain)}</span></div>` : ''}
+      <div class="hex-title${cat.url ? ' has-link' : ''}"${cat.url ? ` data-url-link data-tip="${escapeHtml(cat.url)}"` : ''}>${title}</div>
     </div>
   `;
 }
