@@ -63,6 +63,7 @@ import {
   refreshTrackedOwnerData,
 } from './tracked.js';
 import { voteCreator, getMyCreatorVotes } from './creator-votes.js';
+import { saveFeedCache, loadFeedCache } from './feed-cache.js';
 
 // PERF/UX: boot tracing was left on for everyone. It costs a little
 // time and a lot of console noise on a production site. Opt in with
@@ -129,10 +130,24 @@ function _warmDeferredModules() {
   _dotSimPromise.catch(() => {});
   _nodeSplitPromise.catch(() => {});
 }
-function _scheduleWarmup() {
+// The warm-up must not start while the critical path is still running.
+// requestIdleCallback alone was not enough: the main thread goes idle
+// the moment we are blocked on the network, so the prefetch kicked off
+// at ~1.9s — exactly inside the App Check handshake — and spent
+// connections the page was waiting on. Arm it only once the first live
+// snapshot has landed (or a generous fallback has expired), and only
+// then wait for genuine idle.
+let _warmupArmed = false;
+function _armWarmup() {
+  if (_warmupArmed) return;
+  _warmupArmed = true;
   const run = () => _warmDeferredModules();
-  if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 8000 });
-  else setTimeout(run, 4000);
+  if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 5000 });
+  else setTimeout(run, 2000);
+}
+function _scheduleWarmup() {
+  // Fallback for routes that never receive a feed snapshot.
+  setTimeout(_armWarmup, 10000);
 }
 
 let _currentCategory = 'all';
@@ -2516,24 +2531,45 @@ async function renderFeedRoute() {
       b.classList.toggle('selected', b.dataset.mode === _feedViewMode);
     });
   }
-  // Skeleton briefly paints into #honeycomb before .feed-mode flips
-  // over to the community list.
-  renderSkeleton();
+  // PERF: paint the grid from the last known snapshot right now. The
+  // live query below cannot even be sent until App Check clears its
+  // reCAPTCHA handshake — around three seconds on a cold load — and
+  // none of that is needed to draw catalysts we already have. The
+  // skeleton is only for a genuinely first-ever visit.
+  const _cached = loadFeedCache(_currentCategory);
+  if (_cached && _cached.length) {
+    _currentFeedSnapshot = _cached;
+    _repaintFeed();
+  } else {
+    _currentFeedSnapshot = [];
+    renderSkeleton();
+  }
 
-  // PERF: hand the page over as soon as the shell + skeleton exist.
-  // This used to wait for the first Firestore snapshot, which sits
-  // behind the App Check / reCAPTCHA token exchange — so the spinning
-  // logo was covering a fully-rendered app for the whole round trip.
-  // The skeleton is the app's own loading state; showing it beats
-  // showing a modal spinner over it.
+  // Content (real or skeleton) is on screen — hand the page over.
   if (window._hideLoadingScreen) window._hideLoadingScreen();
 
-  _currentFeedSnapshot = [];
   let _feedFirstPaint = true;
-  const unsub = subscribePublicFeed(_currentCategory, (catalysts) => {
-    _dbg('[feed] subscription fired', { count: catalysts?.length ?? 0 });
-    _currentFeedSnapshot = catalysts || [];
+  const unsub = subscribePublicFeed(_currentCategory, (catalysts, meta) => {
+    _dbg('[feed] subscription fired', { count: catalysts?.length ?? 0, ok: meta?.ok });
+    const _items = catalysts || [];
+    // Nothing but a real server answer may clear the grid. A failed
+    // query, or Firestore's initial empty local-cache snapshot, would
+    // otherwise wipe the catalysts we just painted from our own cache
+    // and leave the user staring at an empty page.
+    const _authoritative = meta?.ok && !meta?.fromCache;
+    if (!_authoritative && _items.length === 0) {
+      if (!_currentFeedSnapshot.length) _repaintFeed();
+      _armWarmup();
+      return;
+    }
+    _currentFeedSnapshot = _items;
+    // Only persist what the server actually confirmed. A genuinely
+    // empty server answer is written through, so deleting every
+    // catalyst does not leave stale tiles cached forever.
+    if (_authoritative) saveFeedCache(_currentCategory, _currentFeedSnapshot);
     _repaintFeed();
+    // Critical path is done — the deferred modules may now prefetch.
+    _armWarmup();
     // MD#46: restore scroll on first paint when returning from a profile
     if (_feedFirstPaint && _savedScrollY > 0) {
       _feedFirstPaint = false;
@@ -2784,6 +2820,16 @@ async function renderRoute({ force = false } = {}) {
     return;
   }
 
+  // PERF: every route hands the loader over as soon as its shell is
+  // about to paint. This used to live in the finally below, after the
+  // route had awaited its data — so opening a shared catalyst link sat
+  // on the spinner for a full Firestore round trip (and, cold, for the
+  // App Check handshake in front of it). The route's own skeleton and
+  // chrome are a better loading state than a full-screen spinner.
+  if (window._hideLoadingScreen) {
+    requestAnimationFrame(() => window._hideLoadingScreen());
+  }
+
   // Tear down any listeners from the previous route
   clearSubs();
 
@@ -2839,13 +2885,10 @@ async function renderRoute({ force = false } = {}) {
     if (honey) honey.style.opacity = '1';
     // NB-MD11: refresh Invite-to-game button states since /play toggled.
     applyInviteButtonStates();
-    // MD#15: for non-feed routes (profile, catalyst, etc.) the feed paint
-    // callback never fires, so hide the loader once this route has rendered.
-    // The feed route hides it itself on first data paint, so skip here to
-    // avoid hiding before feed tiles arrive.
-    if (route.page !== 'feed' && window._hideLoadingScreen) {
-      window._hideLoadingScreen();
-    }
+    // Backstop only — the handover above already ran before the awaits.
+    // _hideLoadingScreen is idempotent, so this simply covers the case
+    // where a route returned before the rAF above had a chance to fire.
+    if (window._hideLoadingScreen) window._hideLoadingScreen();
   }
 }
 

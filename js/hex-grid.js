@@ -155,6 +155,48 @@ function _accentBrightnessClass(hex) {
 // another tile refactor.
 const PEOPLE_MINI_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
 
+/* ══════════════════════════════════════
+   PERF — per-hex artwork
+
+   Thumbnails live in Firebase Storage, one request per tile. Painting
+   them all up front meant a busy feed fired well over a hundred image
+   requests the instant the grid appeared, competing with the very
+   requests the page was still waiting on. The URL is parked on the
+   element instead and applied when the tile nears the viewport — or
+   straight away if the user clicks it first, so a tap never waits on
+   a queue it could jump.
+══════════════════════════════════════ */
+
+let _thumbIO = null;
+function _thumbObserver() {
+  if (_thumbIO) return _thumbIO;
+  if (typeof IntersectionObserver === 'undefined') return null;
+  _thumbIO = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting) applyThumb(e.target); });
+  }, { rootMargin: '400px' });
+  return _thumbIO;
+}
+
+// Promote a tile's artwork immediately. Safe to call repeatedly and
+// safe on a tile that has no thumbnail.
+export function applyThumb(el) {
+  if (!el || el._thumbApplied) return;
+  const url = el.dataset ? el.dataset.thumb : null;
+  if (!url) return;
+  el._thumbApplied = true;
+  el.style.setProperty('--thumb', 'url("' + url + '")');
+  if (_thumbIO) _thumbIO.unobserve(el);
+}
+
+function deferThumb(el, url) {
+  if (!url) return;
+  el.dataset.thumb = url;
+  const io = _thumbObserver();
+  // Without IntersectionObserver there is nothing to defer against, so
+  // fall back to loading it directly rather than never showing it.
+  if (io) io.observe(el); else applyThumb(el);
+}
+
 function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   const domain = safeDomain(cat.url);
   const title = escapeHtml(cat.title || '');
@@ -395,7 +437,7 @@ function _renderNow(state) {
       el.style.setProperty('--accent', accent);
       el.classList.add(_accentBrightnessClass(accent));
 
-      if (tile.thumbURL) el.style.setProperty('--thumb', `url("${tile.thumbURL}")`);
+      if (tile.thumbURL) deferThumb(el, tile.thumbURL);
       else el.classList.add('no-thumb');
       if (tile.status === 'placeholder') el.classList.add('wip');
       // MD23: mark locked tiles so the thumb blur + dim kick in.
@@ -449,6 +491,9 @@ function _renderNow(state) {
         _pd = { x: e.clientX, y: e.clientY, t: Date.now() };
       });
       el.addEventListener('click', (e) => {
+        // Clicking a tile is the strongest possible signal that its
+        // artwork is wanted — jump it ahead of the viewport queue.
+        applyThumb(el);
         if (_suppressNextClick) { _suppressNextClick = false; return; }
         if (e.target.closest('[data-pin-btn]')) return;
         if (e.target.closest('[data-vote-btn]')) return;
@@ -815,7 +860,7 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
   el.style.setProperty('--accent', accent);
   el.classList.add(_accentBrightnessClass(accent));
 
-  if (cat.thumbURL) el.style.setProperty('--thumb', `url("${cat.thumbURL}")`);
+  if (cat.thumbURL) deferThumb(el, cat.thumbURL);
   else el.classList.add('no-thumb');
   if (cat.status === 'placeholder') el.classList.add('wip');
   // MD23: locked-tile class for thumb blur + overlay.
@@ -881,6 +926,7 @@ export function createCatalystTileElement(cat, { width, height, showCreatorAvata
     _flowPd = { x: e.clientX, y: e.clientY, t: Date.now() };
   });
   el.addEventListener('click', (e) => {
+    applyThumb(el);
     if (_suppressNextClick) { _suppressNextClick = false; return; }
     if (e.target.closest('[data-pin-btn]')) return;
     if (e.target.closest('[data-vote-btn]')) return;

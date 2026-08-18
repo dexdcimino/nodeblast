@@ -29,6 +29,7 @@
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
   <link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://content-firebaseappcheck.googleapis.com" crossorigin />
   <link rel="preconnect" href="https://www.google.com" crossorigin />
   <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
 
@@ -41,7 +42,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
 
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="/css/style.css?v=197" />
+  <link rel="stylesheet" href="/css/style.css?v=198" />
 
   <!-- ── PERF: flatten the ES-module waterfall.
 
@@ -54,7 +55,7 @@
        Only modules reachable from init.js at load time belong here —
        play-mode.js, dot-sim-modal.js and nodesplit-modal.js are
        deliberately absent because they now load on demand. ── -->
-  <link rel="modulepreload" href="/js/init.js?v=205" />
+  <link rel="modulepreload" href="/js/init.js?v=206" />
   <link rel="modulepreload" href="/js/state.js" />
   <link rel="modulepreload" href="/js/firebase-config.js" />
   <link rel="modulepreload" href="/js/auth.js" />
@@ -74,12 +75,17 @@
   <link rel="modulepreload" href="/js/search.js" />
   <link rel="modulepreload" href="/js/notifications.js" />
   <link rel="modulepreload" href="/js/creator-votes.js" />
+  <link rel="modulepreload" href="/js/feed-cache.js" />
 
   <!-- The three Firebase SDK entry points every boot needs. Fetching
        them alongside the local modules removes another serial hop. -->
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js" crossorigin />
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js" crossorigin />
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js" crossorigin />
+  <!-- App Check gates the first Firestore request, and it was being
+       discovered a wave late (only once firebase-config.js had parsed),
+       pushing the whole reCAPTCHA handshake back with it. -->
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.4.0/firebase-app-check.js" crossorigin />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -1337,7 +1343,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="/js/init.js?v=205"></script>
+  <script type="module" src="/js/init.js?v=206"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

@@ -266,13 +266,25 @@ export function subscribePublicFeed(category, callback, max = 200) {
     query(collection(db, 'catalysts'), ...constraints),
     (snap) => {
       receivedAny = true;
-      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      // Two flags, because "the feed is empty" and "we have not heard
+      // from the server yet" look identical without them:
+      //   ok        — this is a snapshot, not the error fallback below.
+      //   fromCache — Firestore answered from its own local store. It
+      //               fires one of these immediately on every listen,
+      //               and on a cold visit that store is empty, so an
+      //               empty fromCache snapshot means nothing at all.
+      // Only a snapshot with fromCache:false is authoritative enough to
+      // clear the grid or overwrite what we have saved.
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })), {
+        ok: true,
+        fromCache: !!snap.metadata?.fromCache,
+      });
     },
     (err) => {
       console.warn('[catalysts] feed sub error:', err);
       // Only escape the skeleton state if we never got data — leave a
       // successful render in place rather than wiping it.
-      if (!receivedAny) callback([]);
+      if (!receivedAny) callback([], { ok: false });
     },
   );
 }
