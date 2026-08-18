@@ -194,7 +194,7 @@ function catalystTileHTML(cat, { showCreatorAvatar = false } = {}) {
   if (showCreatorAvatar) {
     const initial = escapeHtml((cat.ownerName || 'A').charAt(0).toUpperCase());
     const photo = cat.ownerPhoto
-      ? `<img src="${escapeHtml(cat.ownerPhoto)}" alt="">`
+      ? `<img src="${escapeHtml(cat.ownerPhoto)}" alt="" loading="lazy" decoding="async">`
       : `<span class="hex-creator-avatar-initial">${initial}</span>`;
     avatarHTML = `<button type="button" class="hex-creator-avatar" style="border-color:#${hex}" data-creator-link data-tip="View profile" aria-label="View ${escapeHtml(cat.ownerName || 'creator')}'s profile">${photo}</button>`;
   }
@@ -343,12 +343,20 @@ function _renderNow(state) {
 
   const COLS = (state.getColsFn || getCols)(containerW);
 
-  // MD#13: skeleton placeholders removed. While loading, render nothing
-  // (blank canvas) instead of the shimmering hex grid. The rotating-logo
-  // #loading-screen covers the initial page load; mid-session reloads
-  // briefly show an empty canvas until real tiles paint. This is intended.
+  // MD#13 dropped the placeholders because the full-screen logo loader
+  // sat on top of this area for the whole initial load anyway. That is
+  // no longer true — the loader now hands over the moment the shell
+  // paints, so the grid owns its own loading state. Without it the page
+  // reads as empty while Firestore is still answering. The placeholders
+  // reuse _renderTiles, so they occupy exactly the cells the real tiles
+  // will land in and nothing shifts when the data arrives.
   if (state.loading) {
     honey.innerHTML = '';
+    const skeletonCount = Math.max(COLS * 2 - 1, 3);
+    _renderTiles(honey, containerW, COLS, skeletonCount, state.gap, (i, el) => {
+      el.classList.add('hex-skeleton');
+      el.style.animationDelay = (i % Math.max(COLS, 1)) * 70 + 'ms';
+    });
     return;
   }
 
@@ -503,7 +511,7 @@ function _renderNow(state) {
   // never reorderable). `showAdd` is only true on the signed-in
   // user's own profile route, so gating on onReorder + showAdd gives
   // us the "own profile only" requirement for free.
-  console.log('[drag] gate', {
+  _dbg('[drag] gate', {
     hasOnReorder: !!state.onReorder,
     showAdd,
     tileCount: tiles.length,
@@ -537,6 +545,12 @@ function _renderTiles(honey, containerW, COLS, count, customGap, decorate) {
   const rowCounts = layoutRows(count, COLS);
   const slots = [];
 
+  // PERF: tiles are built into a fragment and inserted once. Appending
+  // each tile straight into the live grid meant one DOM mutation of an
+  // in-document subtree per tile — on a busy feed that is a few hundred
+  // style invalidations where one will do.
+  const frag = document.createDocumentFragment();
+
   let idx = 0;
   for (let row = 0; row < rowCounts.length; row++) {
     const rowCount = rowCounts[row];
@@ -558,10 +572,11 @@ function _renderTiles(honey, containerW, COLS, count, customGap, decorate) {
       el.style.top = top + 'px';
       slots.push({ left, top, width: hexW, height: hexH });
       decorate(idx, el);
-      honey.appendChild(el);
+      frag.appendChild(el);
       idx++;
     }
   }
+  honey.appendChild(frag);
 
   const totalH = GRID_TOP_PAD + rowCounts.length * stepY + gap + 16;
   honey.style.height = totalH + 'px';
@@ -572,8 +587,18 @@ function _renderTiles(honey, containerW, COLS, count, customGap, decorate) {
    DRAG TO REORDER
 ══════════════════════════════════════ */
 
+// Drag tracing is opt-in: localStorage.setItem('nb-debug','1') or ?debug=1.
+// It used to log on every pointerdown anywhere in the grid.
+const _DEBUG = (() => {
+  try {
+    return localStorage.getItem('nb-debug') === '1'
+      || new URLSearchParams(location.search).has('debug');
+  } catch { return false; }
+})();
+function _dbg(...args) { if (_DEBUG) console.log(...args); }
+
 function _attachDragReorder(honey, tileEls, tiles, slots, onReorder) {
-  console.log('[drag] _attachDragReorder called', tileEls.length);
+  _dbg('[drag] _attachDragReorder called', tileEls.length);
   tileEls.forEach((el) => {
     if (!el) return;
     el.addEventListener('pointerdown', (e) => _onPointerDown(e, el, honey, tileEls, tiles, slots, onReorder));
@@ -581,7 +606,7 @@ function _attachDragReorder(honey, tileEls, tiles, slots, onReorder) {
 }
 
 function _onPointerDown(e, el, honey, tileEls, tiles, slots, onReorder) {
-  console.log('[drag] pointerdown on tile', {
+  _dbg('[drag] pointerdown on tile', {
     pointerType: e.pointerType,
     button: e.button,
     target: e.target?.className || e.target?.tagName,

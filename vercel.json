@@ -6,34 +6,50 @@
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=(), payment=()"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "0"
-        },
-        {
-          "key": "Cross-Origin-Opener-Policy",
-          "value": "same-origin-allow-popups"
-        },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
+        { "key": "X-XSS-Protection", "value": "0" },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
         {
           "key": "Content-Security-Policy",
           "value": "upgrade-insecure-requests; default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss: https://*.googleapis.com https://*.firebaseio.com https://*.photonengine.com wss://*.photonengine.com;"
         }
+      ]
+    },
+
+    {
+      "//": "PERF: JS/CSS are not content-hashed, so the browser must revalidate — a deploy can never serve a half-old module graph. On HTTP/2 the whole module set revalidates in roughly one round trip, and s-maxage keeps the CDN serving them from the edge. The service worker layers instant cache-first delivery on top of this.",
+      "source": "/(js|css)/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, s-maxage=31536000" }
+      ]
+    },
+    {
+      "//": "PERF: logos, icons and other static art change rarely and are referenced by stable names — cache them hard on the client.",
+      "source": "/(assets|icons|games)/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=2592000" }
+      ]
+    },
+    {
+      "//": "The HTML shell is the deploy trigger for everything above, so it must always be revalidated.",
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     }
   ]

@@ -13,18 +13,73 @@
   <meta name="twitter:title" content="nodeblast" />
   <meta name="twitter:description" content="A launchpad for creators." />
   <link rel="canonical" href="https://nodeblast.dev" />
-  <link rel="icon" type="image/svg+xml" href="assets/nodeblast_logo_v2.svg" />
+  <link rel="icon" type="image/svg+xml" href="/assets/nodeblast_logo_v2.svg" />
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0a0a0a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="nodeblast">
+  <!-- ── PERF: open the TLS connections the boot path needs before any
+       code asks for them. www.gstatic.com serves the Firebase SDK,
+       www.google.com serves reCAPTCHA Enterprise for App Check, and
+       firestore.googleapis.com is the first data hop. ── -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://www.google.com" crossorigin />
+  <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
+
+  <!-- PERF: fonts are non-blocking. The site paints in the fallback
+       stack and swaps when Outfit arrives (display=swap), instead of
+       holding first paint on a third-party stylesheet round trip. -->
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
+
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="css/style.css?v=196" />
+  <link rel="stylesheet" href="/css/style.css?v=197" />
+
+  <!-- ── PERF: flatten the ES-module waterfall.
+
+       Without these the browser discovers the graph one level at a
+       time: index.html → init.js → auth.js/catalysts.js → ui-events.js
+       → modal.js → the Firebase SDK. That is five serial round trips
+       before a single byte of data is requested. Declaring the whole
+       boot graph up front turns it into one parallel wave.
+
+       Only modules reachable from init.js at load time belong here —
+       play-mode.js, dot-sim-modal.js and nodesplit-modal.js are
+       deliberately absent because they now load on demand. ── -->
+  <link rel="modulepreload" href="/js/init.js?v=205" />
+  <link rel="modulepreload" href="/js/state.js" />
+  <link rel="modulepreload" href="/js/firebase-config.js" />
+  <link rel="modulepreload" href="/js/auth.js" />
+  <link rel="modulepreload" href="/js/theme.js" />
+  <link rel="modulepreload" href="/js/color.js" />
+  <link rel="modulepreload" href="/js/modal.js" />
+  <link rel="modulepreload" href="/js/social.js" />
+  <link rel="modulepreload" href="/js/ui-events.js" />
+  <link rel="modulepreload" href="/js/users.js" />
+  <link rel="modulepreload" href="/js/router.js" />
+  <link rel="modulepreload" href="/js/storage.js" />
+  <link rel="modulepreload" href="/js/game-registry.js" />
+  <link rel="modulepreload" href="/js/hex-grid.js" />
+  <link rel="modulepreload" href="/js/catalysts.js" />
+  <link rel="modulepreload" href="/js/friends.js" />
+  <link rel="modulepreload" href="/js/tracked.js" />
+  <link rel="modulepreload" href="/js/search.js" />
+  <link rel="modulepreload" href="/js/notifications.js" />
+  <link rel="modulepreload" href="/js/creator-votes.js" />
+
+  <!-- The three Firebase SDK entry points every boot needs. Fetching
+       them alongside the local modules removes another serial hop. -->
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js" crossorigin />
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js" crossorigin />
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js" crossorigin />
 </head>
 <body>
   <!-- ══════════════════════════════════════
@@ -1230,19 +1285,16 @@
     </div>
   </div>
 
-  <!-- EMERGENCY DEBUG: global error catcher registered BEFORE the
-       module imports so import-time failures (which try/catch inside
-       the module can't see) still surface to the console and the
-       document title. Leaves a visible breadcrumb even when the page
-       would otherwise render blank. Keep in place until the site is
-       stable; remove once the crash is diagnosed. -->
+  <!-- Last-resort error reporting. Registered before the module
+       imports so import-time failures — which a try/catch inside the
+       module can never see — still reach the console. The title is
+       left alone: users should never see "ERROR:" in their tab. -->
   <script>
     window.addEventListener('error', (e) => {
-      console.error('[GLOBAL ERROR]', e.message, e.filename, e.lineno, e.colno);
-      document.title = 'ERROR: ' + e.message;
+      console.error('[nodeblast] uncaught:', e.message, e.filename + ':' + e.lineno + ':' + e.colno);
     });
     window.addEventListener('unhandledrejection', (e) => {
-      console.error('[UNHANDLED REJECTION]', e.reason);
+      console.error('[nodeblast] unhandled rejection:', e.reason);
     });
   </script>
   <!-- QR Share Modal -->
@@ -1285,13 +1337,11 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="js/init.js?v=204"></script>
+  <script type="module" src="/js/init.js?v=205"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(r => console.log('SW registered:', r.scope))
-          .catch(e => console.log('SW failed:', e));
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
       });
     }
   </script>

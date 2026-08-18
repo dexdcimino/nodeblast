@@ -50,10 +50,7 @@ import { initSearch, closeSearch, focusSearch, isSearchOpen } from './search.js'
 import { initNotifications, initHelpPanel } from './notifications.js';
 import { initFriends, setFriendsCurrentUser, isFriend, sendFriendRequest, applyInviteButtonStates, openDM } from './friends.js';
 import { renderSocialIconsHTML, initSocialModal, openSocialModal } from './social.js';
-import { renderPlayRoute, destroyPlayRoute } from './play-mode.js';
 import { getGame, SYSTEM_PROFILE, getGamesAsCatalysts, GAME_REGISTRY } from './game-registry.js';
-import { openDotSim } from './dot-sim-modal.js';
-import { openNodeSplit } from './nodesplit-modal.js';
 import {
   pinCatalyst,
   unpinCatalyst,
@@ -66,6 +63,77 @@ import {
   refreshTrackedOwnerData,
 } from './tracked.js';
 import { voteCreator, getMyCreatorVotes } from './creator-votes.js';
+
+// PERF/UX: boot tracing was left on for everyone. It costs a little
+// time and a lot of console noise on a production site. Opt in with
+// localStorage.setItem('nb-debug','1') (or ?debug=1) when tracing a
+// boot problem.
+const _DEBUG = (() => {
+  try {
+    return localStorage.getItem('nb-debug') === '1'
+      || new URLSearchParams(location.search).has('debug');
+  } catch { return false; }
+})();
+function _dbg(...args) { if (_DEBUG) console.log(...args); }
+
+/* ══════════════════════════════════════
+   PERF — deferred feature modules
+
+   The play route drags in the whole game engine (play-mode → game.js
+   → plasma / enemy-nodes / node-blaster / guns / audio, plus the
+   photon + hathora clients: ~250KB) and the two game modals add ~60KB
+   more. None of that is needed to paint the feed, so it stays out of
+   the boot graph and loads the first time it's actually asked for.
+══════════════════════════════════════ */
+
+let _playModeMod = null;
+let _playModePromise = null;
+function _loadPlayMode() {
+  if (!_playModePromise) {
+    _playModePromise = import('./play-mode.js').then((m) => (_playModeMod = m));
+  }
+  return _playModePromise;
+}
+async function renderPlayRoute(gameId) {
+  return (await _loadPlayMode()).renderPlayRoute(gameId);
+}
+// Synchronous by design — renderRoute calls this on every navigation
+// away from /play. If the module was never loaded there is no play
+// route to tear down, so doing nothing is correct.
+function destroyPlayRoute() {
+  if (_playModeMod) _playModeMod.destroyPlayRoute();
+}
+
+let _dotSimPromise = null;
+async function openDotSim(title) {
+  if (!_dotSimPromise) _dotSimPromise = import('./dot-sim-modal.js');
+  return (await _dotSimPromise).openDotSim(title);
+}
+
+let _nodeSplitPromise = null;
+async function openNodeSplit(title) {
+  if (!_nodeSplitPromise) _nodeSplitPromise = import('./nodesplit-modal.js');
+  return (await _nodeSplitPromise).openNodeSplit(title);
+}
+
+// Once the page is idle the deferred modules cost nothing to fetch, so
+// pull them in ahead of time — by the time someone opens a game the
+// code is already parsed. Also fired on hover/focus of the Play button.
+let _warmed = false;
+function _warmDeferredModules() {
+  if (_warmed) return;
+  _warmed = true;
+  _loadPlayMode().catch(() => {});
+  if (!_dotSimPromise) _dotSimPromise = import('./dot-sim-modal.js');
+  if (!_nodeSplitPromise) _nodeSplitPromise = import('./nodesplit-modal.js');
+  _dotSimPromise.catch(() => {});
+  _nodeSplitPromise.catch(() => {});
+}
+function _scheduleWarmup() {
+  const run = () => _warmDeferredModules();
+  if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 8000 });
+  else setTimeout(run, 4000);
+}
 
 let _currentCategory = 'all';
 // Feed view mode — 'catalysts' (flat hex flow) or 'alchemists' (grouped
@@ -226,7 +294,10 @@ function hideAllViews() {
   _lastProfileViewKey = null;
   const grid = document.getElementById('grid');
   grid.style.display = 'block';
-  grid.classList.remove('with-filter', 'feed-mode');
+  // 'alchemists-mode' has to come off too: showFilterBar re-adds
+  // 'feed-mode' on the next feed render, and the pair of them hides
+  // #honeycomb — which is where the loading skeleton paints.
+  grid.classList.remove('with-filter', 'feed-mode', 'alchemists-mode');
   // Empty the community list so a previous render doesn't flash back
   // while a new subscription is warming up.
   const list = document.getElementById('community-list');
@@ -1017,7 +1088,7 @@ function _renderProfileView(user, catalysts, isOwn) {
 
   // MD19: invalidate pinned memo when switching profiles
   if (_currentProfileView?.user?.uid !== user?.uid) _lastPinnedRenderKey = null;
-  console.log('[profile-view] rendering', { user: user?.displayName, isOwn, catalystsCount: catalysts?.length });
+  _dbg('[profile-view] rendering', { user: user?.displayName, isOwn, catalystsCount: catalysts?.length });
   _currentProfileView = { user, catalysts, isOwn };
   // Columns always visible; tabs hidden (MD#13).
   const tabsEl = document.getElementById('profile-tabs');
@@ -1026,7 +1097,7 @@ function _renderProfileView(user, catalysts, isOwn) {
   if (tabsEl) tabsEl.style.display = 'none';
   if (colsEl) colsEl.style.display = 'flex';
   if (honeyEl) { honeyEl.style.display = 'none'; honeyEl.innerHTML = ''; }
-  console.log('[profile-view] colsEl display:', colsEl?.style.display, 'exists:', !!colsEl);
+  _dbg('[profile-view] colsEl display:', colsEl?.style.display, 'exists:', !!colsEl);
   // Defensive: ensure both pinned columns are visible (MD#2 patch).
   const _pCol = document.getElementById('profile-col-pinned');
   const _fCol = document.getElementById('profile-col-following');
@@ -1086,7 +1157,7 @@ function _renderProfileView(user, catalysts, isOwn) {
       _lastPinnedRenderKey = pinnedKey;
       pinnedCol.innerHTML = '';
       pinnedCol.appendChild(_buildSectionTitle('Catalysts', 'Search...', pinnedCol));
-      console.log('[profile-view] rendering pinned col, isOwn:', isOwn, 'tracked:', _myTrackedCatalysts?.length);
+      _dbg('[profile-view] rendering pinned col, isOwn:', isOwn, 'tracked:', _myTrackedCatalysts?.length);
       if (isOwn && _myTrackedCatalysts.length > 0) {
         const tilesWrap = document.createElement('div');
         tilesWrap.className = 'profile-col-tiles';
@@ -1735,14 +1806,23 @@ function getCommunityTileSize(count, containerWidth) {
 // MD10: after cards are in the DOM, re-measure each card's available
 // body width and re-position tiles if they overflow. This corrects
 // for the pre-render cardMaxW estimate being wider than reality.
+// PERF: this runs over every card in the feed, so it is split into a
+// strict read phase and a write phase. Interleaving them (measure card,
+// write tile styles, measure next card…) forced one synchronous layout
+// per card — with a couple of dozen creator cards that is a couple of
+// dozen full reflows in a single frame.
 function _fitCommunityTiles(list) {
   if (!list) return;
-  list.querySelectorAll('.community-card:not(.collapsed):not(.pill)').forEach((card) => {
+  const cards = list.querySelectorAll('.community-card:not(.collapsed):not(.pill)');
+  if (cards.length === 0) return;
+
+  // ── Read phase: measure everything, mutate nothing. ──
+  const work = [];
+  cards.forEach((card) => {
     const body = card.querySelector('.community-tiles');
     if (!body) return;
     const tiles = body.querySelectorAll('.hex-tile');
     if (tiles.length === 0) return;
-    // Measure the card's interior content width (card width minus padding)
     const cardStyle = getComputedStyle(card);
     const padL = parseFloat(cardStyle.paddingLeft) || 0;
     const padR = parseFloat(cardStyle.paddingRight) || 0;
@@ -1754,6 +1834,12 @@ function _fitCommunityTiles(list) {
     const currentW = firstTile ? parseFloat(firstTile.style.width) || 0 : 0;
     const currentH = firstTile ? parseFloat(firstTile.style.height) || 0 : 0;
     if (Math.abs(currentW - tileSize.w) < 2 && Math.abs(currentH - tileSize.h) < 2) return;
+    work.push({ body, tiles, tileSize });
+  });
+  if (work.length === 0) return;
+
+  // ── Write phase: inline styles only, no further measurement. ──
+  work.forEach(({ body, tiles, tileSize }) => {
     const gap = 6;
     const hW = tileSize.w;
     const hH = tileSize.h;
@@ -1783,10 +1869,22 @@ function _fitCommunityTiles(list) {
 // MD18: ResizeObserver per community card — re-fits tiles when a
 // card's width changes (zoom, sidebar collapse, card animation).
 let _communityRO = null;
+let _communityFitFrame = 0;
+// Bumped on every community-hub render so a stale chunked append loop
+// can detect that it has been superseded and bail.
+let _communityRenderToken = 0;
 function _observeCommunityCards(list) {
   if (_communityRO) _communityRO.disconnect();
+  if (_communityFitFrame) { cancelAnimationFrame(_communityFitFrame); _communityFitFrame = 0; }
+  // PERF: the observer watches every card, so a single window resize
+  // fires it once per card. Coalesce into one rAF — _fitCommunityTiles
+  // already walks the whole list, so N callbacks did N redundant passes.
   _communityRO = new ResizeObserver(() => {
-    requestAnimationFrame(() => _fitCommunityTiles(list));
+    if (_communityFitFrame) return;
+    _communityFitFrame = requestAnimationFrame(() => {
+      _communityFitFrame = 0;
+      _fitCommunityTiles(list);
+    });
   });
   list.querySelectorAll('.community-card').forEach((card) => {
     _communityRO.observe(card);
@@ -2148,6 +2246,9 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   // feed-mode class is applied synchronously by showFilterBar() before
   // the subscription is even set up, so no need to re-add it here.
   list.innerHTML = '';
+  // Invalidate any chunked append still in flight from a previous
+  // render before we decide whether this one has anything to draw.
+  const token = ++_communityRenderToken;
 
   if (!catalysts || catalysts.length === 0) {
     const empty = document.createElement('div');
@@ -2163,25 +2264,57 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   // ranking — tile order inside a card is owner-controlled.
   const groups = Array.from(_groupCatalystsByCreator(catalysts).values());
   const ranked = _sortCreatorGroups(groups, _feedSortMode);
-  ranked.forEach((g) => list.appendChild(_buildCommunityCard(g)));
 
-  // MD10: post-render fit — re-layout tiles in any card whose body
-  // overflows its card's content area. Uses rAF so the DOM has painted
-  // and clientWidth is accurate.
-  requestAnimationFrame(() => {
-    _fitCommunityTiles(list);
-    _observeCommunityCards(list);
-  });
+  // PERF: each card builds a full hex tile per catalyst, so a busy feed
+  // was thousands of DOM nodes constructed in one synchronous burst —
+  // the main thread locked up and nothing painted until it finished.
+  // Paint the first screenful immediately, then append the rest a chunk
+  // per frame so the page stays interactive while it fills in.
+  const FIRST_PAINT_CARDS = 6;
+  const CHUNK = 4;
 
-  // NB-MD09: pre-fetch the signed-in user's creator votes for every
-  // visible creator so their buttons render in the active state. Runs
-  // async after cards are in the DOM — no layout blocking.
-  if (State.user) {
-    const creatorUids = ranked.map((g) => g.uid).filter((uid) => uid && uid !== State.user.uid);
-    getMyCreatorVotes(creatorUids).then((votesMap) => {
-      votesMap.forEach((voteType, uid) => _updateCreatorVoteUI(uid, voteType));
+  const appendCards = (from, to) => {
+    const frag = document.createDocumentFragment();
+    for (let i = from; i < to; i++) frag.appendChild(_buildCommunityCard(ranked[i]));
+    list.appendChild(frag);
+  };
+
+  appendCards(0, Math.min(FIRST_PAINT_CARDS, ranked.length));
+
+  const finish = () => {
+    // MD10: post-render fit — re-layout tiles in any card whose body
+    // overflows its card's content area. Uses rAF so the DOM has painted
+    // and clientWidth is accurate.
+    requestAnimationFrame(() => {
+      if (token !== _communityRenderToken) return;
+      _fitCommunityTiles(list);
+      _observeCommunityCards(list);
     });
-  }
+
+    // NB-MD09: pre-fetch the signed-in user's creator votes for every
+    // visible creator so their buttons render in the active state. Runs
+    // async after cards are in the DOM — no layout blocking.
+    if (State.user) {
+      const creatorUids = ranked.map((g) => g.uid).filter((uid) => uid && uid !== State.user.uid);
+      getMyCreatorVotes(creatorUids).then((votesMap) => {
+        if (token !== _communityRenderToken) return;
+        votesMap.forEach((voteType, uid) => _updateCreatorVoteUI(uid, voteType));
+      });
+    }
+  };
+
+  if (ranked.length <= FIRST_PAINT_CARDS) { finish(); return; }
+
+  let next = FIRST_PAINT_CARDS;
+  const pump = () => {
+    if (token !== _communityRenderToken) return;
+    const to = Math.min(next + CHUNK, ranked.length);
+    appendCards(next, to);
+    next = to;
+    if (next < ranked.length) requestAnimationFrame(pump);
+    else finish();
+  };
+  requestAnimationFrame(pump);
 }
 
 // "Catalysts" view: a single flow of hex tiles, sorted by createdAt
@@ -2194,7 +2327,10 @@ function renderCatalystsFlow(catalysts, { emptyMessage } = {}) {
   const honey = document.getElementById('honeycomb');
   if (!grid) return;
 
-  // Hide alchemist list, show honeycomb for catalysts grid
+  // Hide alchemist list, show honeycomb for catalysts grid. Bumping the
+  // token stops any alchemist card chunking still appending in the
+  // background — those cards are no longer on screen.
+  _communityRenderToken++;
   if (list) list.style.display = 'none';
   grid.classList.remove('alchemists-mode');
 
@@ -2369,7 +2505,7 @@ async function renderFeaturedRoute() {
 }
 
 async function renderFeedRoute() {
-  console.log('[feed] renderFeedRoute called', { category: _currentCategory, mode: _feedViewMode });
+  _dbg('[feed] renderFeedRoute called', { category: _currentCategory, mode: _feedViewMode });
   hideAllViews();
   showFilterBar();
   setPageTitle([]);
@@ -2383,14 +2519,21 @@ async function renderFeedRoute() {
   // Skeleton briefly paints into #honeycomb before .feed-mode flips
   // over to the community list.
   renderSkeleton();
+
+  // PERF: hand the page over as soon as the shell + skeleton exist.
+  // This used to wait for the first Firestore snapshot, which sits
+  // behind the App Check / reCAPTCHA token exchange — so the spinning
+  // logo was covering a fully-rendered app for the whole round trip.
+  // The skeleton is the app's own loading state; showing it beats
+  // showing a modal spinner over it.
+  if (window._hideLoadingScreen) window._hideLoadingScreen();
+
   _currentFeedSnapshot = [];
   let _feedFirstPaint = true;
   const unsub = subscribePublicFeed(_currentCategory, (catalysts) => {
-    console.log('[feed] subscription fired', { count: catalysts?.length ?? 0 });
+    _dbg('[feed] subscription fired', { count: catalysts?.length ?? 0 });
     _currentFeedSnapshot = catalysts || [];
     _repaintFeed();
-    // MD#15: content is now on screen — hide the logo loader (idempotent).
-    if (window._hideLoadingScreen) window._hideLoadingScreen();
     // MD#46: restore scroll on first paint when returning from a profile
     if (_feedFirstPaint && _savedScrollY > 0) {
       _feedFirstPaint = false;
@@ -2611,7 +2754,7 @@ async function renderProfileRoute(username, hex, { openSlug = null } = {}) {
 
 async function renderRoute({ force = false } = {}) {
   const route = getRoute();
-  console.log('[route] renderRoute', { from: _currentRoute?.page, to: route.page, force });
+  _dbg('[route] renderRoute', { from: _currentRoute?.page, to: route.page, force });
 
   // MD#46: save scroll when leaving feed/hub for a profile view
   const _fromPage = _currentRoute?.page;
@@ -3271,9 +3414,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // error during initialization surfaces to the console AND paints
   // the stack trace directly into the page instead of leaving the
   // user with a silent blank screen. Remove once the site is stable.
-  console.log('[BOOT] DOMContentLoaded fired');
-  // Safety net: force-hide the loading screen after 6s if boot stalls
-  // (e.g. hard refresh on a catalyst URL races with auth resolve).
+  _dbg('[BOOT] DOMContentLoaded fired');
+  // Safety net: force-hide the loading screen if boot throws before
+  // any route finishes. Short now that the normal path hides the
+  // loader on shell paint rather than on data arrival.
   setTimeout(() => {
     const ls = document.getElementById('loading-screen');
     if (ls && !ls.classList.contains('hidden')) {
@@ -3282,7 +3426,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const err = document.getElementById('loading-error');
       if (err) err.style.display = 'block';
     }
-  }, 6000);
+  }, 4000);
   // MD#15: single idempotent loader-hide. Called when real content has
   // painted (feed first paint) or when a non-feed route finishes. Safe to
   // call multiple times — only acts once.
@@ -3300,24 +3444,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Palette first, accent second — applyPalette writes --clr, so the
   // logo accent must be applied *after* it to end up as the effective
   // site color.
-  console.log('[BOOT] 1 - applyTheme');
   applyTheme(State.theme, true);
-  console.log('[BOOT] 2 - applyPalette');
   applyPalette(State.palette);
-  console.log('[BOOT] 3 - initLogoPicker');
   initLogoPicker();
 
-  console.log('[BOOT] 4 - initTooltips');
   initTooltips();
-  console.log('[BOOT] 5 - initThemeToggle');
   initThemeToggle();
-  console.log('[BOOT] 6 - initPalettePickers');
   initPalettePickers();
-  console.log('[BOOT] 7 - initColorPicker');
   initColorPicker();
-  console.log('[BOOT] 8 - initAudioSettings');
   initAudioSettings();
-  console.log('[BOOT] 9 - initSigninModal');
   initSigninModal();
 
   // MD13: intercept the account pill click BEFORE initAccountMenu
@@ -3342,7 +3477,6 @@ document.addEventListener('DOMContentLoaded', () => {
       toast('Sign in to create a catalyst');
       openSigninModal();
     });
-  console.log('[BOOT] 10 - initAccountMenu');
   initAccountMenu({
     onSignOut: () => {
       showModal({
@@ -3414,12 +3548,10 @@ document.addEventListener('DOMContentLoaded', () => {
     },
   });
 
-  console.log('[BOOT] 11 - initCatalystModal');
   initCatalystModal(() => {
     _profileCache.clear();
     renderRoute();
   });
-  console.log('[BOOT] 12 - initCatalystDetail');
   // MD03: inject pin/unpin/isPinned callbacks so the detail popup can
   // drive the tracked pin state without importing tracked.js itself.
   initCatalystDetail({
@@ -3429,8 +3561,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   // MD02: QR share modal (lazy-loads QR lib on first open)
   initQrShareModal();
-  console.log('[BOOT] 13 - initRouter');
   initRouter(renderRoute);
+  _scheduleWarmup();
 
   // MD#48: welcome modal — multi-page tour.
   //  - Signed-in users: shown ONCE per account (per-uid localStorage flag).
@@ -3450,9 +3582,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 800);
     }
   });
-  console.log('[BOOT] 14 - initSearch');
   initSearch();
-  console.log('[BOOT] 15 - initNotifications');
   initNotifications();
   initSocialModal();
 
@@ -3490,9 +3620,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
-  console.log('[BOOT] 16 - initHelpPanel');
   initHelpPanel();
-  console.log('[BOOT] 17 - initFriends');
   initFriends();
 
   // MD14: re-render the mini catalyst grid AFTER the default toggle
@@ -3514,7 +3642,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('hdr-logo')?.addEventListener('click', () => navigate('/'));
 
   // MD01: Play button → /play route
-  document.getElementById('play-btn')?.addEventListener('click', () => navigate('/featured'));
+  const _playBtn = document.getElementById('play-btn');
+  _playBtn?.addEventListener('click', () => navigate('/featured'));
+  // PERF: the game engine is no longer in the boot graph, so warm it
+  // on intent — by the time the click lands the module is usually
+  // already parsed and the route opens instantly.
+  _playBtn?.addEventListener('pointerenter', _warmDeferredModules, { once: true });
+  _playBtn?.addEventListener('focus', _warmDeferredModules, { once: true });
 
   // Community / My Profile view toggle in the header.
   document.getElementById('view-toggle-community')?.addEventListener('click', () => {
@@ -3560,7 +3694,6 @@ document.addEventListener('DOMContentLoaded', () => {
     signIn('discord');
   });
 
-  console.log('[BOOT] 18 - paintGuestProfilePill');
   // Guest mode by default — paint the pill immediately so the account
   // menu is usable before auth resolves (or if the user never signs in).
   paintGuestProfilePill();
@@ -3777,7 +3910,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSkeleton();
   }
 
-  console.log('[BOOT] 19 - onAuthReady(updateAuthUI)');
   // Do NOT call renderRoute() directly here. The catalysts collection's
   // Firestore security rules require an authenticated user, so any
   // subscription set up before auth resolves will fail with a permission
@@ -3860,7 +3992,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (communityList) _fitCommunityTiles(communityList);
     });
   });
-  console.log('[BOOT] 20 - boot complete');
   // MD#15: do NOT hide the loader here — boot finishing does not mean
   // content has painted. The feed's first paint (renderFeedRoute) hides
   // it once real tiles are on screen. Non-feed routes hide it via the
@@ -3903,21 +4034,38 @@ window._seedTestProfiles = async function() {
   console.log('[seed] Done! Refresh the page.');
 };
 
-// DEV ONLY — delete all seeded test profiles. Console: _deleteTestProfiles()
+// DEV ONLY — delete every seeded test profile and its catalysts.
+// Console: await _deleteTestProfiles()
+//
+// The seed set is 25 profiles carrying 133 catalysts between them, all
+// public — so leaving it in place means every visitor's feed downloads
+// and renders 133 tiles they don't care about. This is the fast way
+// out: the per-user work runs concurrently and each user's catalysts
+// go in one batched write instead of a delete round trip per document.
 window._deleteTestProfiles = async function() {
-  const { getFirestore, collection, doc, deleteDoc, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+  const { getFirestore, collection, doc, getDocs, query, where, writeBatch } =
+    await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
   const db = getFirestore();
   const names = ['AlphaNode','BetaWave','CosmicRay','DeltaForce','EchoVault','FluxCore','GammaBeam','HyperLink','IonSpark','JadeCircuit','KiloVolt','LunarByte','MegaPulse','NeonDrift','OmegaGrid','PixelStorm','QuantumLeap','RetroBit','SolarFlare','TurboMesh','UltraNode','VectorPrime','WarpDrive','XenonGlow','ZeroPoint'];
-  for (let i = 0; i < 25; i++) {
+
+  let removed = 0;
+  await Promise.all(names.map(async (name, i) => {
     const uid = 'test_user_' + String(i).padStart(3, '0');
-    const name = names[i];
     const catsSnap = await getDocs(query(collection(db, 'catalysts'), where('ownerId', '==', uid)));
-    for (const d of catsSnap.docs) await deleteDoc(d.ref);
-    await deleteDoc(doc(db, 'users', uid));
-    await deleteDoc(doc(db, 'userLookup', name.toLowerCase()));
-    console.log(`[seed] Deleted ${name}`);
-  }
-  console.log('[seed] All test profiles deleted. Refresh the page.');
+    // Firestore caps a batch at 500 writes; +2 here for the user and
+    // lookup docs, so chunk well under the limit.
+    const refs = catsSnap.docs.map((d) => d.ref)
+      .concat([doc(db, 'users', uid), doc(db, 'userLookup', name.toLowerCase())]);
+    for (let k = 0; k < refs.length; k += 400) {
+      const batch = writeBatch(db);
+      refs.slice(k, k + 400).forEach((r) => batch.delete(r));
+      await batch.commit();
+    }
+    removed += catsSnap.size;
+    console.log('[seed] deleted ' + name + ' (' + catsSnap.size + ' catalysts)');
+  }));
+
+  console.log('[seed] Done — ' + names.length + ' profiles and ' + removed + ' catalysts removed. Refresh the page.');
 };
 
 /* ── MD#48: welcome modal pages + render logic ──────────────────────── */

@@ -60,6 +60,16 @@ import { toast, renderUsername, escapeHtml, showModal, safeHex } from './ui-even
 import { navigate, buildUserSlug } from './router.js';
 import { userLookupKey } from './users.js';
 
+// Friend-request tracing is opt-in — it used to log on every snapshot.
+// Enable with localStorage.setItem('nb-debug','1') or ?debug=1.
+const _DEBUG = (() => {
+  try {
+    return localStorage.getItem('nb-debug') === '1'
+      || new URLSearchParams(location.search).has('debug');
+  } catch { return false; }
+})();
+function _dbg(...args) { if (_DEBUG) console.log(...args); }
+
 const db = getFirestore(app);
 
 // ── Friend list + request subscriptions ─────────────────────────
@@ -277,19 +287,19 @@ function _startRequestsSub(uid) {
   _stopRequestsSub();
   _seenRequestIds = new Set();
   // MD-B5 DIAG: log listener attach with uid for cross-app comparison
-  console.log('[NB friend-req] attaching listener for uid:', uid);
+  _dbg('[NB friend-req] attaching listener for uid:', uid);
   _requestsUnsub = onSnapshot(
     query(
       collection(db, 'users', uid, 'friend_requests'),
       where('status', '==', 'pending'),
     ),
     (snap) => {
-      console.log('[NB friend-req] snapshot fired. changes:',
+      _dbg('[NB friend-req] snapshot fired. changes:',
         snap.docChanges().length, 'docs in view:', snap.size);
       snap.docChanges().forEach((change) => {
         const id = change.doc.id;
         const _d = change.doc.data() || {};
-        console.log('[NB friend-req]', change.type, 'docId:', id,
+        _dbg('[NB friend-req]', change.type, 'docId:', id,
           'fromUid:', _d.fromUid, 'status:', _d.status);
         if (change.type === 'modified' || change.type === 'removed') {
           _removeFriendReqNotif(id);

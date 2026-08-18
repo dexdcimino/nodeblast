@@ -8,7 +8,7 @@ input,textarea,[contenteditable="true"]{user-select:text;}
 
 :root {
   --sb:300px; --hdr:56px;
-  --fn:'Outfit',sans-serif; --fs:16px;
+  --fn:'Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; --fs:16px;
   --clr:#5AAA72; --clr-lt:#95e35c; --clr-dk:#397212;
   --clr-top:#72e122; --clr-sub:#3d8c10;
   --clr-on:#000000; --clr-title-on:#ffffff;
@@ -983,6 +983,12 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    of the accent color bleeds through as a subtle tint. Without a
    thumb, the accent is the full hex fill behind the placeholder. */
 .hex-tile{position:absolute;background:var(--accent,var(--bg3));clip-path:url(#hex-clip);overflow:hidden;cursor:pointer;transition:transform .5s ease;container-type:inline-size;}
+/* Grid loading state. The full-screen logo loader now hands the page
+   over as soon as the shell paints, so these hold the grid's shape
+   while the feed query is still in flight. */
+.hex-tile.hex-skeleton{background:var(--bg3);cursor:default;pointer-events:none;animation:nb-skel-pulse 1.5s ease-in-out infinite;}
+@keyframes nb-skel-pulse{0%,100%{opacity:.28}50%{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.hex-tile.hex-skeleton{animation:none;opacity:.35;}}
 /* Flow modifier: lets a .hex-tile sit inside a normal flex/grid
    container instead of the absolutely-positioned honeycomb. Used by
    the community hub cards to drop tiles into a simple flex-wrap row. */
