@@ -4218,16 +4218,39 @@ async function _fsdk() {
   return import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
 }
 
-// Commit a list of {ref, op, data} in batches, well under the 500 cap.
+// Commit a list of {ref, op, data}.
+//
+// Batches are atomic, so a single write the rules reject takes the whole
+// batch down with it. The first trim attempt bundled 115 permitted
+// catalyst deletes together with 17 forbidden users/ deletes and landed
+// none of them. Ops are grouped by collection so a path the rules refuse
+// cannot cancel work on a path they allow, and each group reports
+// separately instead of failing as one opaque error.
 async function _commitOps(sdk, db, ops) {
-  for (let i = 0; i < ops.length; i += 400) {
-    const batch = sdk.writeBatch(db);
-    for (const o of ops.slice(i, i + 400)) {
-      if (o.op === 'delete') batch.delete(o.ref);
-      else batch.set(o.ref, o.data, { merge: true });
-    }
-    await batch.commit();
+  const groups = new Map();
+  for (const o of ops) {
+    const col = o.ref.path.split('/')[0];
+    if (!groups.has(col)) groups.set(col, []);
+    groups.get(col).push(o);
   }
+  const report = [];
+  for (const [col, list] of groups) {
+    let done = 0, failed = 0, err = null;
+    for (let i = 0; i < list.length; i += 400) {
+      const chunk = list.slice(i, i + 400);
+      const batch = sdk.writeBatch(db);
+      for (const o of chunk) {
+        if (o.op === 'delete') batch.delete(o.ref);
+        else batch.set(o.ref, o.data, { merge: true });
+      }
+      try { await batch.commit(); done += chunk.length; }
+      catch (e) { failed += chunk.length; err = e; }
+    }
+    report.push({ col, done, failed, error: err && err.message });
+    console.log('[test-data]   ' + col + ': ' + done + ' written' +
+      (failed ? ', ' + failed + ' FAILED - ' + err.message : ''));
+  }
+  return report;
 }
 
 // Read every seeded profile and its catalysts. Read-only.
@@ -4299,10 +4322,26 @@ window._renameTestProfiles = async function({ apply = false } = {}) {
 };
 
 // DEV ONLY — shrink the seeded set.
+//
+// Deleting the users/ documents is NOT possible under the deployed
+// rules. match /users/{uid} grants `create, update` only — there is no
+// `allow delete`, so a delete falls through to the deny-all at the
+// bottom of the file, for every caller including admin. catalysts/{id}
+// does grant `update, delete` to the owner or admin, so the catalyst
+// deletes below are permitted.
+//
+// Removing the catalysts is what actually clears the community hub,
+// since the hub is built from catalyst documents. The orphaned
+// users/test_user_* docs stay reachable through search and a direct
+// /tester011.hex URL, because searchUsers does a prefix query on
+// usernameLower and getUserByUsernameHex falls back to the same field.
+// Pass {deleteProfiles:true} only after adding a delete rule for
+// users/{uid} in the DexNote repo and redeploying from there.
+//
 // Console:  await _trimTestProfiles()                              (dry run)
 //           await _trimTestProfiles({apply:true})
 //           await _trimTestProfiles({keepProfiles:8, keepEach:3, apply:true})
-window._trimTestProfiles = async function({ keepProfiles = 8, keepEach = 3, apply = false } = {}) {
+window._trimTestProfiles = async function({ keepProfiles = 8, keepEach = 3, deleteProfiles = false, apply = false } = {}) {
   const { sdk, db, byOwner } = await _scanTestData();
   const ops = [];
   let keptP = 0, keptC = 0, dropP = 0, dropC = 0;
@@ -4317,16 +4356,22 @@ window._trimTestProfiles = async function({ keepProfiles = 8, keepEach = 3, appl
       keptC += Math.min(keepEach, sorted.length);
       sorted.slice(keepEach).forEach((c) => { dropC++; ops.push({ op: 'delete', ref: c.ref }); });
     } else {
-      const s = await sdk.getDoc(sdk.doc(db, 'users', uid));
-      if (s.exists()) { dropP++; ops.push({ op: 'delete', ref: sdk.doc(db, 'users', uid) }); }
       cats.forEach((c) => { dropC++; ops.push({ op: 'delete', ref: c.ref }); });
+      if (deleteProfiles) {
+        const s = await sdk.getDoc(sdk.doc(db, 'users', uid));
+        if (s.exists()) { dropP++; ops.push({ op: 'delete', ref: sdk.doc(db, 'users', uid) }); }
+      }
     }
   }
-  console.log('[test-data] trim: keep ' + keptP + ' profiles / ' + keptC + ' catalysts - remove ' +
-    dropP + ' profiles and ' + dropC + ' catalysts (' + ops.length + ' writes)');
+  console.log('[test-data] trim: keep ' + keptP + ' profiles / ' + keptC +
+    ' catalysts - remove ' + dropC + ' catalysts' +
+    (deleteProfiles ? ' and ' + dropP + ' profile docs' : '') +
+    ' (' + ops.length + ' writes)');
+  if (!deleteProfiles) {
+    console.log('[test-data] profile docs are left in place - users/{uid} has no delete rule.');
+  }
   if (!apply) { console.log('[test-data] DRY RUN - re-run with {apply:true} to write.'); return; }
-  await _commitOps(sdk, db, ops);
-  console.log('[test-data] trimmed. Refresh the page.');
+  return _commitOps(sdk, db, ops);
 };
 
 // DEV ONLY — seed a fresh test set. Names are Tester001...
@@ -4356,23 +4401,34 @@ window._seedTestProfiles = async function() {
   console.log('[test-data] seeded 25 Tester profiles. Refresh the page.');
 };
 
-// DEV ONLY — remove every seeded profile and its catalysts.
+// DEV ONLY — remove every seeded catalyst.
+//
+// Same rules constraint as the trim above: users/{uid} grants create and
+// update only, so the profile documents cannot be deleted by anyone,
+// admin included. Catalysts can, and they are what the community hub is
+// built from.
+//
 // Console:  await _deleteTestProfiles()             (dry run)
 //           await _deleteTestProfiles({apply:true})
-window._deleteTestProfiles = async function({ apply = false } = {}) {
+window._deleteTestProfiles = async function({ deleteProfiles = false, apply = false } = {}) {
   const { sdk, db, byOwner } = await _scanTestData();
   const ops = [];
   let profiles = 0, cats = 0;
   for (let i = 0; i < 25; i++) {
     const uid = _testUid(i);
-    const s = await sdk.getDoc(sdk.doc(db, 'users', uid));
-    if (s.exists()) { profiles++; ops.push({ op: 'delete', ref: sdk.doc(db, 'users', uid) }); }
     for (const c of (byOwner.get(uid) || [])) { cats++; ops.push({ op: 'delete', ref: c.ref }); }
+    if (deleteProfiles) {
+      const s = await sdk.getDoc(sdk.doc(db, 'users', uid));
+      if (s.exists()) { profiles++; ops.push({ op: 'delete', ref: sdk.doc(db, 'users', uid) }); }
+    }
   }
-  console.log('[test-data] delete: ' + profiles + ' profiles, ' + cats + ' catalysts (' + ops.length + ' writes)');
+  console.log('[test-data] delete: ' + cats + ' catalysts' +
+    (deleteProfiles ? ', ' + profiles + ' profile docs' : '') + ' (' + ops.length + ' writes)');
+  if (!deleteProfiles) {
+    console.log('[test-data] profile docs are left in place - users/{uid} has no delete rule.');
+  }
   if (!apply) { console.log('[test-data] DRY RUN - re-run with {apply:true} to write.'); return; }
-  await _commitOps(sdk, db, ops);
-  console.log('[test-data] deleted. Refresh the page.');
+  return _commitOps(sdk, db, ops);
 };
 
 /* ── MD#48: welcome modal pages + render logic ──────────────────────── */
