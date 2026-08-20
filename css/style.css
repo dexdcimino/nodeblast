@@ -858,7 +858,10 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-collapse svg{width:18px;height:18px;}
 .community-card.collapsed .community-tiles > *:not(:first-child){display:none;}
 .community-card.collapsed{min-height:0;}
-.community-card.collapsed .community-tiles > *:first-child{left:50% !important;transform:translateX(-50%) !important;width:180px !important;height:208px !important;}
+/* The solo-tile size and its centring are computed in
+   getCommunityTileSize / layoutCardTiles now. Forcing them here as well
+   left the tile 208px tall inside a body sized for 152px, so it spilled
+   out of the strip's overflow-y:hidden and got cut off. */
 .community-card.collapsed .community-card-hdr{overflow:visible;text-overflow:unset;white-space:normal;}
 .community-card.collapsed .community-card-name{white-space:normal;overflow:visible;text-overflow:unset;}
 

@@ -1799,12 +1799,19 @@ const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_BASE_W * 1.1547);
 const COMMUNITY_MAX_ROWS = 2;
 const COMMUNITY_TILE_GAP = 6;
 
+// A creator with a single catalyst gets one large hexagon rather than a
+// lone small one floating in a wide card.
+const COMMUNITY_SOLO_TILE = { w: 180, h: 208 };
+
 function getCommunityTileSize(count, containerWidth) {
   const availW = containerWidth || 500;
   const gap = COMMUNITY_TILE_GAP;
   const MIN_TILE = 58;
   const MAX_TILE = 132;
   const n = Math.max(count, 1);
+  if (n === 1) {
+    return { w: COMMUNITY_SOLO_TILE.w, h: COMMUNITY_SOLO_TILE.h, rows: 1, cols: 1, perRow: 1, showCount: count };
+  }
   const rows = Math.min(COMMUNITY_MAX_ROWS, n);
   // Columns needed to hold everything within the row cap.
   const cols = Math.ceil(n / rows);
@@ -1917,84 +1924,6 @@ function _fitCommunityTiles(list) {
 // Builds a deferred card's tiles when it comes within reach of the
 // viewport. Cards below the fold are the bulk of a busy feed, and most
 // visitors never scroll to them at all.
-let _hydrationIO = null;
-let _hydrationScrollHandler = null;
-
-function _hydrateCard(card) {
-  if (!card || !card._hydrateTiles) return false;
-  card._hydrateTiles();
-  card._hydrateTiles = null;
-  delete card.dataset.pendingTiles;
-  return true;
-}
-
-// Build a card's tiles once it is near the viewport.
-//
-// The first version gated the observer callback on the render token and
-// disconnected whenever a newer snapshot had bumped it. Firestore
-// delivers a cached snapshot and then a server one, so the token moved
-// underneath the observer and 22 of 27 cards were left permanently
-// empty — headers and counts, no hexagons. The token check is gone; a
-// superseded render's cards are detached from the document instead, so
-// hydrating them is harmless, and the explicit disconnect below is what
-// stops the old observer.
-//
-// A scroll listener backs the observer up rather than replacing it,
-// because the list lives inside #grid rather than the document scroller
-// and that is exactly the arrangement observers are easiest to get
-// wrong on.
-function _observeCardHydration(cards) {
-  if (_hydrationIO) { _hydrationIO.disconnect(); _hydrationIO = null; }
-  const scroller = document.getElementById('grid');
-  if (_hydrationScrollHandler && scroller) {
-    scroller.removeEventListener('scroll', _hydrationScrollHandler);
-    _hydrationScrollHandler = null;
-  }
-  const pending = (cards || []).filter((c) => c && c._hydrateTiles);
-  if (pending.length === 0) return;
-
-  const MARGIN = 700;
-  const sweep = () => {
-    let hydratedAny = false;
-    for (let i = pending.length - 1; i >= 0; i--) {
-      const card = pending[i];
-      if (!card.isConnected) { pending.splice(i, 1); continue; }
-      const r = card.getBoundingClientRect();
-      const near = r.top < window.innerHeight + MARGIN && r.bottom > -MARGIN
-        && r.left < window.innerWidth + MARGIN && r.right > -MARGIN;
-      if (!near) continue;
-      if (_hydrateCard(card)) hydratedAny = true;
-      if (_hydrationIO) _hydrationIO.unobserve(card);
-      pending.splice(i, 1);
-    }
-    if (hydratedAny) {
-      const list = document.getElementById('community-list');
-      requestAnimationFrame(() => _fitCommunityTiles(list));
-    }
-    if (pending.length === 0 && _hydrationIO) { _hydrationIO.disconnect(); _hydrationIO = null; }
-  };
-
-  if (typeof IntersectionObserver !== 'undefined') {
-    _hydrationIO = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) sweep();
-    }, { rootMargin: MARGIN + 'px' });
-    pending.forEach((c) => _hydrationIO.observe(c));
-  }
-
-  let queued = false;
-  _hydrationScrollHandler = () => {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(() => { queued = false; sweep(); });
-  };
-  if (scroller) scroller.addEventListener('scroll', _hydrationScrollHandler, { passive: true });
-  window.addEventListener('resize', _hydrationScrollHandler, { passive: true });
-
-  // Anything already on screen must not wait for a scroll that may
-  // never come — most visitors never scroll at all.
-  sweep();
-}
-
 // MD18: ResizeObserver per community card — re-fits tiles when a
 // card's width changes (zoom, sidebar collapse, card animation).
 let _communityRO = null;
@@ -2031,7 +1960,7 @@ function _updateCreatorVoteUI(creatorUid, activeType) {
     });
 }
 
-function _buildCommunityCard(group, { deferTiles = false } = {}) {
+function _buildCommunityCard(group) {
   const hex = group.hexCode;
   const hexColor = '#' + hex;
   const card = document.createElement('div');
@@ -2347,14 +2276,7 @@ function _buildCommunityCard(group, { deferTiles = false } = {}) {
 
   // MD#8: creator-level fire/poop vote pills removed from alchemist cards.
 
-  if (deferTiles) {
-    // Hydrated by the observer in renderCommunityHub once the card
-    // approaches the viewport.
-    card._hydrateTiles = _fillTiles;
-    card.dataset.pendingTiles = '1';
-  } else {
-    _fillTiles();
-  }
+  _fillTiles();
 
   // The strip is centred while it fits and scrolls sideways once it
   // doesn't, so a creator with many catalysts gets a scrollbar rather
@@ -2411,21 +2333,23 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   // correctly-sized shell whose tiles are built when it scrolls into
   // reach. On a feed of 27 creators that is the difference between
   // ~140 tiles up front and ~30.
-  const EAGER_CARDS = 5;
+  // Cards are built complete. Deferring the tiles of off-screen cards
+  // saved little once the two-row cap bounded how many tiles a card can
+  // hold, and it meant any card the observer missed rendered as a
+  // finished-looking box with a count badge and no hexagons - which is
+  // exactly how it read to a person: broken, not loading. Appending in
+  // chunks across frames keeps the main thread responsive without ever
+  // putting an empty card on screen.
+  const FIRST_PAINT_CARDS = 5;
   const CHUNK = 4;
 
   const appendCards = (from, to) => {
     const frag = document.createDocumentFragment();
-    for (let i = from; i < to; i++) {
-      const card = _buildCommunityCard(ranked[i], { deferTiles: i >= EAGER_CARDS });
-      if (card.dataset.pendingTiles) _hydrationQueue.push(card);
-      frag.appendChild(card);
-    }
+    for (let i = from; i < to; i++) frag.appendChild(_buildCommunityCard(ranked[i]));
     list.appendChild(frag);
   };
-  const _hydrationQueue = [];
 
-  appendCards(0, Math.min(EAGER_CARDS, ranked.length));
+  appendCards(0, Math.min(FIRST_PAINT_CARDS, ranked.length));
 
   const finish = () => {
     // MD10: post-render fit — re-layout tiles in any card whose body
@@ -2449,16 +2373,16 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
     }
   };
 
-  if (ranked.length <= EAGER_CARDS) { finish(); return; }
+  if (ranked.length <= FIRST_PAINT_CARDS) { finish(); return; }
 
-  let next = EAGER_CARDS;
+  let next = FIRST_PAINT_CARDS;
   const pump = () => {
     if (token !== _communityRenderToken) return;
     const to = Math.min(next + CHUNK, ranked.length);
     appendCards(next, to);
     next = to;
     if (next < ranked.length) requestAnimationFrame(pump);
-    else { _observeCardHydration(_hydrationQueue); finish(); }
+    else finish();
   };
   requestAnimationFrame(pump);
 }
