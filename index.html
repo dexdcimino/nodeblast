@@ -42,7 +42,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
 
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="/css/style.css?v=200" />
+  <link rel="stylesheet" href="/css/style.css?v=201" />
 
   <!-- ── PERF: flatten the ES-module waterfall.
 
@@ -55,7 +55,7 @@
        Only modules reachable from init.js at load time belong here —
        play-mode.js, dot-sim-modal.js and nodesplit-modal.js are
        deliberately absent because they now load on demand. ── -->
-  <link rel="modulepreload" href="/js/init.js?v=212" />
+  <link rel="modulepreload" href="/js/init.js?v=213" />
   <link rel="modulepreload" href="/js/state.js" />
   <link rel="modulepreload" href="/js/firebase-config.js" />
   <link rel="modulepreload" href="/js/auth.js" />
@@ -112,6 +112,18 @@
       var b = localStorage.getItem('nb-logo-bot-color');
       if (t) { var el = document.getElementById('loading-path-top'); if (el) el.setAttribute('fill', t); }
       if (b) { var el2 = document.getElementById('loading-path-bot'); if (el2) el2.setAttribute('fill', b); }
+
+      // Start the seed fetch here rather than waiting for the module
+      // graph to finish loading. It is a static same-origin file, so it
+      // is usually complete before the modules have parsed. Only worth
+      // doing when there is no cached feed to paint from.
+      try {
+        if (!localStorage.getItem('nb-feed-cache-v1')) {
+          window.__nbSeed = fetch('/feed-seed.json', { cache: 'force-cache' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .catch(function () { return null; });
+        }
+      } catch (e) {}
     })();
   </script>
   <style>
@@ -1347,8 +1359,28 @@
       </div>
     </div>
   </div>
+  <script>
+    // The spinner used to sit there until init.js had loaded, parsed and
+    // run - about 2.6s cold, none of which the visitor needs to wait
+    // through. The shell below is static markup and is already styled,
+    // so reveal it now; the modules fill in the grid when they arrive.
+    (function () {
+      var hide = function () {
+        var ls = document.getElementById('loading-screen');
+        if (!ls || ls.classList.contains('hidden')) return;
+        ls.classList.add('hidden');
+        ls.addEventListener('transitionend', function () { ls.style.display = 'none'; }, { once: true });
+      };
+      // Synchronously, not on a frame callback. The stylesheet is
+      // render-blocking and sits above this, so the shell is already
+      // styled and paints correctly on the very first frame. Deferring
+      // to rAF put the hide behind module compilation and cost ~300ms
+      // of spinner that the visitor gained nothing from.
+      hide();
+    })();
+  </script>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="/js/init.js?v=212"></script>
+  <script type="module" src="/js/init.js?v=213"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

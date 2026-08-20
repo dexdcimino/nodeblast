@@ -106,8 +106,10 @@ export function loadFeedCache(category) {
 let _seedPromise = null;
 export function loadSeedFeed() {
   if (_seedPromise) return _seedPromise;
-  _seedPromise = fetch('/feed-seed.json', { cache: 'force-cache' })
-    .then((r) => (r.ok ? r.json() : null))
+  // index.html starts this fetch inline, before the module graph has
+  // even finished loading, so prefer that one.
+  _seedPromise = (window.__nbSeed || fetch('/feed-seed.json', { cache: 'force-cache' })
+    .then((r) => (r.ok ? r.json() : null)))
     .then((p) => (p && Array.isArray(p.items) && p.items.length ? p.items.map(rehydrate) : null))
     .catch(() => null);
   return _seedPromise;
