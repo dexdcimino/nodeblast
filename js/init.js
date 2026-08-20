@@ -215,7 +215,7 @@ function _applyCollapseAction(uid, action) {
   if (!card) return false;
   const collapseBtn = card.querySelector('.community-card-collapse');
   if (!collapseBtn) return false;
-  const isCollapsed = card.classList.contains('collapsed');
+  const isCollapsed = card.classList.contains('pill');
   if ((action === 'collapse' && isCollapsed) || (action === 'expand' && !isCollapsed)) return false;
   collapseBtn.click();
   return true;
@@ -1275,9 +1275,9 @@ function _renderProfileView(user, catalysts, isOwn) {
           if (isOwn) {
             const _ss = _loadProfileCardStates();
             const _sv = _ss[group.uid];
-            if (_sv === 'collapsed' || _sv === 'pill') {
+            if (_sv === 'pill' || _sv === 'collapsed') {
               const _cb = card.querySelector('.community-card-collapse');
-              if (_cb) { card.classList.add(_sv); if (_sv === 'collapsed') card.dataset.count = '1'; }
+              if (_cb) card.classList.add('pill');
             }
           }
           followingCol.appendChild(card);
@@ -1870,7 +1870,7 @@ function layoutCardTiles(count, tileSize) {
 // dozen full reflows in a single frame.
 function _fitCommunityTiles(list) {
   if (!list) return;
-  const cards = list.querySelectorAll('.community-card:not(.collapsed):not(.pill)');
+  const cards = list.querySelectorAll('.community-card:not(.pill)');
   if (cards.length === 0) return;
 
   // ── Read phase: measure everything, mutate nothing. ──
@@ -2053,13 +2053,17 @@ function _buildCommunityCard(group) {
   const EXPAND_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
   const PILL_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="9" width="20" height="6" rx="3"/></svg>';
 
+  // A card is either the full thing or a pill. The old middle state
+  // ("collapsed": full-height card showing one enlarged tile) is gone.
+  // It cleared the strip's inline height on the way in and relied on a
+  // CSS rule to re-size the surviving tile, so any card entered through
+  // it ended up with a zero-height strip and no visible hexagons at all.
   function getCardState(el) {
-    if (el.classList.contains('pill')) return 'pill';
-    if (el.classList.contains('collapsed')) return 'collapsed';
-    return 'expanded';
+    return el.classList.contains('pill') ? 'pill' : 'expanded';
   }
   function setCardState(el, state, btn) {
     el.classList.remove('collapsed', 'pill');
+    if (state === 'collapsed') state = 'pill';
     // NB-COLLAPSE-FIX: clear stale inline styles set by _fitCommunityTiles
     // before entering collapsed/pill. Without this, .community-tiles keeps
     // its expanded inline width (e.g. 600px) and `left:50%` on the first
@@ -2079,12 +2083,7 @@ function _buildCommunityCard(group) {
         firstTile.style.top = '';
       }
     }
-    if (state === 'collapsed') {
-      el.classList.add('collapsed');
-      el.dataset.count = '1';
-      btn.innerHTML = PILL_ICON;
-      btn.setAttribute('data-tip', 'Minimize to pill');
-    } else if (state === 'pill') {
+    if (state === 'pill') {
       el.classList.add('pill');
       btn.innerHTML = EXPAND_ICON;
       btn.setAttribute('data-tip', 'Expand');
@@ -2096,11 +2095,11 @@ function _buildCommunityCard(group) {
       btn.setAttribute('data-tip', 'Collapse');
     }
     const pinBtn = el.querySelector('.community-card-follow');
-    if (pinBtn && state === 'collapsed') {
+    if (pinBtn && state === 'pill') {
       pinBtn.dataset.fullText = pinBtn.textContent;
       pinBtn.classList.add('icon-only');
       pinBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>';
-    } else if (pinBtn && state === 'expanded') {
+    } else if (pinBtn) {
       pinBtn.classList.remove('icon-only');
       const isFollowing = pinBtn.classList.contains('following');
       pinBtn.innerHTML = isFollowing ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>';
@@ -2112,30 +2111,19 @@ function _buildCommunityCard(group) {
   collapseBtn.className = 'community-card-collapse';
   collapseBtn.setAttribute('aria-label', 'Collapse card');
   const _feedSaved = _loadFeedCardStates();
-  const _feedState = _feedSaved[group.uid];
-  const startPill = _feedState === 'pill';
-  const startCollapsed = _feedState === 'collapsed' || _collapsedCards.has(group.uid);
-  if (startPill) {
-    setCardState(card, 'pill', collapseBtn);
-  } else if (startCollapsed) {
-    setCardState(card, 'collapsed', collapseBtn);
-    requestAnimationFrame(() => {
-      const _initPin = card.querySelector('.community-card-follow');
-      if (_initPin) setCardState(card, 'collapsed', collapseBtn);
-    });
-  } else {
-    setCardState(card, 'expanded', collapseBtn);
-  }
+  // States saved before the middle state was removed migrate to a pill.
+  const startPill = _feedSaved[group.uid] === 'pill'
+    || _feedSaved[group.uid] === 'collapsed'
+    || _collapsedCards.has(group.uid);
+  setCardState(card, startPill ? 'pill' : 'expanded', collapseBtn);
   collapseBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const currentState = getCardState(card);
-    const nextState = currentState === 'expanded' ? 'collapsed'
-      : currentState === 'collapsed' ? 'pill'
-      : 'expanded';
+    const nextState = currentState === 'expanded' ? 'pill' : 'expanded';
     _collapseUndoStack.push({ uid: group.uid, action: nextState, prev: currentState });
     if (_collapseUndoStack.length > MAX_UNDO) _collapseUndoStack.shift();
     _collapseRedoStack.length = 0;
-    if (nextState === 'collapsed' || nextState === 'pill') {
+    if (nextState === 'pill') {
       _collapsedCards.add(group.uid);
     } else {
       _collapsedCards.delete(group.uid);
@@ -2287,13 +2275,9 @@ function _buildCommunityCard(group) {
   scroller.appendChild(body);
   card.appendChild(scroller);
 
-  // Single-catalyst cards — always collapsed, no toggle
-  if (group.catalysts.length <= 1) {
-    card.classList.add('collapsed');
-    card.dataset.count = '1';
-    const _singleBtn = card.querySelector('.community-card-collapse');
-    if (_singleBtn) _singleBtn.style.display = 'none';
-  }
+  // A single-catalyst card is just a card with one large hexagon; it
+  // used to be forced into the middle state, which is what left it
+  // rendering an empty box.
 
   return card;
 }
@@ -4323,6 +4307,72 @@ window._seedTestProfiles = async function() {
     }
   }
   console.log('[test-data] seeded 25 Tester profiles. Refresh the page.');
+};
+
+// DEV ONLY — top the seeded profiles back up to a realistic spread.
+//
+// The trim left every profile with two or three catalysts, which makes
+// the hub look thin and never exercises the two-row cap, the horizontal
+// scroll or the pill state. This brings a few profiles up to 10-15, a
+// few to the middle, and leaves the rest small.
+//
+// Only creates what is missing, so it is safe to run twice. Titles and
+// slugs follow the current TesterNNN naming, and the id prefix is the
+// only selector, so it can never touch a real account.
+//
+// Console:  await _topUpTestProfiles()             (dry run)
+//           await _topUpTestProfiles({apply:true})
+//           await _topUpTestProfiles({spread:[15,12,10,6,5,3,2,1], apply:true})
+window._topUpTestProfiles = async function({ spread = null, apply = false } = {}) {
+  const { sdk, db, byOwner } = await _scanTestData();
+  // A few large, several medium, a few small — index i maps to
+  // test_user_00i, so the shape is stable between runs.
+  const TARGET = spread || [15, 13, 11, 8, 6, 5, 4, 3, 2, 1];
+  const colors = ['ff4444','44aaff','44dd66','ffaa22','dd44ff','22ddcc','ff6699','8855ff','ddaa33','66ccff',
+                  'ff3366','33cc99','aa66ff','ff8833','4488ff','cc3355','55cc44','ff5544','3399ff','bb44dd',
+                  'ee6633','44bbaa','ff77aa','6644ff','cccc33'];
+
+  const ops = [];
+  const plan = [];
+  for (let i = 0; i < TARGET.length; i++) {
+    const uid = _testUid(i);
+    const name = _testName(i);
+    const s = await sdk.getDoc(sdk.doc(db, 'users', uid));
+    if (!s.exists()) { plan.push(name + ': profile missing, skipped'); continue; }
+    const hex = (s.data().hexCode) || colors[i];
+    const have = byOwner.get(uid) || [];
+    const haveIdx = new Set(have.map((c) => {
+      const m = /^test_user_\d+_cat_(\d+)$/.exec(c.id);
+      return m ? Number(m[1]) : -1;
+    }));
+    const want = TARGET[i];
+    let added = 0;
+    // Fill the lowest free indices so ids stay dense and predictable.
+    for (let n = 0; added < want - have.length; n++) {
+      if (n > 200) break;
+      if (haveIdx.has(n)) continue;
+      const title = name + ' Project ' + (n + 1);
+      ops.push({ op: 'set', ref: sdk.doc(db, 'catalysts', uid + '_cat_' + n), data: {
+        title,
+        ownerId: uid, ownerName: name, ownerHex: hex,
+        accentColor: '#' + colors[(i + n) % colors.length],
+        thumbURL: '',
+        status: (n % 7 === 0) ? 'placeholder' : 'published',
+        gameId: null,
+        createdAt: sdk.serverTimestamp(), updatedAt: sdk.serverTimestamp(),
+        fireCount: ((i * 7 + n * 13) % 60), frostCount: ((i + n) % 5),
+        isLocked: false, isPublic: true,
+        slug: title.toLowerCase().replace(/\s+/g, '-'),
+      } });
+      added++;
+    }
+    plan.push(name + ': has ' + have.length + ', target ' + want + ', adding ' + added);
+  }
+
+  plan.forEach((p) => console.log('[test-data]   ' + p));
+  console.log('[test-data] top-up: ' + ops.length + ' catalysts to create');
+  if (!apply) { console.log('[test-data] DRY RUN - re-run with {apply:true} to write.'); return; }
+  return _commitOps(sdk, db, ops);
 };
 
 // DEV ONLY — remove every seeded catalyst.
