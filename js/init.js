@@ -4251,7 +4251,8 @@ async function _scanTestData() {
 window._renameTestProfiles = async function({ apply = false } = {}) {
   const { sdk, db, byOwner } = await _scanTestData();
   const ops = [];
-  let profiles = 0;
+  const samples = [];
+  let profiles = 0, titles = 0, owners = 0;
   for (let i = 0; i < 25; i++) {
     const uid = _testUid(i);
     const name = _testName(i);
@@ -4260,14 +4261,38 @@ window._renameTestProfiles = async function({ apply = false } = {}) {
     profiles++;
     ops.push({ op: 'set', ref: sdk.doc(db, 'users', uid),
       data: { displayName: name, usernameLower: name.toLowerCase() } });
-    // ownerName is denormalized onto every catalyst, so the cards keep
-    // showing the old name unless these are rewritten too.
+
     for (const c of (byOwner.get(uid) || [])) {
-      ops.push({ op: 'set', ref: c.ref, data: { ownerName: name } });
+      const data = {};
+      // ownerName is denormalized onto every catalyst, so the cards keep
+      // showing the old name unless these are rewritten too.
+      if (c.ownerName !== name) { data.ownerName = name; owners++; }
+
+      // Take the catalyst's position from its document id
+      // (test_user_011_cat_2) rather than by parsing the old title. The
+      // id never changes, so this stays correct however many times the
+      // profiles are renamed.
+      const m = /^test_user_\d+_cat_(\d+)$/.exec(c.id);
+      if (m) {
+        const title = name + ' Project ' + (Number(m[1]) + 1);
+        const slug = title.toLowerCase().replace(/\s+/g, '-');
+        if (c.title !== title) {
+          if (samples.length < 5) samples.push((c.title || '(untitled)') + '  ->  ' + title);
+          data.title = title;
+          titles++;
+        }
+        // The slug is the catalyst's URL segment, so leaving it as
+        // zeropoint-project-3 under Tester011 would just move the
+        // mismatch into the address bar.
+        if (c.slug !== slug) data.slug = slug;
+      }
+
+      if (Object.keys(data).length) ops.push({ op: 'set', ref: c.ref, data });
     }
   }
-  console.log('[test-data] rename: ' + profiles + ' profiles, ' +
-    (ops.length - profiles) + ' catalyst ownerName updates, ' + ops.length + ' writes total');
+  console.log('[test-data] rename: ' + profiles + ' profiles, ' + owners +
+    ' ownerName updates, ' + titles + ' title/slug updates (' + ops.length + ' writes)');
+  samples.forEach((s) => console.log('[test-data]   ' + s));
   if (!apply) { console.log('[test-data] DRY RUN - re-run with {apply:true} to write.'); return; }
   await _commitOps(sdk, db, ops);
   console.log('[test-data] renamed. Refresh the page.');
