@@ -6,7 +6,7 @@
 //  the previous cache, which is how a deploy invalidates the cached
 //  module graph. Keep it in step with the ?v= on init.js/style.css.
 // ══════════════════════════════════════════════════════════════
-const CACHE_NAME = 'nodeblast-v207';
+const CACHE_NAME = 'nodeblast-v208';
 
 // The app shell. Precached at install so a repeat visit paints without
 // touching the network.
@@ -14,13 +14,15 @@ const PRECACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/css/style.css?v=198',
-  '/js/init.js?v=207',
+  '/css/style.css?v=199',
+  '/js/init.js?v=208',
 ];
 
 // Same-origin paths served stale-while-revalidate: answered instantly
 // from cache, refreshed in the background for the next load.
 const SWR_PREFIXES = ['/js/', '/css/', '/assets/', '/icons/'];
+// The seed file is static data the first paint depends on.
+const SWR_EXACT = ['/feed-seed.json'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -42,7 +44,7 @@ self.addEventListener('activate', (e) => {
 });
 
 function isStaticAsset(url) {
-  return SWR_PREFIXES.some((p) => url.pathname.startsWith(p));
+  return SWR_PREFIXES.some((p) => url.pathname.startsWith(p)) || SWR_EXACT.includes(url.pathname);
 }
 
 self.addEventListener('fetch', (e) => {

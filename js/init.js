@@ -63,7 +63,7 @@ import {
   refreshTrackedOwnerData,
 } from './tracked.js';
 import { voteCreator, getMyCreatorVotes } from './creator-votes.js';
-import { saveFeedCache, loadFeedCache } from './feed-cache.js';
+import { saveFeedCache, loadFeedCache, loadSeedFeed } from './feed-cache.js';
 
 // PERF/UX: boot tracing was left on for everyone. It costs a little
 // time and a lot of console noise on a production site. Opt in with
@@ -157,6 +157,9 @@ let _currentCategory = 'all';
 // user signs in, updateAuthUI() reads their per-account preference
 // from localStorage (key `nb-feed-mode-{uid}`) and applies it.
 let _feedViewMode = 'alchemists';
+// Set once a server-confirmed snapshot arrives. Gates the static seed
+// file so it can never paint over real data — including a real empty.
+let _feedGotServerData = false;
 function _feedModeKey(uid) { return 'nb-feed-mode-' + uid; }
 // Feed sort mode — 'popular' (fireCount desc), 'latest' (createdAt
 // desc), 'oldest' (createdAt asc). MD20 flipped this from sitewide
@@ -1789,33 +1792,65 @@ function _sortCardTiles(tiles) {
 const COMMUNITY_TILE_BASE_W = 180;
 const COMMUNITY_TILE_W = COMMUNITY_TILE_BASE_W;
 const COMMUNITY_TILE_H = Math.round(COMMUNITY_TILE_BASE_W * 1.1547);
+// Community cards show at most two rows of hexagons. Beyond that the
+// tiles were shrinking until the titles became single letters followed
+// by an ellipsis, which reads as broken rather than dense. Two rows, a
+// readable tile size, and a horizontal scroll for the overflow.
+const COMMUNITY_MAX_ROWS = 2;
+const COMMUNITY_TILE_GAP = 6;
+
 function getCommunityTileSize(count, containerWidth) {
   const availW = containerWidth || 500;
-  const gap = 6;
-  const MIN_TILE = 48;
-  const MAX_TILE = 200;
-  // Determine how many tiles fit per row without going below MIN_TILE.
-  // Start with all tiles on one row and reduce perRow until they fit.
-  let perRow = Math.min(count, 6);
-  while (perRow > 1) {
-    const w = Math.floor((availW - gap * (perRow + 1)) / perRow);
-    if (w >= MIN_TILE) break;
-    perRow--;
-  }
-  let w = Math.floor((availW - gap * (perRow + 1)) / Math.max(perRow, 1));
+  const gap = COMMUNITY_TILE_GAP;
+  const MIN_TILE = 58;
+  const MAX_TILE = 132;
+  const n = Math.max(count, 1);
+  const rows = Math.min(COMMUNITY_MAX_ROWS, n);
+  // Columns needed to hold everything within the row cap.
+  const cols = Math.ceil(n / rows);
+  // Shrink to fit the card, but only down to MIN_TILE. Past that the
+  // strip scrolls sideways instead of shrinking further.
+  let w = Math.floor((availW - gap * (cols + 1)) / Math.max(cols, 1));
   w = Math.min(w, MAX_TILE);
   w = Math.max(w, MIN_TILE);
-  const rows = Math.ceil(count / perRow);
-  let h = Math.round(w * 1.1547);
-  const totalH = h + (rows - 1) * (h * 0.75 + gap);
-  if (totalH > 220 && rows > 1) {
-    const newH = Math.floor((220 - gap * (rows - 1)) / (1 + (rows - 1) * 0.75));
-    const newW = Math.floor(newH / 1.1547);
-    const finalW = Math.max(newW, MIN_TILE);
-    const finalH = Math.round(finalW * 1.1547);
-    return { w: finalW, h: finalH, perRow, rows, showCount: count };
+  const h = Math.round(w * 1.1547);
+  return { w, h, rows, cols, perRow: cols, showCount: count };
+}
+
+// Single source of truth for where a card's tiles sit. Both the initial
+// build and the post-render refit call this, so the two can no longer
+// drift apart. Column-major, so a horizontally scrolling strip reads
+// left to right in the same order the tiles are sorted.
+function layoutCardTiles(count, tileSize) {
+  const gap = COMMUNITY_TILE_GAP;
+  const { w, h, rows } = tileSize;
+  const stepX = w + gap;
+  const stepY = h * 0.75 + gap;
+  const positions = [];
+  const rowOf = (i) => (rows > 1 ? i % rows : 0);
+  const extents = [];
+  let maxB = 0;
+  for (let i = 0; i < count; i++) {
+    const row = rowOf(i);
+    const col = rows > 1 ? Math.floor(i / rows) : i;
+    const left = gap + (row === 1 ? stepX / 2 : 0) + col * stepX;
+    const top = row * stepY;
+    positions.push({ left, top });
+    const e = extents[row] || (extents[row] = { min: Infinity, max: -Infinity });
+    if (left < e.min) e.min = left;
+    if (left + w > e.max) e.max = left + w;
+    if (top + h > maxB) maxB = top + h;
   }
-  return { w, h, perRow, rows, showCount: count };
+  // Centre every row inside the content box. The offset row of a
+  // honeycomb starts half a step in and usually holds one tile fewer,
+  // so without this the rows sit against the left edge with a ragged
+  // gap on the right and read as misaligned rather than interlocked.
+  const widest = extents.reduce((m, e) => Math.max(m, e.max - e.min), 0);
+  positions.forEach((p, i) => {
+    const e = extents[rowOf(i)];
+    p.left += gap + (widest - (e.max - e.min)) / 2 - e.min;
+  });
+  return { positions, width: widest + gap * 2, height: maxB + gap };
 }
 
 // MD10: after cards are in the DOM, re-measure each card's available
@@ -1833,51 +1868,49 @@ function _fitCommunityTiles(list) {
 
   // ── Read phase: measure everything, mutate nothing. ──
   const work = [];
+  const pendingFlags = [];
   cards.forEach((card) => {
     const body = card.querySelector('.community-tiles');
     if (!body) return;
     const tiles = body.querySelectorAll('.hex-tile');
     if (tiles.length === 0) return;
-    const cardStyle = getComputedStyle(card);
-    const padL = parseFloat(cardStyle.paddingLeft) || 0;
-    const padR = parseFloat(cardStyle.paddingRight) || 0;
-    const availW = card.clientWidth - padL - padR;
+    const scroller = body.parentElement;
+    // Measure the strip's own box — it is the element that scrolls, so
+    // its width is what the tiles have to fit inside.
+    const availW = (scroller && scroller.clientWidth) || (() => {
+      const cs = getComputedStyle(card);
+      return card.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    })();
     if (availW <= 0) return;
     // MD17: always recompute — tiles must grow back after zoom-out
     const tileSize = getCommunityTileSize(tiles.length, availW);
+    if (scroller) {
+      const projected = layoutCardTiles(tiles.length, tileSize).width;
+      pendingFlags.push([scroller, projected > availW + 1]);
+    }
     const firstTile = tiles[0];
     const currentW = firstTile ? parseFloat(firstTile.style.width) || 0 : 0;
     const currentH = firstTile ? parseFloat(firstTile.style.height) || 0 : 0;
     if (Math.abs(currentW - tileSize.w) < 2 && Math.abs(currentH - tileSize.h) < 2) return;
-    work.push({ body, tiles, tileSize });
+    work.push({ body, tiles, tileSize, scroller });
   });
+  pendingFlags.forEach(([el, on]) => el.classList.toggle('scrolls', on));
   if (work.length === 0) return;
 
   // ── Write phase: inline styles only, no further measurement. ──
-  work.forEach(({ body, tiles, tileSize }) => {
-    const gap = 6;
-    const hW = tileSize.w;
-    const hH = tileSize.h;
-    const stepX = hW + gap;
-    const stepY = hH * 0.75 + gap;
-    const perRow = tileSize.perRow;
-    const colsForRow = (r) => r % 2 === 0 ? perRow : Math.max(perRow - 1, 1);
-    let row = 0, col = 0, maxR = 0, maxB = 0;
-    tiles.forEach((tile) => {
-      const isOff = row % 2 === 1;
-      const left = gap + (isOff ? stepX / 2 : 0) + col * stepX;
-      const top = row * stepY;
-      tile.style.left = left + 'px';
-      tile.style.top = top + 'px';
-      tile.style.width = hW + 'px';
-      tile.style.height = hH + 'px';
-      if (left + hW > maxR) maxR = left + hW;
-      if (top + hH > maxB) maxB = top + hH;
-      col++;
-      if (col >= colsForRow(row)) { col = 0; row++; }
+  work.forEach(({ body, tiles, tileSize, scroller }) => {
+    const { positions, width, height } = layoutCardTiles(tiles.length, tileSize);
+    tiles.forEach((tile, i) => {
+      tile.style.left = positions[i].left + 'px';
+      tile.style.top = positions[i].top + 'px';
+      tile.style.width = tileSize.w + 'px';
+      tile.style.height = tileSize.h + 'px';
     });
-    body.style.width = (maxR + gap) + 'px';
-    body.style.height = (maxB + gap) + 'px';
+    body.style.width = width + 'px';
+    body.style.height = height + 'px';
+    // Only the cards that actually overflow get a scrollbar and the
+    // padding that goes with it.
+    if (scroller) scroller.classList.toggle('scrolls', width > scroller.clientWidth + 1);
   });
 }
 
@@ -1885,27 +1918,81 @@ function _fitCommunityTiles(list) {
 // viewport. Cards below the fold are the bulk of a busy feed, and most
 // visitors never scroll to them at all.
 let _hydrationIO = null;
-function _observeCardHydration(cards, token) {
+let _hydrationScrollHandler = null;
+
+function _hydrateCard(card) {
+  if (!card || !card._hydrateTiles) return false;
+  card._hydrateTiles();
+  card._hydrateTiles = null;
+  delete card.dataset.pendingTiles;
+  return true;
+}
+
+// Build a card's tiles once it is near the viewport.
+//
+// The first version gated the observer callback on the render token and
+// disconnected whenever a newer snapshot had bumped it. Firestore
+// delivers a cached snapshot and then a server one, so the token moved
+// underneath the observer and 22 of 27 cards were left permanently
+// empty — headers and counts, no hexagons. The token check is gone; a
+// superseded render's cards are detached from the document instead, so
+// hydrating them is harmless, and the explicit disconnect below is what
+// stops the old observer.
+//
+// A scroll listener backs the observer up rather than replacing it,
+// because the list lives inside #grid rather than the document scroller
+// and that is exactly the arrangement observers are easiest to get
+// wrong on.
+function _observeCardHydration(cards) {
   if (_hydrationIO) { _hydrationIO.disconnect(); _hydrationIO = null; }
-  if (!cards || cards.length === 0) return;
-  if (typeof IntersectionObserver === 'undefined') {
-    cards.forEach((c) => c._hydrateTiles?.());
-    return;
+  const scroller = document.getElementById('grid');
+  if (_hydrationScrollHandler && scroller) {
+    scroller.removeEventListener('scroll', _hydrationScrollHandler);
+    _hydrationScrollHandler = null;
   }
-  _hydrationIO = new IntersectionObserver((entries, obs) => {
-    // A newer feed render supersedes this one; stop touching its cards.
-    if (token !== _communityRenderToken) { obs.disconnect(); return; }
-    entries.forEach((e) => {
-      if (!e.isIntersecting) return;
-      const card = e.target;
-      obs.unobserve(card);
-      card._hydrateTiles?.();
-      delete card.dataset.pendingTiles;
-      // Tiles only exist now, so this card still needs its fit pass.
-      requestAnimationFrame(() => _fitCommunityTiles(card.parentElement));
-    });
-  }, { rootMargin: '600px 0px' });
-  cards.forEach((c) => _hydrationIO.observe(c));
+  const pending = (cards || []).filter((c) => c && c._hydrateTiles);
+  if (pending.length === 0) return;
+
+  const MARGIN = 700;
+  const sweep = () => {
+    let hydratedAny = false;
+    for (let i = pending.length - 1; i >= 0; i--) {
+      const card = pending[i];
+      if (!card.isConnected) { pending.splice(i, 1); continue; }
+      const r = card.getBoundingClientRect();
+      const near = r.top < window.innerHeight + MARGIN && r.bottom > -MARGIN
+        && r.left < window.innerWidth + MARGIN && r.right > -MARGIN;
+      if (!near) continue;
+      if (_hydrateCard(card)) hydratedAny = true;
+      if (_hydrationIO) _hydrationIO.unobserve(card);
+      pending.splice(i, 1);
+    }
+    if (hydratedAny) {
+      const list = document.getElementById('community-list');
+      requestAnimationFrame(() => _fitCommunityTiles(list));
+    }
+    if (pending.length === 0 && _hydrationIO) { _hydrationIO.disconnect(); _hydrationIO = null; }
+  };
+
+  if (typeof IntersectionObserver !== 'undefined') {
+    _hydrationIO = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) sweep();
+    }, { rootMargin: MARGIN + 'px' });
+    pending.forEach((c) => _hydrationIO.observe(c));
+  }
+
+  let queued = false;
+  _hydrationScrollHandler = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; sweep(); });
+  };
+  if (scroller) scroller.addEventListener('scroll', _hydrationScrollHandler, { passive: true });
+  window.addEventListener('resize', _hydrationScrollHandler, { passive: true });
+
+  // Anything already on screen must not wait for a scroll that may
+  // never come — most visitors never scroll at all.
+  sweep();
 }
 
 // MD18: ResizeObserver per community card — re-fits tiles when a
@@ -2171,41 +2258,22 @@ function _buildCommunityCard(group, { deferTiles = false } = {}) {
   // everywhere else in the community hub.
   const hideOwnPin = State.user && group.uid === State.user.uid;
   const isOwnCardForReorder = State.user && group.uid === State.user.uid;
-  const MAX_VISIBLE_TILES = 18;
   const sortedTiles = _sortCardTiles(group.catalysts);
   const cardMaxW = Math.floor((window.innerWidth > 900 ? window.innerWidth * 0.5 : window.innerWidth) - 84);
   const tileSize = getCommunityTileSize(sortedTiles.length, cardMaxW);
-  const tilesToShow = sortedTiles.slice(0, tileSize.showCount);
+  const tilesToShow = sortedTiles;
 
-  // Honeycomb absolute positioning — same math as _renderTiles in hex-grid.js
-  const _hGap = 6;
   const _hW = tileSize.w;
   const _hH = tileSize.h;
-  const _hStepX = _hW + _hGap;
-  const _hStepY = _hH * 0.75 + _hGap;
-  const _hPerRow = tileSize.perRow || 4;
-  // Offset rows (odd) get one fewer tile so they don't overflow
-  const _hColsForRow = (r) => r % 2 === 0 ? _hPerRow : Math.max(_hPerRow - 1, 1);
-  let _hRow = 0, _hCol = 0, _hMaxR = 0, _hMaxB = 0;
 
   // PERF: tile positions are pure arithmetic, so they are worked out
   // for the whole card up front. A card that is not near the viewport
   // can then size itself correctly and skip building any DOM at all,
   // and hydrating it later shifts nothing on screen.
-  const _positions = [];
-  tilesToShow.forEach(() => {
-    const _isOff = _hRow % 2 === 1;
-    const _left = _hGap + (_isOff ? _hStepX / 2 : 0) + _hCol * _hStepX;
-    const _top = _hRow * _hStepY;
-    _positions.push({ left: _left, top: _top });
-    if (_left + _hW > _hMaxR) _hMaxR = _left + _hW;
-    if (_top + _hH > _hMaxB) _hMaxB = _top + _hH;
-    _hCol++;
-    if (_hCol >= _hColsForRow(_hRow)) { _hCol = 0; _hRow++; }
-  });
-  // Set container dimensions to fit all absolute tiles
-  body.style.height = (_hMaxB + _hGap) + 'px';
-  body.style.width = (_hMaxR + _hGap) + 'px';
+  const _layout = layoutCardTiles(tilesToShow.length, tileSize);
+  const _positions = _layout.positions;
+  body.style.height = _layout.height + 'px';
+  body.style.width = _layout.width + 'px';
 
   const _fillTiles = () => {
     if (body.dataset.filled) return;
@@ -2288,7 +2356,14 @@ function _buildCommunityCard(group, { deferTiles = false } = {}) {
     _fillTiles();
   }
 
-  card.appendChild(body);
+  // The strip is centred while it fits and scrolls sideways once it
+  // doesn't, so a creator with many catalysts gets a scrollbar rather
+  // than progressively unreadable tiles.
+  const scroller = document.createElement('div');
+  scroller.className = 'community-tiles-scroll';
+  if (_layout.width > cardMaxW) scroller.classList.add('scrolls');
+  scroller.appendChild(body);
+  card.appendChild(scroller);
 
   // Single-catalyst cards — always collapsed, no toggle
   if (group.catalysts.length <= 1) {
@@ -2327,7 +2402,8 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   // (popular / latest / oldest). Within each card tiles honor
   // sortOrder → createdAt via _sortCardTiles regardless of the outer
   // ranking — tile order inside a card is owner-controlled.
-  const groups = Array.from(_groupCatalystsByCreator(catalysts).values());
+  const groups = Array.from(_groupCatalystsByCreator(catalysts).values())
+    .filter((g) => Array.isArray(g.catalysts) && g.catalysts.length > 0);
   const ranked = _sortCreatorGroups(groups, _feedSortMode);
 
   // PERF: only the profiles the visitor can actually see get built. The
@@ -2382,7 +2458,7 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
     appendCards(next, to);
     next = to;
     if (next < ranked.length) requestAnimationFrame(pump);
-    else { _observeCardHydration(_hydrationQueue, token); finish(); }
+    else { _observeCardHydration(_hydrationQueue); finish(); }
   };
   requestAnimationFrame(pump);
 }
@@ -2597,6 +2673,7 @@ async function renderFeedRoute() {
   // reCAPTCHA handshake — around three seconds on a cold load — and
   // none of that is needed to draw catalysts we already have. The
   // skeleton is only for a genuinely first-ever visit.
+  _feedGotServerData = false;
   const _cached = loadFeedCache(_currentCategory);
   if (_cached && _cached.length) {
     _currentFeedSnapshot = _cached;
@@ -2604,6 +2681,16 @@ async function renderFeedRoute() {
   } else {
     _currentFeedSnapshot = [];
     renderSkeleton();
+    // No cache — first-ever visit. Fall back to the committed seed file,
+    // which needs neither App Check nor Firestore. It is only ever
+    // allowed to fill an empty grid: once the server has answered, that
+    // answer stands, including when the answer is "nothing".
+    loadSeedFeed().then((seed) => {
+      if (!seed || _feedGotServerData || _currentFeedSnapshot.length) return;
+      if (_currentRoute?.page !== 'feed') return;
+      _currentFeedSnapshot = seed;
+      _repaintFeed();
+    });
   }
 
   // Content (real or skeleton) is on screen — hand the page over.
@@ -2623,6 +2710,7 @@ async function renderFeedRoute() {
       _armWarmup();
       return;
     }
+    _feedGotServerData = true;
     _currentFeedSnapshot = _items;
     // Only persist what the server actually confirmed. A genuinely
     // empty server answer is written through, so deleting every

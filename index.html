@@ -42,7 +42,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
 
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="/css/style.css?v=198" />
+  <link rel="stylesheet" href="/css/style.css?v=199" />
 
   <!-- ── PERF: flatten the ES-module waterfall.
 
@@ -55,7 +55,7 @@
        Only modules reachable from init.js at load time belong here —
        play-mode.js, dot-sim-modal.js and nodesplit-modal.js are
        deliberately absent because they now load on demand. ── -->
-  <link rel="modulepreload" href="/js/init.js?v=207" />
+  <link rel="modulepreload" href="/js/init.js?v=208" />
   <link rel="modulepreload" href="/js/state.js" />
   <link rel="modulepreload" href="/js/firebase-config.js" />
   <link rel="modulepreload" href="/js/auth.js" />
@@ -76,6 +76,9 @@
   <link rel="modulepreload" href="/js/notifications.js" />
   <link rel="modulepreload" href="/js/creator-votes.js" />
   <link rel="modulepreload" href="/js/feed-cache.js" />
+  <!-- Static first-paint data for the grid. Same origin, no App Check,
+       so it lands long before Firestore is allowed to answer. -->
+  <link rel="preload" as="fetch" href="/feed-seed.json" crossorigin="anonymous" />
 
   <!-- The three Firebase SDK entry points every boot needs. Fetching
        them alongside the local modules removes another serial hop. -->
@@ -1343,7 +1346,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="/js/init.js?v=207"></script>
+  <script type="module" src="/js/init.js?v=208"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

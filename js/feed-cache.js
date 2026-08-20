@@ -97,6 +97,22 @@ export function loadFeedCache(category) {
   }
 }
 
+// First-ever visit has no localStorage cache, and the live query is
+// still stuck behind the App Check handshake. /feed-seed.json is a
+// static file on our own origin — no App Check, no Firestore, just a
+// plain GET — so the grid has something real to draw within a couple of
+// hundred milliseconds. Whatever it holds is replaced the moment the
+// server snapshot lands, so drift here is cosmetic.
+let _seedPromise = null;
+export function loadSeedFeed() {
+  if (_seedPromise) return _seedPromise;
+  _seedPromise = fetch('/feed-seed.json', { cache: 'force-cache' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((p) => (p && Array.isArray(p.items) && p.items.length ? p.items.map(rehydrate) : null))
+    .catch(() => null);
+  return _seedPromise;
+}
+
 export function clearFeedCache() {
   try { localStorage.removeItem(KEY); } catch {}
 }

@@ -839,7 +839,18 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card-follow.icon-only svg{flex-shrink:0;}
 .community-card.collapsed .community-card-hdr{flex-wrap:nowrap;overflow:hidden;}
 
-.community-tiles{position:relative;overflow:hidden;min-height:0;}
+.community-tiles{position:relative;min-height:0;margin:0 auto;flex:0 0 auto;}
+/* Horizontal scroller around a card's hexagons. Capped at two rows, a
+   creator with many catalysts scrolls sideways instead of shrinking the
+   tiles until their titles are single letters. */
+.community-tiles-scroll{position:relative;width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;display:flex;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;overscroll-behavior-x:contain;}
+.community-tiles-scroll::-webkit-scrollbar{height:8px;}
+.community-tiles-scroll::-webkit-scrollbar-track{background:transparent;}
+.community-tiles-scroll::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px;}
+.community-tiles-scroll::-webkit-scrollbar-thumb:hover{background:var(--tx3);}
+/* Only reserve scrollbar space on cards that actually overflow. */
+.community-tiles-scroll:not(.scrolls){overflow-x:hidden;}
+.community-tiles-scroll.scrolls{padding-bottom:8px;}
 
 /* NB-MD05: collapse/expand button + collapsed card state */
 .community-card-collapse{flex-shrink:0;background:none;border:1px solid var(--bdr);border-radius:50%;color:var(--tx3);cursor:pointer;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;transition:color var(--ease),border-color var(--ease);}
@@ -853,7 +864,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 
 /* Pill collapse — third level: compact horizontal pill */
 .community-card.pill{padding:14px 24px;border-radius:9999px;max-width:calc(1 * 180px + 56px + 60px);}
-.community-card.pill .community-tiles{display:none;}
+.community-card.pill .community-tiles,.community-card.pill .community-tiles-scroll{display:none;}
 .community-card.pill .community-card-hdr{border-bottom:none;margin-bottom:0;padding-bottom:0;gap:10px;}
 .community-card.pill .community-card-avatar{width:32px;height:32px;font-size:12px;}
 .community-card.pill .community-card-name{font-size:14px;}
@@ -983,6 +994,11 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
    of the accent color bleeds through as a subtle tint. Without a
    thumb, the accent is the full hex fill behind the placeholder. */
 .hex-tile{position:absolute;background:var(--accent,var(--bg3));clip-path:url(#hex-clip);overflow:hidden;cursor:pointer;transition:transform .5s ease;container-type:inline-size;}
+.community-tiles .hex-tile{container-name:cardtile;}
+/* A title clipped to "W…" or "LI…" is noise, so drop the text entirely
+   rather than showing a fragment of it. */
+@container cardtile (max-width: 104px){.hex-tile .hex-info{display:none;}}
+@container cardtile (max-width: 78px){.hex-tile .hex-collab-badge,.hex-tile .hex-status{display:none;}}
 /* Grid loading state. The full-screen logo loader now hands the page
    over as soon as the shell paints, so these hold the grid's shape
    while the feed query is still in flight. */
