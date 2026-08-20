@@ -881,7 +881,7 @@ body{background:var(--bg);color:var(--tx);overflow:hidden;}
 .community-card.pill .community-card-follow{width:26px;height:26px;padding:0;font-size:0;}
 .community-card.pill .community-card-follow.icon-only{width:26px;height:26px;padding:4px;}
 .community-card.pill .community-vote-pill{display:none;}
-#community-list .community-card.pill{flex-basis:auto;width:280px;max-width:280px;order:1000;}
+#community-list .community-card.pill{flex-basis:auto;width:280px;max-width:280px;order:1000;align-self:flex-start;}
 #community-list .community-card:not(.pill){order:0;}
 
 /* MD#1: absolute-positioned vote pills — bottom-left frost, bottom-right fire */

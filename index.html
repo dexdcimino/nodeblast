@@ -42,7 +42,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
 
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <link rel="stylesheet" href="/css/style.css?v=201" />
+  <link rel="stylesheet" href="/css/style.css?v=202" />
 
   <!-- ── PERF: flatten the ES-module waterfall.
 
@@ -55,7 +55,7 @@
        Only modules reachable from init.js at load time belong here —
        play-mode.js, dot-sim-modal.js and nodesplit-modal.js are
        deliberately absent because they now load on demand. ── -->
-  <link rel="modulepreload" href="/js/init.js?v=213" />
+  <link rel="modulepreload" href="/js/init.js?v=214" />
   <link rel="modulepreload" href="/js/state.js" />
   <link rel="modulepreload" href="/js/firebase-config.js" />
   <link rel="modulepreload" href="/js/auth.js" />
@@ -1380,7 +1380,7 @@
     })();
   </script>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="/js/init.js?v=213"></script>
+  <script type="module" src="/js/init.js?v=214"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

@@ -1835,7 +1835,6 @@ function layoutCardTiles(count, tileSize) {
   const stepY = h * 0.75 + gap;
   const positions = [];
   const rowOf = (i) => (rows > 1 ? i % rows : 0);
-  const extents = [];
   let maxB = 0;
   for (let i = 0; i < count; i++) {
     const row = rowOf(i);
@@ -1843,21 +1842,30 @@ function layoutCardTiles(count, tileSize) {
     const left = gap + (row === 1 ? stepX / 2 : 0) + col * stepX;
     const top = row * stepY;
     positions.push({ left, top });
-    const e = extents[row] || (extents[row] = { min: Infinity, max: -Infinity });
-    if (left < e.min) e.min = left;
-    if (left + w > e.max) e.max = left + w;
     if (top + h > maxB) maxB = top + h;
   }
-  // Centre every row inside the content box. The offset row of a
-  // honeycomb starts half a step in and usually holds one tile fewer,
-  // so without this the rows sit against the left edge with a ragged
-  // gap on the right and read as misaligned rather than interlocked.
-  const widest = extents.reduce((m, e) => Math.max(m, e.max - e.min), 0);
-  positions.forEach((p, i) => {
-    const e = extents[rowOf(i)];
-    p.left += gap + (widest - (e.max - e.min)) / 2 - e.min;
+  // Centre the honeycomb as one block, never row by row.
+  //
+  // Centring each row independently cancelled the half-step offset
+  // whenever the two rows held the same number of tiles: the offset row
+  // was shifted back by exactly stepX/2 and landed directly under the
+  // first, so the hexagons collided instead of nesting. Odd counts
+  // survived by coincidence - the row widths differed by one step, and
+  // half that difference happened to re-apply the offset. Hence a bug
+  // that only showed on even counts.
+  //
+  // Shifting every tile by the same amount keeps the rows interlocked,
+  // and .community-tiles carries margin:0 auto, so the block still ends
+  // up centred inside the card.
+  let minL = Infinity, maxR = 0;
+  positions.forEach((p) => {
+    if (p.left < minL) minL = p.left;
+    if (p.left + w > maxR) maxR = p.left + w;
   });
-  return { positions, width: widest + gap * 2, height: maxB + gap };
+  if (!positions.length) { minL = 0; maxR = 0; }
+  const shift = gap - minL;
+  positions.forEach((p) => { p.left += shift; });
+  return { positions, width: (maxR - minL) + gap * 2, height: maxB + gap };
 }
 
 // MD10: after cards are in the DOM, re-measure each card's available
