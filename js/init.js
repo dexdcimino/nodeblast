@@ -1881,6 +1881,33 @@ function _fitCommunityTiles(list) {
   });
 }
 
+// Builds a deferred card's tiles when it comes within reach of the
+// viewport. Cards below the fold are the bulk of a busy feed, and most
+// visitors never scroll to them at all.
+let _hydrationIO = null;
+function _observeCardHydration(cards, token) {
+  if (_hydrationIO) { _hydrationIO.disconnect(); _hydrationIO = null; }
+  if (!cards || cards.length === 0) return;
+  if (typeof IntersectionObserver === 'undefined') {
+    cards.forEach((c) => c._hydrateTiles?.());
+    return;
+  }
+  _hydrationIO = new IntersectionObserver((entries, obs) => {
+    // A newer feed render supersedes this one; stop touching its cards.
+    if (token !== _communityRenderToken) { obs.disconnect(); return; }
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      const card = e.target;
+      obs.unobserve(card);
+      card._hydrateTiles?.();
+      delete card.dataset.pendingTiles;
+      // Tiles only exist now, so this card still needs its fit pass.
+      requestAnimationFrame(() => _fitCommunityTiles(card.parentElement));
+    });
+  }, { rootMargin: '600px 0px' });
+  cards.forEach((c) => _hydrationIO.observe(c));
+}
+
 // MD18: ResizeObserver per community card — re-fits tiles when a
 // card's width changes (zoom, sidebar collapse, card animation).
 let _communityRO = null;
@@ -1917,7 +1944,7 @@ function _updateCreatorVoteUI(creatorUid, activeType) {
     });
 }
 
-function _buildCommunityCard(group) {
+function _buildCommunityCard(group, { deferTiles = false } = {}) {
   const hex = group.hexCode;
   const hexColor = '#' + hex;
   const card = document.createElement('div');
@@ -2161,7 +2188,30 @@ function _buildCommunityCard(group) {
   const _hColsForRow = (r) => r % 2 === 0 ? _hPerRow : Math.max(_hPerRow - 1, 1);
   let _hRow = 0, _hCol = 0, _hMaxR = 0, _hMaxB = 0;
 
-  tilesToShow.forEach((cat) => {
+  // PERF: tile positions are pure arithmetic, so they are worked out
+  // for the whole card up front. A card that is not near the viewport
+  // can then size itself correctly and skip building any DOM at all,
+  // and hydrating it later shifts nothing on screen.
+  const _positions = [];
+  tilesToShow.forEach(() => {
+    const _isOff = _hRow % 2 === 1;
+    const _left = _hGap + (_isOff ? _hStepX / 2 : 0) + _hCol * _hStepX;
+    const _top = _hRow * _hStepY;
+    _positions.push({ left: _left, top: _top });
+    if (_left + _hW > _hMaxR) _hMaxR = _left + _hW;
+    if (_top + _hH > _hMaxB) _hMaxB = _top + _hH;
+    _hCol++;
+    if (_hCol >= _hColsForRow(_hRow)) { _hCol = 0; _hRow++; }
+  });
+  // Set container dimensions to fit all absolute tiles
+  body.style.height = (_hMaxB + _hGap) + 'px';
+  body.style.width = (_hMaxR + _hGap) + 'px';
+
+  const _fillTiles = () => {
+    if (body.dataset.filled) return;
+    body.dataset.filled = '1';
+    const _frag = document.createDocumentFragment();
+    tilesToShow.forEach((cat, _i) => {
     const tile = createCatalystTileElement(
       cat,
       {
@@ -2177,15 +2227,10 @@ function _buildCommunityCard(group) {
     // Absolute position for honeycomb interlock
     tile.classList.remove('hex-tile-flow');
     tile.style.position = 'absolute';
-    const _isOff = _hRow % 2 === 1;
-    const _left = _hGap + (_isOff ? _hStepX / 2 : 0) + _hCol * _hStepX;
-    const _top = _hRow * _hStepY;
-    tile.style.left = _left + 'px';
-    tile.style.top = _top + 'px';
+    tile.style.left = _positions[_i].left + 'px';
+    tile.style.top = _positions[_i].top + 'px';
     tile.style.width = _hW + 'px';
     tile.style.height = _hH + 'px';
-    if (_left + _hW > _hMaxR) _hMaxR = _left + _hW;
-    if (_top + _hH > _hMaxB) _hMaxB = _top + _hH;
 
     if (isOwnCardForReorder) {
       tile.draggable = true;
@@ -2227,16 +2272,21 @@ function _buildCommunityCard(group) {
       });
     }
 
-    body.appendChild(tile);
-    _hCol++;
-    if (_hCol >= _hColsForRow(_hRow)) { _hCol = 0; _hRow++; }
-  });
-
-  // Set container dimensions to fit all absolute tiles
-  body.style.height = (_hMaxB + _hGap) + 'px';
-  body.style.width = (_hMaxR + _hGap) + 'px';
+      _frag.appendChild(tile);
+    });
+    body.appendChild(_frag);
+  };
 
   // MD#8: creator-level fire/poop vote pills removed from alchemist cards.
+
+  if (deferTiles) {
+    // Hydrated by the observer in renderCommunityHub once the card
+    // approaches the viewport.
+    card._hydrateTiles = _fillTiles;
+    card.dataset.pendingTiles = '1';
+  } else {
+    _fillTiles();
+  }
 
   card.appendChild(body);
 
@@ -2280,21 +2330,26 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
   const groups = Array.from(_groupCatalystsByCreator(catalysts).values());
   const ranked = _sortCreatorGroups(groups, _feedSortMode);
 
-  // PERF: each card builds a full hex tile per catalyst, so a busy feed
-  // was thousands of DOM nodes constructed in one synchronous burst —
-  // the main thread locked up and nothing painted until it finished.
-  // Paint the first screenful immediately, then append the rest a chunk
-  // per frame so the page stays interactive while it fills in.
-  const FIRST_PAINT_CARDS = 6;
+  // PERF: only the profiles the visitor can actually see get built. The
+  // top cards are constructed in full; everything below the fold gets a
+  // correctly-sized shell whose tiles are built when it scrolls into
+  // reach. On a feed of 27 creators that is the difference between
+  // ~140 tiles up front and ~30.
+  const EAGER_CARDS = 5;
   const CHUNK = 4;
 
   const appendCards = (from, to) => {
     const frag = document.createDocumentFragment();
-    for (let i = from; i < to; i++) frag.appendChild(_buildCommunityCard(ranked[i]));
+    for (let i = from; i < to; i++) {
+      const card = _buildCommunityCard(ranked[i], { deferTiles: i >= EAGER_CARDS });
+      if (card.dataset.pendingTiles) _hydrationQueue.push(card);
+      frag.appendChild(card);
+    }
     list.appendChild(frag);
   };
+  const _hydrationQueue = [];
 
-  appendCards(0, Math.min(FIRST_PAINT_CARDS, ranked.length));
+  appendCards(0, Math.min(EAGER_CARDS, ranked.length));
 
   const finish = () => {
     // MD10: post-render fit — re-layout tiles in any card whose body
@@ -2318,16 +2373,16 @@ function renderCommunityHub(catalysts, { emptyMessage } = {}) {
     }
   };
 
-  if (ranked.length <= FIRST_PAINT_CARDS) { finish(); return; }
+  if (ranked.length <= EAGER_CARDS) { finish(); return; }
 
-  let next = FIRST_PAINT_CARDS;
+  let next = EAGER_CARDS;
   const pump = () => {
     if (token !== _communityRenderToken) return;
     const to = Math.min(next + CHUNK, ranked.length);
     appendCards(next, to);
     next = to;
     if (next < ranked.length) requestAnimationFrame(pump);
-    else finish();
+    else { _observeCardHydration(_hydrationQueue, token); finish(); }
   };
   requestAnimationFrame(pump);
 }
@@ -2527,10 +2582,16 @@ async function renderFeedRoute() {
   // MD#14: apply mode from URL route if present
   if (_currentRoute?.mode === 'catalysts' || _currentRoute?.mode === 'alchemists') {
     _feedViewMode = _currentRoute.mode;
-    document.querySelectorAll('.feed-mode-btn').forEach((b) => {
-      b.classList.toggle('selected', b.dataset.mode === _feedViewMode);
-    });
+  } else {
+    // Landing on "/" always shows Alchemists. Creator profiles are the
+    // front page; the flat catalyst grid is something you opt into via
+    // /catalysts or the toggle. A per-account preference saved from an
+    // earlier session no longer decides what a fresh visit looks like.
+    _feedViewMode = 'alchemists';
   }
+  document.querySelectorAll('.feed-mode-btn').forEach((b) => {
+    b.classList.toggle('selected', b.dataset.mode === _feedViewMode);
+  });
   // PERF: paint the grid from the last known snapshot right now. The
   // live query below cannot even be sent until App Check clears its
   // reCAPTCHA handshake — around three seconds on a cold load — and
@@ -4047,68 +4108,158 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// DEV ONLY — seed fake profiles for testing. Console: _seedTestProfiles()
-window._seedTestProfiles = async function() {
-  const { getFirestore, collection, doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
-  const db = getFirestore();
-  const names = ['AlphaNode','BetaWave','CosmicRay','DeltaForce','EchoVault','FluxCore','GammaBeam','HyperLink','IonSpark','JadeCircuit','KiloVolt','LunarByte','MegaPulse','NeonDrift','OmegaGrid','PixelStorm','QuantumLeap','RetroBit','SolarFlare','TurboMesh','UltraNode','VectorPrime','WarpDrive','XenonGlow','ZeroPoint'];
-  const catalystCounts = [1,1,2,2,3,3,5,5,5,10,10,10,20,20,1,2,3,5,1,2,3,5,10,1,3];
-  const colors = ['ff4444','44aaff','44dd66','ffaa22','dd44ff','22ddcc','ff6699','8855ff','ddaa33','66ccff','ff3366','33cc99','aa66ff','ff8833','4488ff','cc3355','55cc44','ff5544','3399ff','bb44dd','ee6633','44bbaa','ff77aa','6644ff','cccc33'];
-  console.log('[seed] Creating 25 test profiles...');
-  for (let i = 0; i < 25; i++) {
-    const uid = 'test_user_' + String(i).padStart(3, '0');
-    const name = names[i];
-    const hex = colors[i];
-    const catCount = catalystCounts[i];
-    await setDoc(doc(db, 'users', uid), { displayName: name, usernameLower: name.toLowerCase(), hexCode: hex, photoURL: '', isAdmin: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
-    await setDoc(doc(db, 'userLookup', name.toLowerCase()), { uid, displayName: name, hexCode: hex }, { merge: true });
-    for (let c = 0; c < catCount; c++) {
-      const catId = uid + '_cat_' + c;
-      await setDoc(doc(db, 'catalysts', catId), { title: name + ' Project ' + (c + 1), ownerId: uid, ownerName: name, ownerHex: hex, accentColor: '#' + colors[(i + c) % colors.length], thumbURL: '', status: c === 0 && catCount > 3 ? 'placeholder' : 'published', gameId: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), fireCount: Math.floor(Math.random() * 50), frostCount: Math.floor(Math.random() * 10), isLocked: false, isPublic: true, slug: (name.toLowerCase() + '-project-' + (c + 1)).replace(/\s+/g, '-') });
+/* ══════════════════════════════════════════════════════════════
+   DEV ONLY — seeded test data tools.
+
+   Every selector here keys on the test_user_ document-id prefix and
+   nothing else. An earlier version also deleted userLookup entries by
+   DISPLAY NAME, which a real account could hold — if someone had
+   registered as e.g. "WarpDrive", running the cleanup would have taken
+   their lookup entry with it. Display names never select documents now.
+
+   This is a Firebase project shared with DexNote, so the destructive
+   tools default to a dry run and only write when explicitly told to.
+══════════════════════════════════════════════════════════════ */
+
+const TEST_UID_PREFIX = 'test_user_';
+const _testUid = (i) => TEST_UID_PREFIX + String(i).padStart(3, '0');
+const _testName = (i) => 'Tester' + String(i + 1).padStart(3, '0');
+const _isTestUid = (id) => typeof id === 'string' && id.startsWith(TEST_UID_PREFIX);
+
+async function _fsdk() {
+  return import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+}
+
+// Commit a list of {ref, op, data} in batches, well under the 500 cap.
+async function _commitOps(sdk, db, ops) {
+  for (let i = 0; i < ops.length; i += 400) {
+    const batch = sdk.writeBatch(db);
+    for (const o of ops.slice(i, i + 400)) {
+      if (o.op === 'delete') batch.delete(o.ref);
+      else batch.set(o.ref, o.data, { merge: true });
     }
-    // Seed creator vote counts for variety
-    if (i % 3 === 0) {
-      await setDoc(doc(db, 'users', uid), { fireVoteCount: Math.floor(Math.random() * 400 + 100), frostVoteCount: Math.floor(Math.random() * 30) }, { merge: true });
-    } else if (i % 3 === 1) {
-      await setDoc(doc(db, 'users', uid), { fireVoteCount: Math.floor(Math.random() * 40 + 10), frostVoteCount: Math.floor(Math.random() * 10) }, { merge: true });
-    }
-    console.log(`[seed] Created ${name}#${hex} with ${catCount} catalysts`);
+    await batch.commit();
   }
-  console.log('[seed] Done! Refresh the page.');
+}
+
+// Read every seeded profile and its catalysts. Read-only.
+async function _scanTestData() {
+  const sdk = await _fsdk();
+  const db = sdk.getFirestore();
+  const snap = await sdk.getDocs(sdk.collection(db, 'catalysts'));
+  const byOwner = new Map();
+  snap.docs.forEach((d) => {
+    const data = d.data();
+    if (!_isTestUid(data.ownerId)) return;
+    if (!byOwner.has(data.ownerId)) byOwner.set(data.ownerId, []);
+    byOwner.get(data.ownerId).push({ ref: d.ref, id: d.id, ...data });
+  });
+  return { sdk, db, byOwner };
+}
+
+// DEV ONLY — rename seeded profiles to Tester001, Tester002, ...
+// Console:  await _renameTestProfiles()             (dry run)
+//           await _renameTestProfiles({apply:true})
+window._renameTestProfiles = async function({ apply = false } = {}) {
+  const { sdk, db, byOwner } = await _scanTestData();
+  const ops = [];
+  let profiles = 0;
+  for (let i = 0; i < 25; i++) {
+    const uid = _testUid(i);
+    const name = _testName(i);
+    const s = await sdk.getDoc(sdk.doc(db, 'users', uid));
+    if (!s.exists()) continue;
+    profiles++;
+    ops.push({ op: 'set', ref: sdk.doc(db, 'users', uid),
+      data: { displayName: name, usernameLower: name.toLowerCase() } });
+    // ownerName is denormalized onto every catalyst, so the cards keep
+    // showing the old name unless these are rewritten too.
+    for (const c of (byOwner.get(uid) || [])) {
+      ops.push({ op: 'set', ref: c.ref, data: { ownerName: name } });
+    }
+  }
+  console.log('[test-data] rename: ' + profiles + ' profiles, ' +
+    (ops.length - profiles) + ' catalyst ownerName updates, ' + ops.length + ' writes total');
+  if (!apply) { console.log('[test-data] DRY RUN - re-run with {apply:true} to write.'); return; }
+  await _commitOps(sdk, db, ops);
+  console.log('[test-data] renamed. Refresh the page.');
 };
 
-// DEV ONLY — delete every seeded test profile and its catalysts.
-// Console: await _deleteTestProfiles()
-//
-// The seed set is 25 profiles carrying 133 catalysts between them, all
-// public — so leaving it in place means every visitor's feed downloads
-// and renders 133 tiles they don't care about. This is the fast way
-// out: the per-user work runs concurrently and each user's catalysts
-// go in one batched write instead of a delete round trip per document.
-window._deleteTestProfiles = async function() {
-  const { getFirestore, collection, doc, getDocs, query, where, writeBatch } =
-    await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
-  const db = getFirestore();
-  const names = ['AlphaNode','BetaWave','CosmicRay','DeltaForce','EchoVault','FluxCore','GammaBeam','HyperLink','IonSpark','JadeCircuit','KiloVolt','LunarByte','MegaPulse','NeonDrift','OmegaGrid','PixelStorm','QuantumLeap','RetroBit','SolarFlare','TurboMesh','UltraNode','VectorPrime','WarpDrive','XenonGlow','ZeroPoint'];
-
-  let removed = 0;
-  await Promise.all(names.map(async (name, i) => {
-    const uid = 'test_user_' + String(i).padStart(3, '0');
-    const catsSnap = await getDocs(query(collection(db, 'catalysts'), where('ownerId', '==', uid)));
-    // Firestore caps a batch at 500 writes; +2 here for the user and
-    // lookup docs, so chunk well under the limit.
-    const refs = catsSnap.docs.map((d) => d.ref)
-      .concat([doc(db, 'users', uid), doc(db, 'userLookup', name.toLowerCase())]);
-    for (let k = 0; k < refs.length; k += 400) {
-      const batch = writeBatch(db);
-      refs.slice(k, k + 400).forEach((r) => batch.delete(r));
-      await batch.commit();
+// DEV ONLY — shrink the seeded set.
+// Console:  await _trimTestProfiles()                              (dry run)
+//           await _trimTestProfiles({apply:true})
+//           await _trimTestProfiles({keepProfiles:8, keepEach:3, apply:true})
+window._trimTestProfiles = async function({ keepProfiles = 8, keepEach = 3, apply = false } = {}) {
+  const { sdk, db, byOwner } = await _scanTestData();
+  const ops = [];
+  let keptP = 0, keptC = 0, dropP = 0, dropC = 0;
+  for (let i = 0; i < 25; i++) {
+    const uid = _testUid(i);
+    const cats = byOwner.get(uid) || [];
+    if (i < keepProfiles) {
+      keptP++;
+      // Keep the newest few; the rest go.
+      const sorted = cats.slice().sort((a, b) =>
+        (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+      keptC += Math.min(keepEach, sorted.length);
+      sorted.slice(keepEach).forEach((c) => { dropC++; ops.push({ op: 'delete', ref: c.ref }); });
+    } else {
+      const s = await sdk.getDoc(sdk.doc(db, 'users', uid));
+      if (s.exists()) { dropP++; ops.push({ op: 'delete', ref: sdk.doc(db, 'users', uid) }); }
+      cats.forEach((c) => { dropC++; ops.push({ op: 'delete', ref: c.ref }); });
     }
-    removed += catsSnap.size;
-    console.log('[seed] deleted ' + name + ' (' + catsSnap.size + ' catalysts)');
-  }));
+  }
+  console.log('[test-data] trim: keep ' + keptP + ' profiles / ' + keptC + ' catalysts - remove ' +
+    dropP + ' profiles and ' + dropC + ' catalysts (' + ops.length + ' writes)');
+  if (!apply) { console.log('[test-data] DRY RUN - re-run with {apply:true} to write.'); return; }
+  await _commitOps(sdk, db, ops);
+  console.log('[test-data] trimmed. Refresh the page.');
+};
 
-  console.log('[seed] Done — ' + names.length + ' profiles and ' + removed + ' catalysts removed. Refresh the page.');
+// DEV ONLY — seed a fresh test set. Names are Tester001...
+window._seedTestProfiles = async function() {
+  const sdk = await _fsdk();
+  const db = sdk.getFirestore();
+  const counts = [1,1,2,2,3,3,5,5,5,10,10,10,20,20,1,2,3,5,1,2,3,5,10,1,3];
+  const colors = ['ff4444','44aaff','44dd66','ffaa22','dd44ff','22ddcc','ff6699','8855ff','ddaa33','66ccff','ff3366','33cc99','aa66ff','ff8833','4488ff','cc3355','55cc44','ff5544','3399ff','bb44dd','ee6633','44bbaa','ff77aa','6644ff','cccc33'];
+  for (let i = 0; i < 25; i++) {
+    const uid = _testUid(i), name = _testName(i), hex = colors[i];
+    await sdk.setDoc(sdk.doc(db, 'users', uid), {
+      displayName: name, usernameLower: name.toLowerCase(), hexCode: hex,
+      photoURL: '', isAdmin: false,
+      createdAt: sdk.serverTimestamp(), updatedAt: sdk.serverTimestamp(),
+    }, { merge: true });
+    for (let c = 0; c < counts[i]; c++) {
+      await sdk.setDoc(sdk.doc(db, 'catalysts', uid + '_cat_' + c), {
+        title: name + ' Project ' + (c + 1), ownerId: uid, ownerName: name, ownerHex: hex,
+        accentColor: '#' + colors[(i + c) % colors.length], thumbURL: '',
+        status: (c === 0 && counts[i] > 3) ? 'placeholder' : 'published', gameId: null,
+        createdAt: sdk.serverTimestamp(), updatedAt: sdk.serverTimestamp(),
+        fireCount: 0, frostCount: 0, isLocked: false, isPublic: true,
+        slug: (name.toLowerCase() + '-project-' + (c + 1)),
+      }, { merge: true });
+    }
+  }
+  console.log('[test-data] seeded 25 Tester profiles. Refresh the page.');
+};
+
+// DEV ONLY — remove every seeded profile and its catalysts.
+// Console:  await _deleteTestProfiles()             (dry run)
+//           await _deleteTestProfiles({apply:true})
+window._deleteTestProfiles = async function({ apply = false } = {}) {
+  const { sdk, db, byOwner } = await _scanTestData();
+  const ops = [];
+  let profiles = 0, cats = 0;
+  for (let i = 0; i < 25; i++) {
+    const uid = _testUid(i);
+    const s = await sdk.getDoc(sdk.doc(db, 'users', uid));
+    if (s.exists()) { profiles++; ops.push({ op: 'delete', ref: sdk.doc(db, 'users', uid) }); }
+    for (const c of (byOwner.get(uid) || [])) { cats++; ops.push({ op: 'delete', ref: c.ref }); }
+  }
+  console.log('[test-data] delete: ' + profiles + ' profiles, ' + cats + ' catalysts (' + ops.length + ' writes)');
+  if (!apply) { console.log('[test-data] DRY RUN - re-run with {apply:true} to write.'); return; }
+  await _commitOps(sdk, db, ops);
+  console.log('[test-data] deleted. Refresh the page.');
 };
 
 /* ── MD#48: welcome modal pages + render logic ──────────────────────── */

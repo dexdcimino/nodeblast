@@ -6,7 +6,7 @@
 //  the previous cache, which is how a deploy invalidates the cached
 //  module graph. Keep it in step with the ?v= on init.js/style.css.
 // ══════════════════════════════════════════════════════════════
-const CACHE_NAME = 'nodeblast-v206';
+const CACHE_NAME = 'nodeblast-v207';
 
 // The app shell. Precached at install so a repeat visit paints without
 // touching the network.
@@ -15,7 +15,7 @@ const PRECACHE = [
   '/index.html',
   '/manifest.json',
   '/css/style.css?v=198',
-  '/js/init.js?v=206',
+  '/js/init.js?v=207',
 ];
 
 // Same-origin paths served stale-while-revalidate: answered instantly
