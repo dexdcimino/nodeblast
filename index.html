@@ -55,7 +55,7 @@
        Only modules reachable from init.js at load time belong here —
        play-mode.js, dot-sim-modal.js and nodesplit-modal.js are
        deliberately absent because they now load on demand. ── -->
-  <link rel="modulepreload" href="/js/init.js?v=210" />
+  <link rel="modulepreload" href="/js/init.js?v=211" />
   <link rel="modulepreload" href="/js/state.js" />
   <link rel="modulepreload" href="/js/firebase-config.js" />
   <link rel="modulepreload" href="/js/auth.js" />
@@ -76,9 +76,11 @@
   <link rel="modulepreload" href="/js/notifications.js" />
   <link rel="modulepreload" href="/js/creator-votes.js" />
   <link rel="modulepreload" href="/js/feed-cache.js" />
-  <!-- Static first-paint data for the grid. Same origin, no App Check,
-       so it lands long before Firestore is allowed to answer. -->
-  <link rel="preload" as="fetch" href="/feed-seed.json" crossorigin="anonymous" />
+  <!-- feed-seed.json is deliberately NOT preloaded. It is only fetched
+       when there is no cached feed, so preloading it spent 26KB on
+       every repeat visit for a file that was never read. The fetch now
+       starts from renderFeedRoute, which still lands it long before
+       Firestore is allowed to answer. -->
 
   <!-- The three Firebase SDK entry points every boot needs. Fetching
        them alongside the local modules removes another serial hop. -->
@@ -1346,7 +1348,7 @@
     </div>
   </div>
   <!-- BUMP THIS VERSION ON EVERY DEPLOY: -->
-  <script type="module" src="/js/init.js?v=210"></script>
+  <script type="module" src="/js/init.js?v=211"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
